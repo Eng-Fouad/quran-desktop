@@ -1,0 +1,46 @@
+.profile-full-name-label {
+    -fx-font-weight: bold;
+}
+
+.profile-details-label {
+    -fx-font-size: 11;
+    -fx-text-fill: #616161;
+}
+
+.chapter-title-list .scroll-bar:horizontal .increment-arrow,
+.chapter-title-list .scroll-bar:horizontal .decrement-arrow,
+.chapter-title-list .scroll-bar:horizontal .increment-button,
+.chapter-title-list .scroll-bar:horizontal .decrement-button {
+    -fx-padding:0;
+}
+
+.chapter-title-list, .chapter-title-list .list-cell {
+    -fx-background-color: #f0f0f0;
+}
+
+.chapter-title-list .list-cell:hover:filled {
+    -fx-background-color: #e9e9e9;
+}
+
+.chapter-title-list .list-cell:hover:selected {
+    -fx-background-color: #dedede;
+}
+
+.chapter-title-list .list-cell:selected {
+    -fx-background-color: #dedede;
+}
+
+.title-label {
+    -fx-font-weight: bold;
+    -fx-text-fill: BLACK;
+}
+
+.timestamp-label {
+    -fx-font-size: 11;
+    -fx-text-fill: #616161;
+}
+
+.last-message-text-label {
+    -fx-font-size: 11;
+    -fx-text-fill: #3c3c3c;
+}

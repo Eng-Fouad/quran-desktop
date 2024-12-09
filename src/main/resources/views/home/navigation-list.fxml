@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<AnchorPane xmlns:fx="http://javafx.com/fxml" fx:controller="com.quran.labs.desktop.home.ui.ChatListFxController">
+    <TabPane tabClosingPolicy="UNAVAILABLE" minWidth="300.0" AnchorPane.topAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.bottomAnchor="0.0">
+        <Tab fx:id="tabChaptersList" text="%label.chaptersList">
+            <ListView fx:id="lvChaptersList" styleClass="chapter-title-list" fixedCellSize="64.0"/>
+        </Tab>
+        <Tab fx:id="tabBookmarks" text="%label.bookmarks">
+            <ListView fx:id="lvBookmarks" styleClass="chapter-title-list"/>
+        </Tab>
+    </TabPane>
+</AnchorPane>

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<Alert xmlns:fx="http://javafx.com/fxml" fx:id="alertDialog" resizable="true"
+       fx:controller="com.quran.labs.desktop.core.ui.HttpErrorDialogFxController" title="%dialogs.httpError.title">
+    <dialogPane>
+        <DialogPane fx:id="dialogPane" stylesheets="@/views/main/main.css">
+            <content>
+                <GridPane maxWidth="Infinity" vgap="10.0" hgap="10.0">
+                    <Label text="%dialogs.label.responseStatusCode"
+                           GridPane.columnIndex="0" GridPane.rowIndex="0"
+                           GridPane.valignment="TOP" GridPane.halignment="RIGHT" />
+                    <Label fx:id="lblStatusCode" maxHeight="Infinity" maxWidth="Infinity"
+                           GridPane.columnIndex="1" GridPane.rowIndex="0" />
+                    <Label text="%dialogs.label.responseBody"
+                           GridPane.columnIndex="0" GridPane.rowIndex="1"
+                           GridPane.valignment="TOP" GridPane.halignment="RIGHT"/>
+                    <TextArea fx:id="txtResponseBody" maxHeight="Infinity" maxWidth="Infinity" editable="false"
+                              wrapText="true" GridPane.vgrow="ALWAYS" GridPane.hgrow="ALWAYS"
+                              GridPane.columnIndex="1" GridPane.rowIndex="1" nodeOrientation="LEFT_TO_RIGHT" />
+                </GridPane>
+            </content>
+        </DialogPane>
+    </dialogPane>
+</Alert>

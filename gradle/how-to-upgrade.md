@@ -1,0 +1,1 @@
+./gradlew wrapper --gradle-version 8.11.1 --distribution-type all

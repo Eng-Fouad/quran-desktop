@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Alert?>
+<?import javafx.scene.control.DialogPane?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.layout.*?>
+<Alert xmlns:fx="http://javafx.com/fxml" fx:id="alertDialog"
+       fx:controller="com.quran.labs.desktop.core.ui.MessageDialogFxController">
+    <dialogPane>
+        <DialogPane fx:id="dialogPane" stylesheets="@/views/main/main.css" styleClass="alert">
+            <expandableContent>
+                <GridPane maxWidth="Infinity">
+                    <TextArea fx:id="txtDetails" maxHeight="Infinity" maxWidth="Infinity" editable="false"
+                              wrapText="true" GridPane.vgrow="ALWAYS" GridPane.hgrow="ALWAYS"
+                              GridPane.columnIndex="0" GridPane.rowIndex="1" nodeOrientation="LEFT_TO_RIGHT" />
+                </GridPane>
+            </expandableContent>
+        </DialogPane>
+    </dialogPane>
+</Alert>
