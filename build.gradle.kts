@@ -22,6 +22,8 @@ dependencies {
     implementation(deps.libs.quarkus.arc)
     implementation(deps.libs.quarkusFx)
     implementation(deps.libs.controlsFx)
+    implementation(deps.libs.ikonli)
+    implementation(deps.libs.ikonli.carbonicons)
     implementation(deps.libs.jackson)
     compileOnly(deps.libs.osgi.annotation)
     compileOnly(files("libs/scenicview.jar"))

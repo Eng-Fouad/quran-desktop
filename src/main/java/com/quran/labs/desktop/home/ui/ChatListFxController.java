@@ -64,9 +64,6 @@ public class ChatListFxController extends FxControllerBase implements MountableF
         lvChaptersList.setItems(chatDescriptors);
         lvChaptersList.setCellFactory(newChatListCellFactory());
 
-        tabChaptersList.setGraphic(guiFactory.createFontAwesomeIcon(FontAwesome.Glyph.NAVICON));
-        tabBookmarks.setGraphic(guiFactory.createFontAwesomeIcon(FontAwesome.Glyph.BOOKMARK));
-
         timeline = new Timeline(new KeyFrame(Duration.ZERO, this::onTick), new KeyFrame(PROBE_FREQUENCY));
         timeline.setCycleCount(Timeline.INDEFINITE);
     }

@@ -5,7 +5,10 @@
 <StackPane fx:id="rootPane" xmlns:fx="http://javafx.com/fxml" fx:controller="com.quran.labs.desktop.core.ui.MainFxController" stylesheets="@/views/main/main.css" styleClass="root-pane">
     <BorderPane>
         <center>
-            <fx:include fx:id="bodyPane" source="/views/main/body.fxml"/>
+            <StackPane>
+                <!-- include loadingPane -->
+                <fx:include fx:id="homePane" source="/views/home/home.fxml"/>
+            </StackPane>
         </center>
     </BorderPane>
 </StackPane>

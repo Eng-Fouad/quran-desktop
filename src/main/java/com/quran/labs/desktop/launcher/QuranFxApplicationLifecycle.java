@@ -1,5 +1,6 @@
 package com.quran.labs.desktop.launcher;
 
+import com.quran.labs.desktop.core.data.GuiStateManager;
 import com.quran.labs.desktop.core.enums.GuiLanguage;
 import com.quran.labs.desktop.core.errors.CoreError;
 import com.quran.labs.desktop.core.ui.GuiFactory;
@@ -28,6 +29,7 @@ import java.util.prefs.Preferences;
 public class QuranFxApplicationLifecycle {
 
     @Inject GuiFactory guiFactory;
+    @Inject GuiStateManager guiStateManager;
     @Inject MainFxController mainFxController;
 
     GuiLanguage initialLanguage;
@@ -71,6 +73,8 @@ public class QuranFxApplicationLifecycle {
         if(checkIfAnotherInstanceAlreadyRunning()) {
             anotherInstanceRunning = true;
         }
+
+        guiStateManager.setCurrentGuiLanguage(initialLanguage);
     }
 
     /**

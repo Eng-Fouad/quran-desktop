@@ -5,7 +5,6 @@ import com.quran.labs.desktop.core.enums.GuiLanguage;
 import com.quran.labs.desktop.core.fx.FxControllerBase;
 import com.quran.labs.desktop.core.fx.LanguageChangeAware;
 import com.quran.labs.desktop.core.utils.AppConstants;
-import com.quran.labs.desktop.home.ui.HomeFxController;
 import io.quarkiverse.fx.views.FxView;
 import io.quarkiverse.fx.views.FxViewRepository;
 import io.quarkus.logging.Log;
@@ -42,14 +41,11 @@ public class MainFxController extends FxControllerBase implements LanguageChange
 
     @Inject GuiFactory guiFactory;
     @Inject FxViewRepository fxViewRepository;
-    @Inject BodyFxController bodyFxController;
     @Inject GuiStateManager guiStateManager;
 
     @FXML Pane rootPane;
-    @FXML Pane bodyPane;
 
     public void initStage(Stage stage, GuiLanguage language) {
-        guiStateManager.setCurrentGuiLanguage(language);
         stage.setHeight(AppConstants.STAGE_HEIGHT);
         stage.setWidth(AppConstants.STAGE_WIDTH);
         stage.setMinHeight(AppConstants.STAGE_HEIGHT);
@@ -82,8 +78,6 @@ public class MainFxController extends FxControllerBase implements LanguageChange
                 }
             });
         }
-
-        bodyFxController.attachView(HomeFxController.VIEW_NAME);
     }
 
     @Override
@@ -119,8 +113,7 @@ public class MainFxController extends FxControllerBase implements LanguageChange
         preferences.put(AppConstants.UI_LANGUAGE_PREF_NAME, toLanguage.getLocale().getLanguage());
 
         // propagate language change to all controllers
-        bodyFxController.onLanguageChanged(toLanguage);
-        this.onLanguageChanged(toLanguage);
+        onLanguageChanged(toLanguage);
 
         // hide the primary stage and show it again in case the language orientation is different
         if (currentLanguage.getNodeOrientation() != toLanguage.getNodeOrientation()) {

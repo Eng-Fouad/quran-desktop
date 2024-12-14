@@ -1,7 +1,9 @@
 package com.quran.labs.desktop.core.ui;
 
+import com.quran.labs.desktop.core.errors.LabelAndCode;
+import com.quran.labs.desktop.home.dto.ChatType;
+import com.quran.labs.desktop.home.dto.MessageDeliveryStatus;
 import io.quarkus.logging.Log;
-import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import javafx.animation.Animation;
@@ -18,13 +20,12 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.shape.SVGPath;
-import javafx.scene.text.*;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
+import javafx.scene.text.Text;
+import javafx.scene.text.TextAlignment;
+import javafx.scene.text.TextBoundsType;
 import javafx.util.Duration;
-import org.controlsfx.glyphfont.FontAwesome;
-import org.controlsfx.glyphfont.Glyph;
-import com.quran.labs.desktop.core.errors.LabelAndCode;
-import com.quran.labs.desktop.home.dto.ChatType;
-import com.quran.labs.desktop.home.dto.MessageDeliveryStatus;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -66,15 +67,6 @@ public final class GuiFactory {
     @Inject MessageDialogFxController alertDialogFxController;
     @Inject HttpErrorDialogFxController httpErrorDialogFxController;
     @Inject StacktraceDialogFxController stacktraceDialogFxController;
-
-    FontAwesome fontAwesome;
-
-    @PostConstruct
-    public void init() {
-        var fontResource = Thread.currentThread().getContextClassLoader().getResourceAsStream("/assets/fonts/fontawesome-6.6.0-free-solid-900.otf");
-        fontAwesome = new FontAwesome(fontResource);
-        fontAwesome.register("CHECK_DOUBLE", '\uf560');
-    }
 
     public Node generateMutedChatIcon() {
         var svgPath = new SVGPath();
@@ -167,28 +159,6 @@ public final class GuiFactory {
     private Color selectColorForTitle(String title) {
         if (title == null) return COLOR_UNKNOWN;
         return COLORS_PALETTE[Math.abs(title.hashCode()) % COLORS_PALETTE.length];
-    }
-
-    /**
-     * Creates a {@link Glyph} representing a FontAwesome icon.
-     *
-     * @param icon the {@link FontAwesome.Glyph} to be created.
-     *
-     * @return a {@link Glyph} representing the specified icon.
-     */
-    public Glyph createFontAwesomeIcon(FontAwesome.Glyph icon) {
-        return fontAwesome.create(icon);
-    }
-
-    /**
-     * Creates a {@link Glyph} for a specific character from the FontAwesome font.
-     *
-     * @param character the character to be displayed as a FontAwesome icon.
-     *
-     * @return a {@link Glyph} for the specified character.
-     */
-    public Glyph createFontAwesomeIcon(char character) {
-        return fontAwesome.create(character);
     }
 
     /**

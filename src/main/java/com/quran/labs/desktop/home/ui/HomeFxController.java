@@ -1,13 +1,12 @@
 package com.quran.labs.desktop.home.ui;
 
-import io.quarkiverse.fx.views.FxView;
-import jakarta.inject.Singleton;
-import javafx.fxml.FXML;
-import javafx.scene.layout.Pane;
 import com.quran.labs.desktop.core.enums.GuiLanguage;
 import com.quran.labs.desktop.core.fx.FxControllerBase;
 import com.quran.labs.desktop.core.fx.LanguageChangeAware;
 import com.quran.labs.desktop.core.fx.MountableFxController;
+import jakarta.inject.Singleton;
+import javafx.fxml.FXML;
+import javafx.scene.layout.Pane;
 
 import java.util.ResourceBundle;
 
@@ -16,11 +15,8 @@ import java.util.ResourceBundle;
  *
  * @author Fouad Almalki
  */
-@FxView(HomeFxController.VIEW_NAME)
 @Singleton
 public class HomeFxController extends FxControllerBase implements MountableFxController, LanguageChangeAware {
-
-    public static final String VIEW_NAME = "home";
 
     @FXML Pane sideBarPane;
     @FXML Pane chatViewPane;
