@@ -1,5 +1,7 @@
 package com.quran.labs.desktop.core.ui;
 
+import com.quran.labs.desktop.core.enums.GuiLanguage;
+import com.quran.labs.desktop.core.fx.LanguageChangeAware;
 import io.quarkiverse.fx.views.FxViewRepository;
 import jakarta.inject.Inject;
 import javafx.fxml.FXML;
@@ -10,6 +12,7 @@ import javafx.stage.Stage;
 import com.quran.labs.desktop.core.fx.FxControllerBase;
 
 import java.util.Optional;
+import java.util.ResourceBundle;
 
 /**
  * An abstract base class for handling common dialog-related functionality in JavaFX applications.
@@ -17,22 +20,24 @@ import java.util.Optional;
  *
  * @author Fouad Almalki
  */
-public abstract class AlertDialogFxControllerBase extends FxControllerBase {
+public abstract class AlertDialogFxControllerBase extends FxControllerBase implements LanguageChangeAware {
 
     @FXML protected Alert alertDialog;
     @FXML protected DialogPane dialogPane;
 
-    @Inject FxViewRepository fxViewRepository;
+    @Inject MainFxController mainFxController;
 
-    Stage primaryStage;
-    Stage dialogStage;
+    protected Stage dialogStage;
+    private boolean hasBeenVisible = false;
 
     @Override
     protected void initialize() {
-        primaryStage = fxViewRepository.getPrimaryStage();
         dialogStage = (Stage) dialogPane.getScene().getWindow();
-        dialogStage.getIcons().setAll(primaryStage.getIcons());
-        dialogStage.initOwner(primaryStage);
+    }
+
+    @Override
+    public void onLanguageChanged(GuiLanguage language) {
+        resources = ResourceBundle.getBundle(resources.getBaseBundleName(), language.getLocale());
     }
 
     /**
@@ -46,6 +51,13 @@ public abstract class AlertDialogFxControllerBase extends FxControllerBase {
      *         or an empty {@code Optional} if no button was clicked.
      */
     public Optional<ButtonType> showDialog() {
+        Stage primaryStage = mainFxController.getPrimaryStage();
+        dialogStage.getScene().setNodeOrientation(primaryStage.getScene().getNodeOrientation());
+        if (!hasBeenVisible) {
+            dialogStage.getIcons().setAll(primaryStage.getIcons());
+            dialogStage.initOwner(primaryStage);
+            hasBeenVisible = true;
+        }
         return alertDialog.showAndWait();
     }
 }

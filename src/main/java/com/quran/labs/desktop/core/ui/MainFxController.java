@@ -5,97 +5,99 @@ import com.quran.labs.desktop.core.enums.GuiLanguage;
 import com.quran.labs.desktop.core.fx.FxControllerBase;
 import com.quran.labs.desktop.core.fx.LanguageChangeAware;
 import com.quran.labs.desktop.core.utils.AppConstants;
-import io.quarkiverse.fx.views.FxView;
-import io.quarkiverse.fx.views.FxViewRepository;
 import io.quarkus.logging.Log;
 import io.quarkus.runtime.LaunchMode;
+import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.Scene;
-import javafx.scene.image.Image;
 import javafx.scene.input.KeyEvent;
-import javafx.scene.layout.Pane;
 import javafx.stage.Stage;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
-import org.scenicview.ScenicView;
 
 import java.util.Locale;
 import java.util.ResourceBundle;
 import java.util.prefs.Preferences;
 
-/**
- * FX controller of the primary stage, i.e. controller of the main application GUI.
- *
- * @author Fouad Almalki
- */
-@FxView(MainFxController.VIEW_NAME)
+/// FX controller of the primary stage, i.e. controller of the main application GUI.
+///
+/// @author Fouad Almalki
 @Singleton
 public class MainFxController extends FxControllerBase implements LanguageChangeAware {
 
-    public static final String VIEW_NAME = "main";
+    public static final String STRINGS_RESOURCE_BUNDLE = "/i18n/strings";
+    public static final String FXML = "/views/main/main.fxml";
 
-    @ConfigProperty(name = "quarkus.application.version")
+    @ConfigProperty(name = "quarkus.application.version", defaultValue = "0.0")
     String appVersion;
 
     @Inject GuiFactory guiFactory;
-    @Inject FxViewRepository fxViewRepository;
     @Inject GuiStateManager guiStateManager;
+    @Inject Instance<FxControllerBase> fxControllerBaseInstances;
 
-    @FXML Pane rootPane;
+    @FXML Stage primaryStage;
+    @FXML Scene primaryScene;
 
-    public void initStage(Stage stage, GuiLanguage language) {
-        stage.setHeight(AppConstants.STAGE_HEIGHT);
-        stage.setWidth(AppConstants.STAGE_WIDTH);
-        stage.setMinHeight(AppConstants.STAGE_HEIGHT);
-        stage.setMinWidth(AppConstants.STAGE_WIDTH);
-        stage.getIcons().setAll(new Image("/assets/images/ic_launcher.png"));
-        stage.setTitle("%s %s".formatted(resources.getString("window.title"), appVersion));
-        stage.setScene(new Scene(rootPane));
-        stage.getScene().setNodeOrientation(language.getNodeOrientation());
-        stage.centerOnScreen();
-        stage.setOnCloseRequest(event -> {
+    public Stage getPrimaryStage() {
+        return primaryStage;
+    }
+
+    /// Show the primary stage with the specified GUI language.
+    ///
+    /// @param language the GUI language to use
+    public void showPrimaryStage(GuiLanguage language) {
+        primaryStage.setTitle("%s %s".formatted(resources.getString("window.title"), appVersion));
+        primaryStage.getScene().setNodeOrientation(language.getNodeOrientation());
+        primaryStage.centerOnScreen();
+        primaryStage.setOnCloseRequest(event -> {
             event.consume(); // prevent the stage from closing
             boolean confirmed = guiFactory.showConfirmationDialog(resources.getString("message.confirmExitingApp"));
             if(confirmed) {
-                stage.hide();
+                primaryStage.hide();
                 Log.info("The main window is closed");
                 Platform.exit();
                 System.exit(0);
             }
         });
         if (LaunchMode.current() == LaunchMode.DEVELOPMENT) {
-            stage.getScene().addEventFilter(KeyEvent.KEY_PRESSED, event -> {
+            primaryStage.getScene().addEventFilter(KeyEvent.KEY_PRESSED, event -> {
                 if(AppConstants.SCENIC_VIEW_KEY_COMBINATION.match(event)) {
-                    Log.info("Showing scenic view...");
+                    Log.info("Showing ScenicView for UI debugging...");
                     try {
-                        ScenicView.show(stage.getScene());
+                        // invoking "org.scenicview.ScenicView.show(primaryScene)" by Reflection API
+                        var scenicViewClass = Class.forName("org.scenicview.ScenicView");
+                        scenicViewClass.getMethod("show", Scene.class).invoke(null, primaryScene);
                     }
-                    catch(NoClassDefFoundError e) {
-                        Log.info("Failed to load ScenicView!", e);
+                    catch(Throwable e) {
+                        Log.error("Failed to load ScenicView!", e);
                     }
                 }
             });
         }
+        primaryStage.show();
     }
 
     @Override
     public void onLanguageChanged(GuiLanguage language) {
         resources = ResourceBundle.getBundle(resources.getBaseBundleName(), language.getLocale());
-        fxViewRepository.getPrimaryStage().setTitle("%s %s".formatted(resources.getString("window.title"), appVersion));
-        fxViewRepository.getPrimaryStage().getScene().setNodeOrientation(language.getNodeOrientation());
+        primaryStage.setTitle("%s %s".formatted(resources.getString("window.title"), appVersion));
+        primaryScene.setNodeOrientation(language.getNodeOrientation());
+
+        // notify all other controllers
+        fxControllerBaseInstances.stream()
+                                 .filter(c -> c.getClass() != this.getClass())
+                                 .filter(c -> c instanceof LanguageChangeAware)
+                                 .map(LanguageChangeAware.class::cast)
+                                 .forEach(c -> c.onLanguageChanged(language));
     }
 
-    public String getLocalizedText(String key) {
-        return resources.getString(key);
-    }
-
-    /**
-     * Switch the language of the application to a different language.
-     *
-     * @param toLanguage the language to apply to the application GUI
-     */
+    /// Switch the language of the application to a different language.
+    ///
+    /// @param toLanguage the language to apply to the application GUI
+    ///
+    /// @return <code>true</code> in case the language is changed successfully, otherwise <code>false</code>
     public boolean switchUiLanguage(GuiLanguage toLanguage) {
         var currentLanguage = guiStateManager.getCurrentGuiLanguage();
 
@@ -117,7 +119,6 @@ public class MainFxController extends FxControllerBase implements LanguageChange
 
         // hide the primary stage and show it again in case the language orientation is different
         if (currentLanguage.getNodeOrientation() != toLanguage.getNodeOrientation()) {
-            var primaryStage = fxViewRepository.getPrimaryStage();
             primaryStage.hide();
             primaryStage.show();
         }

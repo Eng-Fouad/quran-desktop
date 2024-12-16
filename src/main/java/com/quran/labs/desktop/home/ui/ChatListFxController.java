@@ -17,14 +17,12 @@ import javafx.scene.control.skin.VirtualFlow;
 import javafx.scene.layout.*;
 import javafx.util.Callback;
 import javafx.util.Duration;
-import org.controlsfx.glyphfont.FontAwesome;
 import com.quran.labs.desktop.core.enums.GuiLanguage;
 import com.quran.labs.desktop.core.fx.FxControllerBase;
 import com.quran.labs.desktop.core.fx.LanguageChangeAware;
 import com.quran.labs.desktop.core.fx.MountableFxController;
 import com.quran.labs.desktop.core.ui.GuiFactory;
 import com.quran.labs.desktop.core.ui.MainFxController;
-import com.quran.labs.desktop.core.utils.DateTimeUtils;
 import com.quran.labs.desktop.home.dto.ChatDescriptor;
 import com.quran.labs.desktop.home.dto.ChatType;
 import com.quran.labs.desktop.home.dto.MessageDeliveryStatus;
@@ -91,7 +89,6 @@ public class ChatListFxController extends FxControllerBase implements MountableF
             var chatDescriptor = entry.getKey();
             var node = entry.getValue();
             var timestampLabel = (Label) node.lookup("#lblTimestamp");
-            timestampLabel.setText(DateTimeUtils.calculateElapsedTime(chatDescriptor.lastMessageTimestamp(), mainFxController::getLocalizedText, guiStateManager.getCurrentGuiLanguage()));
         }
     }
 
@@ -150,7 +147,6 @@ public class ChatListFxController extends FxControllerBase implements MountableF
                                 timestampLabel.setMinWidth(Label.USE_PREF_SIZE); // prevent label shrinking (ellipsis)
                                 timestampLabel.setPadding(new Insets(0.0, 0.0, 0.0, 5.0));
                                 timestampLabel.getStyleClass().add("timestamp-label");
-                                timestampLabel.setText(DateTimeUtils.calculateElapsedTime(item.lastMessageTimestamp(), mainFxController::getLocalizedText, guiStateManager.getCurrentGuiLanguage()));
                                 topLinePane.getChildren().add(timestampLabel);
 
                                 var bottomLinePane = new HBox();

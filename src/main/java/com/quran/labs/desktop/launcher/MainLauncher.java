@@ -6,11 +6,9 @@ import io.quarkus.runtime.QuarkusApplication;
 import io.quarkus.runtime.annotations.QuarkusMain;
 import javafx.application.Application;
 
-/**
- * The main entry point for launching the application.
- *
- * @author Fouad Almalki
- */
+/// The main entry point for launching the application.
+///
+/// @author Fouad Almalki
 @QuarkusMain
 public class MainLauncher implements QuarkusApplication {
 

@@ -14,17 +14,13 @@ import javafx.stage.Stage;
  *
  * @author Fouad Almalki
  */
-@FxView(HttpErrorDialogFxController.VIEW_NAME)
 @Singleton
 public class HttpErrorDialogFxController extends AlertDialogFxControllerBase {
-
-    public static final String VIEW_NAME = "http-error-dialog";
 
     @FXML Label lblStatusCode;
     @FXML TextArea txtResponseBody;
 
     public void setHttpResponse(int statusCode, String body) {
-        dialogStage.getScene().setNodeOrientation(primaryStage.getScene().getNodeOrientation());
         alertDialog.getButtonTypes().setAll(new ButtonType(resources.getString("dialogs.buttons.close"),
                 ButtonBar.ButtonData.CANCEL_CLOSE));
         lblStatusCode.setText(String.valueOf(statusCode));

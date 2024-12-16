@@ -14,16 +14,12 @@ import java.io.StringWriter;
  *
  * @author Fouad Almalki
  */
-@FxView(StacktraceDialogFxController.VIEW_NAME)
 @Singleton
 public class StacktraceDialogFxController extends AlertDialogFxControllerBase {
-
-    public static final String VIEW_NAME = "stacktrace-dialog";
 
     @FXML TextArea txtStacktrace;
 
     public void setException(Throwable throwable) {
-        dialogStage.getScene().setNodeOrientation(primaryStage.getScene().getNodeOrientation());
         alertDialog.getButtonTypes().setAll(new ButtonType(resources.getString("dialogs.buttons.close"),
                 ButtonBar.ButtonData.CANCEL_CLOSE));
 

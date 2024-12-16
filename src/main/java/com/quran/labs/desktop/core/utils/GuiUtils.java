@@ -6,11 +6,9 @@ import javafx.scene.control.TextInputControl;
 
 import java.util.regex.Pattern;
 
-/**
- * Utility class for dealing with GUI components.
- *
- * @author Fouad Almalki
- */
+/// Utility class for dealing with GUI components.
+///
+/// @author Fouad Almalki
 public class GuiUtils {
 
     private static final Pattern NUMBERS_ONLY_PATTERN = Pattern.compile("\\d*");

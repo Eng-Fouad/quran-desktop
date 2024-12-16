@@ -7,7 +7,7 @@
 <Alert xmlns:fx="http://javafx.com/fxml" fx:id="alertDialog"
        fx:controller="com.quran.labs.desktop.core.ui.MessageDialogFxController">
     <dialogPane>
-        <DialogPane fx:id="dialogPane" stylesheets="@/views/main/main.css" styleClass="alert">
+        <DialogPane fx:id="dialogPane" stylesheets="@/styles/main.css" styleClass="alert">
             <expandableContent>
                 <GridPane maxWidth="Infinity">
                     <TextArea fx:id="txtDetails" maxHeight="Infinity" maxWidth="Infinity" editable="false"

@@ -1,6 +1,5 @@
 package com.quran.labs.desktop.core.ui;
 
-import io.quarkiverse.fx.views.FxView;
 import jakarta.inject.Singleton;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
@@ -14,17 +13,13 @@ import java.util.Arrays;
  *
  * @author Fouad Almalki
  */
-@FxView(MessageDialogFxController.VIEW_NAME)
 @Singleton
 public class MessageDialogFxController extends AlertDialogFxControllerBase {
-
-    public static final String VIEW_NAME = "message-dialog";
 
     @FXML TextArea txtDetails;
 
     public void setContent(Alert.AlertType alertType, String titleLabelKey, String headerText,
                            String messageText, String extraDetailsText, GuiFactory.ButtonInfo... buttons) {
-        dialogStage.getScene().setNodeOrientation(primaryStage.getScene().getNodeOrientation());
         alertDialog.setAlertType(alertType);
         alertDialog.setTitle(resources.getString(titleLabelKey));
         alertDialog.setHeaderText(headerText);

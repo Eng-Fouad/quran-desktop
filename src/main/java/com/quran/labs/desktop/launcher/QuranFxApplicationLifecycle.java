@@ -11,34 +11,35 @@ import io.quarkiverse.fx.FxPostStartupEvent;
 import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
+import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 import javafx.application.Platform;
+import javafx.fxml.FXMLLoader;
 
+import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.Locale;
+import java.util.ResourceBundle;
 import java.util.prefs.Preferences;
 
-/**
- * Manages the lifecycle events of a JavaFX application.
- *
- * @author Fouad Almalki
- */
+/// Manages the lifecycle events of a JavaFX application.
+///
+/// @author Fouad Almalki
 @ApplicationScoped
 public class QuranFxApplicationLifecycle {
 
     @Inject GuiFactory guiFactory;
     @Inject GuiStateManager guiStateManager;
+    @Inject Instance<FXMLLoader> fxmlLoader;
     @Inject MainFxController mainFxController;
 
     GuiLanguage initialLanguage;
     boolean anotherInstanceRunning;
 
-    /**
-     * Callback that is invoked when the application is started. Initializations can be performed here.
-     */
-    void onApplicationStartup(@Observes FxApplicationStartupEvent event) {
+    /// Callback that is invoked when the application is started. Initializations can be performed here.
+    void onApplicationStartup(@Observes FxApplicationStartupEvent event) throws IOException {
 
         // check the last selected language by the user, otherwise use the OS default language
         var preferences = Preferences.userNodeForPackage(AppConstants.PREF_NODE_CLASS);
@@ -64,6 +65,7 @@ public class QuranFxApplicationLifecycle {
 
         Log.infof("The language (%s) and locale (%s) will be applied",
                   initialLanguage.name(), initialLanguage.getLocale());
+        guiStateManager.setCurrentGuiLanguage(initialLanguage);
 
         // set default uncaught exception handler
         Thread.setDefaultUncaughtExceptionHandler((_, throwable) -> Platform.runLater(() ->
@@ -74,14 +76,16 @@ public class QuranFxApplicationLifecycle {
             anotherInstanceRunning = true;
         }
 
-        guiStateManager.setCurrentGuiLanguage(initialLanguage);
+        // load the main FXML
+        var loader = fxmlLoader.get();
+        loader.setResources(ResourceBundle.getBundle(MainFxController.STRINGS_RESOURCE_BUNDLE));
+        loader.setLocation(Thread.currentThread().getContextClassLoader().getResource(MainFxController.FXML));
+        loader.load();
     }
 
-    /**
-     * Callback that is invoked when the application has finished starting and that Stage instance is available for use.
-     * Views (constructed by @FxView) are also available.
-     */
-    void onPostStartup(@Observes FxPostStartupEvent event) {
+    /// Callback that is invoked when the application has finished starting and that Stage instance is available for use.
+    /// Views (constructed by @FxView) are also available.
+    void onPostStartup(@Observes FxPostStartupEvent event) throws IOException {
         if (anotherInstanceRunning) {
             Log.warn("Another instance of the application is already running!");
             guiFactory.showWarningDialog(mainFxController.getResources().getString("message.anotherInstanceRunning"));
@@ -90,16 +94,12 @@ public class QuranFxApplicationLifecycle {
             return;
         }
 
-        // initialize the primary stage and then show it
-        var primaryStage = event.getPrimaryStage();
-        mainFxController.initStage(primaryStage, initialLanguage);
-        primaryStage.show();
+        // show the primary stage
+        mainFxController.showPrimaryStage(initialLanguage);
         Log.info("The main window is shown");
     }
 
-    /**
-     * Check whether if another instance of the application is already running or not, using file locks mechanism.
-     */
+    /// Check whether if another instance of the application is already running or not, using file locks mechanism.
     private static boolean checkIfAnotherInstanceAlreadyRunning() {
         Path filePath = Path.of(System.getProperty("user.home"), "quran-desktop.lock");
         try {
