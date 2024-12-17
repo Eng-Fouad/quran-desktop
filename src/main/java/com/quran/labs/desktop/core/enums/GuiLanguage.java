@@ -1,7 +1,7 @@
 package com.quran.labs.desktop.core.enums;
 
-import javafx.geometry.NodeOrientation;
 import com.quran.labs.desktop.core.utils.AppConstants;
+import javafx.geometry.NodeOrientation;
 
 import java.util.Locale;
 

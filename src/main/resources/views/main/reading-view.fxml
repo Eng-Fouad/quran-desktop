@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import com.quran.labs.desktop.core.ui.ImageViewPane?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.BorderPane?>
+<BorderPane xmlns:fx="http://javafx.com/fxml" fx:controller="com.quran.labs.desktop.controllers.ReadingViewFxController">
+    <center>
+        <ScrollPane pannable="true" fitToWidth="true" hbarPolicy="NEVER" vbarPolicy="ALWAYS" style="-fx-background-color:transparent;">
+            <ImageViewPane>
+                <imageView>
+                    <ImageView fx:id="ivPage" preserveRatio="true">
+                        <Image url="@/page006.png"/>
+                    </ImageView>
+                </imageView>
+            </ImageViewPane>
+        </ScrollPane>
+    </center>
+</BorderPane>

@@ -3,7 +3,7 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <Alert xmlns:fx="http://javafx.com/fxml" fx:id="alertDialog" resizable="true"
-       fx:controller="com.quran.labs.desktop.core.ui.HttpErrorDialogFxController" title="%dialogs.httpError.title">
+       fx:controller="com.quran.labs.desktop.controllers.HttpErrorDialogFxController" title="%dialogs.httpError.title">
     <dialogPane>
         <DialogPane fx:id="dialogPane" stylesheets="@/styles/main.css">
             <content>

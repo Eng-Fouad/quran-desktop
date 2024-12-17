@@ -15,5 +15,5 @@ public interface LanguageChangeAware {
      * @param language the new {@link GuiLanguage} that has been selected,
      *                 representing the updated language.
      */
-    void onLanguageChanged(GuiLanguage language);
+    default void onLanguageChanged(GuiLanguage language){}
 }

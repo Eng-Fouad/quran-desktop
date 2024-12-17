@@ -1,15 +1,15 @@
 package com.quran.labs.desktop.core.ui;
 
+import com.quran.labs.desktop.controllers.MainFxController;
 import com.quran.labs.desktop.core.enums.GuiLanguage;
+import com.quran.labs.desktop.core.fx.FxControllerBase;
 import com.quran.labs.desktop.core.fx.LanguageChangeAware;
-import io.quarkiverse.fx.views.FxViewRepository;
 import jakarta.inject.Inject;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.DialogPane;
 import javafx.stage.Stage;
-import com.quran.labs.desktop.core.fx.FxControllerBase;
 
 import java.util.Optional;
 import java.util.ResourceBundle;
@@ -25,7 +25,8 @@ public abstract class AlertDialogFxControllerBase extends FxControllerBase imple
     @FXML protected Alert alertDialog;
     @FXML protected DialogPane dialogPane;
 
-    @Inject MainFxController mainFxController;
+    @Inject
+    MainFxController mainFxController;
 
     protected Stage dialogStage;
     private boolean hasBeenVisible = false;

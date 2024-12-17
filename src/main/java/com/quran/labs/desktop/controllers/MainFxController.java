@@ -1,9 +1,10 @@
-package com.quran.labs.desktop.core.ui;
+package com.quran.labs.desktop.controllers;
 
 import com.quran.labs.desktop.core.data.GuiStateManager;
 import com.quran.labs.desktop.core.enums.GuiLanguage;
 import com.quran.labs.desktop.core.fx.FxControllerBase;
 import com.quran.labs.desktop.core.fx.LanguageChangeAware;
+import com.quran.labs.desktop.core.ui.GuiFactory;
 import com.quran.labs.desktop.core.utils.AppConstants;
 import io.quarkus.logging.Log;
 import io.quarkus.runtime.LaunchMode;
@@ -33,7 +34,8 @@ public class MainFxController extends FxControllerBase implements LanguageChange
     @ConfigProperty(name = "quarkus.application.version", defaultValue = "0.0")
     String appVersion;
 
-    @Inject GuiFactory guiFactory;
+    @Inject
+    GuiFactory guiFactory;
     @Inject GuiStateManager guiStateManager;
     @Inject Instance<FxControllerBase> fxControllerBaseInstances;
 

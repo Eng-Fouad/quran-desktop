@@ -1,12 +1,9 @@
-package com.quran.labs.desktop.home.ui;
+package com.quran.labs.desktop.controllers;
 
 import com.quran.labs.desktop.core.data.GuiStateManager;
 import com.quran.labs.desktop.core.enums.GuiLanguage;
 import com.quran.labs.desktop.core.fx.FxControllerBase;
 import com.quran.labs.desktop.core.fx.LanguageChangeAware;
-import com.quran.labs.desktop.core.fx.MountableFxController;
-import com.quran.labs.desktop.core.ui.GuiFactory;
-import com.quran.labs.desktop.core.ui.MainFxController;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import javafx.collections.FXCollections;
@@ -25,11 +22,10 @@ import java.util.ResourceBundle;
  * @author Fouad Almalki
  */
 @Singleton
-public class ActionBarFxController extends FxControllerBase implements MountableFxController, LanguageChangeAware {
+public class ActionBarFxController extends FxControllerBase implements LanguageChangeAware {
 
     @Inject MainFxController mainFxController;
     @Inject GuiStateManager guiStateManager;
-    @Inject GuiFactory guiFactory;
 
     @FXML MenuButton mbLanguage;
     @FXML Button btnSearch;

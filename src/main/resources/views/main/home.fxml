@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import org.kordamp.ikonli.javafx.*?>
+<BorderPane xmlns:fx="http://javafx.com/fxml" fx:controller="com.quran.labs.desktop.controllers.HomeFxController">
+    <center>
+        <SplitPane dividerPositions="0.2">
+            <BorderPane xmlns:fx="http://javafx.com/fxml" SplitPane.resizableWithParent="false">
+                <top>
+                    <fx:include fx:id="actionBarPane" source="/views/main/action-bar.fxml"/>
+                </top>
+                <center>
+                    <VBox>
+                        <TabPane tabClosingPolicy="UNAVAILABLE" minWidth="250.0" VBox.vgrow="ALWAYS">
+                            <Tab text="%label.chaptersList">
+                                <graphic>
+                                    <FontIcon iconLiteral="ci-menu" iconSize="14"/>
+                                </graphic>
+                                <fx:include source="/views/main/suras-list.fxml"/>
+                            </Tab>
+                            <Tab text="%label.bookmarks">
+                                <graphic>
+                                    <FontIcon iconLiteral="ci-bookmark-filled" iconSize="14"/>
+                                </graphic>
+                                <fx:include source="/views/main/bookmarks-list.fxml"/>
+                            </Tab>
+                        </TabPane>
+                        <VBox>
+                            <TitledPane text="%label.recitation" alignment="CENTER" collapsible="false">
+                                <graphic>
+                                    <FontIcon iconLiteral="ci-volume-up-filled" iconSize="14"/>
+                                </graphic>
+                                <fx:include source="/views/main/recitation-panel.fxml"/>
+                            </TitledPane>
+                        </VBox>
+                    </VBox>
+                </center>
+            </BorderPane>
+            <BorderPane>
+                <top>
+                    <fx:include source="/views/main/reading-toolbar.fxml"/>
+                </top>
+                <center>
+                    <TabPane tabClosingPolicy="UNAVAILABLE" minWidth="300.0">
+                        <Tab text="%label.reading">
+                            <graphic>
+                                <FontIcon iconLiteral="ci-view-filled" iconSize="14"/>
+                            </graphic>
+                            <fx:include source="/views/main/reading-view.fxml"/>
+                        </Tab>
+                        <Tab text="%label.translations">
+                            <graphic>
+                                <FontIcon iconLiteral="ci-translate" iconSize="14"/>
+                            </graphic>
+                            <fx:include source="/views/main/translations-view.fxml"/>
+                        </Tab>
+                    </TabPane>
+                </center>
+            </BorderPane>
+        </SplitPane>
+    </center>
+</BorderPane>

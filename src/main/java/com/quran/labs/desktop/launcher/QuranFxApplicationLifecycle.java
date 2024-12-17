@@ -1,10 +1,10 @@
 package com.quran.labs.desktop.launcher;
 
+import com.quran.labs.desktop.controllers.MainFxController;
 import com.quran.labs.desktop.core.data.GuiStateManager;
 import com.quran.labs.desktop.core.enums.GuiLanguage;
 import com.quran.labs.desktop.core.errors.CoreError;
 import com.quran.labs.desktop.core.ui.GuiFactory;
-import com.quran.labs.desktop.core.ui.MainFxController;
 import com.quran.labs.desktop.core.utils.AppConstants;
 import io.quarkiverse.fx.FxApplicationStartupEvent;
 import io.quarkiverse.fx.FxPostStartupEvent;

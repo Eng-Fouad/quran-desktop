@@ -1,9 +1,11 @@
-package com.quran.labs.desktop.core.ui;
+package com.quran.labs.desktop.controllers;
 
-import io.quarkiverse.fx.views.FxView;
+import com.quran.labs.desktop.core.ui.AlertDialogFxControllerBase;
 import jakarta.inject.Singleton;
 import javafx.fxml.FXML;
-import javafx.scene.control.*;
+import javafx.scene.control.ButtonBar;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.TextArea;
 import javafx.stage.Stage;
 
 import java.io.PrintWriter;

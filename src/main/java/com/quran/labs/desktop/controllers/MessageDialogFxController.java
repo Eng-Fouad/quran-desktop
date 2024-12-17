@@ -1,5 +1,7 @@
-package com.quran.labs.desktop.core.ui;
+package com.quran.labs.desktop.controllers;
 
+import com.quran.labs.desktop.core.ui.AlertDialogFxControllerBase;
+import com.quran.labs.desktop.core.ui.GuiFactory;
 import jakarta.inject.Singleton;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;

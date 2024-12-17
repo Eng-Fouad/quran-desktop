@@ -1,5 +1,8 @@
 package com.quran.labs.desktop.core.ui;
 
+import com.quran.labs.desktop.controllers.HttpErrorDialogFxController;
+import com.quran.labs.desktop.controllers.MessageDialogFxController;
+import com.quran.labs.desktop.controllers.StacktraceDialogFxController;
 import com.quran.labs.desktop.core.errors.LabelAndCode;
 import com.quran.labs.desktop.home.dto.ChatType;
 import com.quran.labs.desktop.home.dto.MessageDeliveryStatus;
@@ -20,11 +23,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.shape.SVGPath;
-import javafx.scene.text.Font;
-import javafx.scene.text.FontWeight;
-import javafx.scene.text.Text;
-import javafx.scene.text.TextAlignment;
-import javafx.scene.text.TextBoundsType;
+import javafx.scene.text.*;
 import javafx.util.Duration;
 
 import java.io.PrintWriter;
@@ -64,9 +63,12 @@ public final class GuiFactory {
     private static final Color COLOR_MUTED_CHAT_ICON = Color.web("3C3C3C");
     private static final Color COLOR_ROUNDED_NUMBER = Color.web("2E6CED");
 
-    @Inject MessageDialogFxController alertDialogFxController;
-    @Inject HttpErrorDialogFxController httpErrorDialogFxController;
-    @Inject StacktraceDialogFxController stacktraceDialogFxController;
+    @Inject
+    MessageDialogFxController alertDialogFxController;
+    @Inject
+    HttpErrorDialogFxController httpErrorDialogFxController;
+    @Inject
+    StacktraceDialogFxController stacktraceDialogFxController;
 
     public Node generateMutedChatIcon() {
         var svgPath = new SVGPath();
