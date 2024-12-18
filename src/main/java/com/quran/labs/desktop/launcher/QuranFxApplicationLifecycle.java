@@ -97,6 +97,8 @@ public class QuranFxApplicationLifecycle {
         // show the primary stage
         mainFxController.showPrimaryStage(initialLanguage);
         Log.info("The main window is shown");
+
+        mainFxController.startPreparingDataTask();
     }
 
     /// Check whether if another instance of the application is already running or not, using file locks mechanism.

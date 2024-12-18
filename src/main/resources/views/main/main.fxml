@@ -5,6 +5,8 @@
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.Scene?>
 <?import javafx.stage.Stage?>
+<?import javafx.scene.control.ProgressIndicator?>
+<?import javafx.scene.layout.Pane?>
 <Stage fx:id="primaryStage" xmlns:fx="http://javafx.com/fxml" fx:controller="com.quran.labs.desktop.controllers.MainFxController"
        width="1024.0" minWidth="1024.0" height="728.0" minHeight="728.0">
     <fx:define>
@@ -21,8 +23,13 @@
                 <BorderPane>
                     <center>
                         <StackPane>
-                            <!-- TODO: include loadingPane -->
-                            <fx:include fx:id="homePane" source="/views/main/home.fxml"/>
+                            <ProgressIndicator fx:id="piLoading" maxHeight="25.0" maxWidth="25.0"/>
+                            <Pane fx:id="loadingPane" managed="false" visible="false">
+                                <fx:include source="/views/main/loading.fxml"/>
+                            </Pane>
+                            <Pane fx:id="homePane" managed="false" visible="false">
+                                <fx:include source="/views/main/home.fxml"/>
+                            </Pane>
                         </StackPane>
                     </center>
                 </BorderPane>

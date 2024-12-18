@@ -17,7 +17,7 @@
                                 <graphic>
                                     <FontIcon iconLiteral="ci-menu" iconSize="14"/>
                                 </graphic>
-                                <fx:include source="/views/main/suras-list.fxml"/>
+                                <fx:include source="/views/main/chapters-list.fxml"/>
                             </Tab>
                             <Tab text="%label.bookmarks">
                                 <graphic>

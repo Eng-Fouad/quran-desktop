@@ -6,15 +6,21 @@ import com.quran.labs.desktop.core.fx.FxControllerBase;
 import com.quran.labs.desktop.core.fx.LanguageChangeAware;
 import com.quran.labs.desktop.core.ui.GuiFactory;
 import com.quran.labs.desktop.core.utils.AppConstants;
+import com.quran.labs.desktop.core.utils.GuiUtils;
+import com.quran.labs.desktop.tasks.PreparingDataTask;
 import io.quarkus.logging.Log;
 import io.quarkus.runtime.LaunchMode;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
+import jakarta.ws.rs.WebApplicationException;
 import javafx.application.Platform;
+import javafx.concurrent.Worker;
 import javafx.fxml.FXML;
 import javafx.scene.Scene;
+import javafx.scene.control.ProgressIndicator;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.layout.Pane;
 import javafx.stage.Stage;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
@@ -34,16 +40,33 @@ public class MainFxController extends FxControllerBase implements LanguageChange
     @ConfigProperty(name = "quarkus.application.version", defaultValue = "0.0")
     String appVersion;
 
-    @Inject
-    GuiFactory guiFactory;
+    @Inject GuiFactory guiFactory;
     @Inject GuiStateManager guiStateManager;
     @Inject Instance<FxControllerBase> fxControllerBaseInstances;
+    @Inject Instance<PreparingDataTask> preparingDataTaskProvider;
 
     @FXML Stage primaryStage;
     @FXML Scene primaryScene;
+    @FXML ProgressIndicator piLoading;
+    @FXML Pane loadingPane;
+    @FXML Pane homePane;
 
     public Stage getPrimaryStage() {
         return primaryStage;
+    }
+
+    @Override
+    public void onLanguageChanged(GuiLanguage language) {
+        resources = ResourceBundle.getBundle(resources.getBaseBundleName(), language.getLocale());
+        primaryStage.setTitle("%s %s".formatted(resources.getString("window.title"), appVersion));
+        primaryScene.setNodeOrientation(language.getNodeOrientation());
+
+        // notify all other controllers
+        fxControllerBaseInstances.stream()
+                .filter(c -> c.getClass() != this.getClass())
+                .filter(c -> c instanceof LanguageChangeAware)
+                .map(LanguageChangeAware.class::cast)
+                .forEach(c -> c.onLanguageChanged(language));
     }
 
     /// Show the primary stage with the specified GUI language.
@@ -81,18 +104,49 @@ public class MainFxController extends FxControllerBase implements LanguageChange
         primaryStage.show();
     }
 
-    @Override
-    public void onLanguageChanged(GuiLanguage language) {
-        resources = ResourceBundle.getBundle(resources.getBaseBundleName(), language.getLocale());
-        primaryStage.setTitle("%s %s".formatted(resources.getString("window.title"), appVersion));
-        primaryScene.setNodeOrientation(language.getNodeOrientation());
+    public void startPreparingDataTask() {
+        // get a new instance of PreparingDataTask
+        var preparingDataTask = preparingDataTaskProvider.get();
 
-        // notify all other controllers
-        fxControllerBaseInstances.stream()
-                                 .filter(c -> c.getClass() != this.getClass())
-                                 .filter(c -> c instanceof LanguageChangeAware)
-                                 .map(LanguageChangeAware.class::cast)
-                                 .forEach(c -> c.onLanguageChanged(language));
+        // add listener for state changing
+        preparingDataTask.stateProperty().addListener((_, _, newState) -> {
+            if (newState == Worker.State.RUNNING) {
+                GuiUtils.hideNode(errorPane);
+                GuiUtils.hideNode(btnRegister);
+                GuiUtils.showNode(piRegistering);
+            } else {
+                GuiUtils.hideNode(piRegistering);
+                GuiUtils.showNode(btnRegister);
+                Platform.runLater(txtBarqNumber::requestFocus);
+            }
+        });
+
+        // add listener to get the task output on success
+        preparingDataTask.valueProperty().addListener((_, _, value) -> {
+            // TODO
+        });
+
+        // add listener to get the exception on failure
+        preparingDataTask.exceptionProperty().addListener((_, _, exception) -> {
+            if (exception instanceof WebApplicationException e) {
+
+                String errorMessage = resources.getString("error.registrationRefused");
+                lblErrorMessage.setText(errorMessage);
+                GuiUtils.showNode(errorPane);
+
+                int statusCode = e.getResponse().getStatus();
+                String responseBody = e.getResponse().getEntity() != null ? e.getResponse().getEntity().toString() : null;
+                btnErrorDetails.setOnAction(_ -> guiFactory.showHttpErrorDialog(statusCode, responseBody));
+            } else {
+                String errorMessage = resources.getString("error.failedToContactServer");
+                lblErrorMessage.setText(errorMessage);
+                GuiUtils.showNode(errorPane);
+                btnErrorDetails.setOnAction(_ -> guiFactory.showErrorStacktraceDialog(exception));
+            }
+        });
+
+        // start the task
+        Thread.startVirtualThread(preparingDataTask);
     }
 
     /// Switch the language of the application to a different language.

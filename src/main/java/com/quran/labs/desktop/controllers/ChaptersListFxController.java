@@ -10,14 +10,14 @@ import javafx.scene.control.ListView;
 import java.util.ResourceBundle;
 
 /**
- * FX controller for Suras list.
+ * FX controller for Chapters list.
  *
  * @author Fouad Almalki
  */
 @Singleton
-public class SurasListFxController extends FxControllerBase implements LanguageChangeAware {
+public class ChaptersListFxController extends FxControllerBase implements LanguageChangeAware {
 
-    @FXML ListView<?> lvSurasList;
+    @FXML ListView<?> lvChaptersList;
 
     @Override
     public void onLanguageChanged(GuiLanguage language) {
