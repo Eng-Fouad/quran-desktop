@@ -1,19 +1,26 @@
+.text { /* fix arabic disjoint font */
+    -fx-font-smoothing-type: gray;
+}
+
+.root-pane {
+    -fx-background-color: #F8F9FB;
+    -fx-border-color: #edeef2;
+    -fx-border-width: 1px 0 0 0;
+}
+
+.blue-progress {
+    -fx-progress-color: #133044;
+}
+
+
+
+
+/*
 #txtProgress.label .text {
     -fx-font-size: 10px;
     -fx-fill: white;
 }
 
-.progress-bar > .track {
-    -fx-background-radius: 0;
-}
-
-.progress-bar > .bar {
-    -fx-accent: #3E2F26;
-}
-
-.text { /* fix arabic disjoint font */
-    -fx-font-smoothing-type: gray;
-}
 
 .root {
     -fx-focus-color: #3E2F26;
@@ -25,11 +32,7 @@
     -fx-accent: #3E2F26;
 }
 
-.root-pane {
-    -fx-background-color: white;
-    -fx-border-color: #3E2F26;
-    -fx-border-width: 1px 0 0 0;
-}
+
 
 .white-background {
     -fx-background-color: white;
@@ -135,4 +138,4 @@
 
 .gray-background {
     -fx-background-color: #f4f4f4;
-}
+}*/

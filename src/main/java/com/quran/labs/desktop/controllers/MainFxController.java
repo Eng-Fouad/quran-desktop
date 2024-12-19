@@ -9,19 +9,16 @@ import com.quran.labs.desktop.core.utils.AppConstants;
 import com.quran.labs.desktop.core.utils.GuiUtils;
 import com.quran.labs.desktop.tasks.PreparingDataTask;
 import io.quarkus.logging.Log;
-import io.quarkus.runtime.LaunchMode;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
-import jakarta.ws.rs.WebApplicationException;
 import javafx.application.Platform;
 import javafx.concurrent.Worker;
 import javafx.fxml.FXML;
 import javafx.scene.Scene;
-import javafx.scene.control.ProgressIndicator;
-import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.Pane;
 import javafx.stage.Stage;
+import javafx.stage.WindowEvent;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import java.util.Locale;
@@ -47,9 +44,25 @@ public class MainFxController extends FxControllerBase implements LanguageChange
 
     @FXML Stage primaryStage;
     @FXML Scene primaryScene;
-    @FXML ProgressIndicator piLoading;
     @FXML Pane loadingPane;
     @FXML Pane homePane;
+
+    @Override
+    protected void initialize() {
+        GuiUtils.attachScenicViewInDevEnv(primaryScene);
+    }
+
+    @FXML
+    void onClosingStage(WindowEvent windowEvent) {
+        windowEvent.consume(); // prevent the stage from closing
+        boolean confirmed = guiFactory.showConfirmationDialog(resources.getString("message.confirmExitingApp"));
+        if(confirmed) {
+            primaryStage.hide();
+            Log.info("The main window is closed");
+            Platform.exit();
+            System.exit(0);
+        }
+    }
 
     public Stage getPrimaryStage() {
         return primaryStage;
@@ -63,10 +76,10 @@ public class MainFxController extends FxControllerBase implements LanguageChange
 
         // notify all other controllers
         fxControllerBaseInstances.stream()
-                .filter(c -> c.getClass() != this.getClass())
-                .filter(c -> c instanceof LanguageChangeAware)
-                .map(LanguageChangeAware.class::cast)
-                .forEach(c -> c.onLanguageChanged(language));
+                                 .filter(c -> c.getClass() != this.getClass())
+                                 .filter(c -> c instanceof LanguageChangeAware)
+                                 .map(LanguageChangeAware.class::cast)
+                                 .forEach(c -> c.onLanguageChanged(language));
     }
 
     /// Show the primary stage with the specified GUI language.
@@ -76,31 +89,6 @@ public class MainFxController extends FxControllerBase implements LanguageChange
         primaryStage.setTitle("%s %s".formatted(resources.getString("window.title"), appVersion));
         primaryStage.getScene().setNodeOrientation(language.getNodeOrientation());
         primaryStage.centerOnScreen();
-        primaryStage.setOnCloseRequest(event -> {
-            event.consume(); // prevent the stage from closing
-            boolean confirmed = guiFactory.showConfirmationDialog(resources.getString("message.confirmExitingApp"));
-            if(confirmed) {
-                primaryStage.hide();
-                Log.info("The main window is closed");
-                Platform.exit();
-                System.exit(0);
-            }
-        });
-        if (LaunchMode.current() == LaunchMode.DEVELOPMENT) {
-            primaryStage.getScene().addEventFilter(KeyEvent.KEY_PRESSED, event -> {
-                if(AppConstants.SCENIC_VIEW_KEY_COMBINATION.match(event)) {
-                    Log.info("Showing ScenicView for UI debugging...");
-                    try {
-                        // invoking "org.scenicview.ScenicView.show(primaryScene)" by Reflection API
-                        var scenicViewClass = Class.forName("org.scenicview.ScenicView");
-                        scenicViewClass.getMethod("show", Scene.class).invoke(null, primaryScene);
-                    }
-                    catch(Throwable e) {
-                        Log.error("Failed to load ScenicView!", e);
-                    }
-                }
-            });
-        }
         primaryStage.show();
     }
 
@@ -110,7 +98,7 @@ public class MainFxController extends FxControllerBase implements LanguageChange
 
         // add listener for state changing
         preparingDataTask.stateProperty().addListener((_, _, newState) -> {
-            if (newState == Worker.State.RUNNING) {
+            /*if (newState == Worker.State.RUNNING) {
                 GuiUtils.hideNode(errorPane);
                 GuiUtils.hideNode(btnRegister);
                 GuiUtils.showNode(piRegistering);
@@ -118,17 +106,20 @@ public class MainFxController extends FxControllerBase implements LanguageChange
                 GuiUtils.hideNode(piRegistering);
                 GuiUtils.showNode(btnRegister);
                 Platform.runLater(txtBarqNumber::requestFocus);
-            }
+            }*/
         });
 
         // add listener to get the task output on success
         preparingDataTask.valueProperty().addListener((_, _, value) -> {
-            // TODO
+            if (value.validData()) {
+                GuiUtils.hideNode(loadingPane);
+                GuiUtils.showNode(homePane);
+            }
         });
 
         // add listener to get the exception on failure
         preparingDataTask.exceptionProperty().addListener((_, _, exception) -> {
-            if (exception instanceof WebApplicationException e) {
+            /*if (exception instanceof WebApplicationException e) {
 
                 String errorMessage = resources.getString("error.registrationRefused");
                 lblErrorMessage.setText(errorMessage);
@@ -142,7 +133,7 @@ public class MainFxController extends FxControllerBase implements LanguageChange
                 lblErrorMessage.setText(errorMessage);
                 GuiUtils.showNode(errorPane);
                 btnErrorDetails.setOnAction(_ -> guiFactory.showErrorStacktraceDialog(exception));
-            }
+            }*/
         });
 
         // start the task
@@ -168,7 +159,7 @@ public class MainFxController extends FxControllerBase implements LanguageChange
 
         // save the language for later usage
         var preferences = Preferences.userNodeForPackage(AppConstants.PREF_NODE_CLASS);
-        preferences.put(AppConstants.UI_LANGUAGE_PREF_NAME, toLanguage.getLocale().getLanguage());
+        preferences.put(AppConstants.PREF_UI_LANGUAGE, toLanguage.getLocale().getLanguage());
 
         // propagate language change to all controllers
         onLanguageChanged(toLanguage);

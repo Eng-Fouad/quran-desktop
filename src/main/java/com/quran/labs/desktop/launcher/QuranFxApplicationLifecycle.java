@@ -8,6 +8,7 @@ import com.quran.labs.desktop.core.ui.GuiFactory;
 import com.quran.labs.desktop.core.utils.AppConstants;
 import io.quarkiverse.fx.FxApplicationStartupEvent;
 import io.quarkiverse.fx.FxPostStartupEvent;
+import io.quarkiverse.fx.style.StylesheetWatchService;
 import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
@@ -15,6 +16,7 @@ import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
+import javafx.stage.Stage;
 
 import java.io.IOException;
 import java.nio.channels.FileChannel;
@@ -30,6 +32,8 @@ import java.util.prefs.Preferences;
 @ApplicationScoped
 public class QuranFxApplicationLifecycle {
 
+    private static final String CSS_MAIN_FILE_PATH = "src/main/resources/styles/main.css";
+
     @Inject GuiFactory guiFactory;
     @Inject GuiStateManager guiStateManager;
     @Inject Instance<FXMLLoader> fxmlLoader;
@@ -43,7 +47,7 @@ public class QuranFxApplicationLifecycle {
 
         // check the last selected language by the user, otherwise use the OS default language
         var preferences = Preferences.userNodeForPackage(AppConstants.PREF_NODE_CLASS);
-        String userLanguage = preferences.get(AppConstants.UI_LANGUAGE_PREF_NAME, null);
+        String userLanguage = preferences.get(AppConstants.PREF_UI_LANGUAGE, null);
         boolean firstTime = false;
         if(userLanguage == null) {
             firstTime = true;
@@ -60,7 +64,7 @@ public class QuranFxApplicationLifecycle {
 
         if (firstTime) {
             // save the language for later usage
-            preferences.put(AppConstants.UI_LANGUAGE_PREF_NAME, initialLanguage.getLocale().getLanguage());
+            preferences.put(AppConstants.PREF_UI_LANGUAGE, initialLanguage.getLocale().getLanguage());
         }
 
         Log.infof("The language (%s) and locale (%s) will be applied",
@@ -80,7 +84,8 @@ public class QuranFxApplicationLifecycle {
         var loader = fxmlLoader.get();
         loader.setResources(ResourceBundle.getBundle(MainFxController.STRINGS_RESOURCE_BUNDLE));
         loader.setLocation(Thread.currentThread().getContextClassLoader().getResource(MainFxController.FXML));
-        loader.load();
+        Stage stage = loader.load();
+        StylesheetWatchService.setStyleAndStartWatchingTask(() -> stage.getScene().getStylesheets(), CSS_MAIN_FILE_PATH);
     }
 
     /// Callback that is invoked when the application has finished starting and that Stage instance is available for use.

@@ -5,6 +5,7 @@ import com.quran.labs.desktop.core.fx.FxControllerBase;
 import com.quran.labs.desktop.core.fx.LanguageChangeAware;
 import jakarta.inject.Singleton;
 import javafx.fxml.FXML;
+import javafx.scene.control.ProgressIndicator;
 import javafx.scene.layout.Pane;
 
 import java.util.ResourceBundle;
@@ -17,13 +18,7 @@ import java.util.ResourceBundle;
 @Singleton
 public class LoadingFxController extends FxControllerBase implements LanguageChangeAware {
 
-    @FXML Pane sideBarPane;
-    @FXML Pane chatViewPane;
-
-    @Override
-    protected void initialize() {
-
-    }
+    @FXML ProgressIndicator piLoading;
 
     @Override
     public void onLanguageChanged(GuiLanguage language) {

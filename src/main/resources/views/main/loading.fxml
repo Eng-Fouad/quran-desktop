@@ -1,10 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-<?import org.kordamp.ikonli.javafx.*?>
+<?import javafx.scene.control.ProgressIndicator?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.control.Label?>
 <BorderPane xmlns:fx="http://javafx.com/fxml" fx:controller="com.quran.labs.desktop.controllers.LoadingFxController">
     <center>
-
+        <HBox alignment="CENTER">
+            <VBox alignment="CENTER" spacing="10.0">
+                <ImageView>
+                    <Image url="@/images/ic_launcher.png"/>
+                </ImageView>
+                <ProgressIndicator fx:id="piLoading" maxHeight="25.0" maxWidth="25.0" styleClass="blue-progress"/>
+            </VBox>
+        </HBox>
     </center>
 </BorderPane>

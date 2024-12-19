@@ -1,8 +1,12 @@
 package com.quran.labs.desktop.core.utils;
 
+import io.quarkus.logging.Log;
+import io.quarkus.runtime.LaunchMode;
 import javafx.scene.Node;
+import javafx.scene.Scene;
 import javafx.scene.control.TextFormatter;
 import javafx.scene.control.TextInputControl;
+import javafx.scene.input.KeyEvent;
 
 import java.util.regex.Pattern;
 
@@ -51,5 +55,23 @@ public class GuiUtils {
                 return null;
             }
         }));
+    }
+
+    public static void attachScenicViewInDevEnv(Scene scene) {
+        if (LaunchMode.current() == LaunchMode.DEVELOPMENT) {
+            scene.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
+                if(AppConstants.SCENIC_VIEW_KEY_COMBINATION.match(event)) {
+                    Log.info("Showing ScenicView for UI debugging...");
+                    try {
+                        // invoking "org.scenicview.ScenicView.show(scene)" by Reflection API
+                        var scenicViewClass = Class.forName("org.scenicview.ScenicView");
+                        scenicViewClass.getMethod("show", Scene.class).invoke(null, scene);
+                    }
+                    catch(Throwable e) {
+                        Log.error("Failed to load ScenicView!", e);
+                    }
+                }
+            });
+        }
     }
 }
