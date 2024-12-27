@@ -6,7 +6,7 @@ package com.quran.labs.desktop.core.errors;
  * @author Fouad Almalki
  */
 public enum CoreError implements LabelAndCode {
-    UNCAUGHT_ERROR("BD-C0000"),
+    UNCAUGHT_ERROR("QD-C0000"),
 
     ;
 

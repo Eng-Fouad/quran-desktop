@@ -3,7 +3,7 @@ dependencyResolutionManagement {
         create("deps") {
             version("dockerPluginVersion", "9.4.0") // https://plugins.gradle.org/plugin/com.bmuschko.docker-remote-api
             version("javafxPluginVersion", "0.1.0") // https://plugins.gradle.org/plugin/org.openjfx.javafxplugin
-            version("quarkusLibVersion", "3.17.4") // https://central.sonatype.com/artifact/io.quarkus/quarkus-bom
+            version("quarkusLibVersion", "3.17.5") // https://central.sonatype.com/artifact/io.quarkus/quarkus-bom
             version("javafxLibVersion", "23.0.1") // https://central.sonatype.com/artifact/org.openjfx/javafx
             version("quarkusFxLibVersion", "0.9.0") // https://central.sonatype.com/artifact/io.quarkiverse.fx/quarkus-fx
             version("controlsFxLibVersion", "11.2.1") // https://central.sonatype.com/artifact/org.controlsfx/controlsfx

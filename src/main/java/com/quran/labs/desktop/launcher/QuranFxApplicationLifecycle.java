@@ -1,5 +1,6 @@
 package com.quran.labs.desktop.launcher;
 
+import com.quran.labs.desktop.controllers.LoadingFxController;
 import com.quran.labs.desktop.controllers.MainFxController;
 import com.quran.labs.desktop.core.data.GuiStateManager;
 import com.quran.labs.desktop.core.enums.GuiLanguage;
@@ -38,6 +39,7 @@ public class QuranFxApplicationLifecycle {
     @Inject GuiStateManager guiStateManager;
     @Inject Instance<FXMLLoader> fxmlLoader;
     @Inject MainFxController mainFxController;
+    @Inject LoadingFxController loadingFxController;
 
     GuiLanguage initialLanguage;
     boolean anotherInstanceRunning;
@@ -103,7 +105,7 @@ public class QuranFxApplicationLifecycle {
         mainFxController.showPrimaryStage(initialLanguage);
         Log.info("The main window is shown");
 
-        mainFxController.startPreparingDataTask();
+        loadingFxController.startRequiredAppFilesCheckingTask();
     }
 
     /// Check whether if another instance of the application is already running or not, using file locks mechanism.

@@ -7,13 +7,11 @@ import com.quran.labs.desktop.core.fx.LanguageChangeAware;
 import com.quran.labs.desktop.core.ui.GuiFactory;
 import com.quran.labs.desktop.core.utils.AppConstants;
 import com.quran.labs.desktop.core.utils.GuiUtils;
-import com.quran.labs.desktop.tasks.PreparingDataTask;
 import io.quarkus.logging.Log;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import javafx.application.Platform;
-import javafx.concurrent.Worker;
 import javafx.fxml.FXML;
 import javafx.scene.Scene;
 import javafx.scene.layout.Pane;
@@ -40,7 +38,6 @@ public class MainFxController extends FxControllerBase implements LanguageChange
     @Inject GuiFactory guiFactory;
     @Inject GuiStateManager guiStateManager;
     @Inject Instance<FxControllerBase> fxControllerBaseInstances;
-    @Inject Instance<PreparingDataTask> preparingDataTaskProvider;
 
     @FXML Stage primaryStage;
     @FXML Scene primaryScene;
@@ -92,54 +89,6 @@ public class MainFxController extends FxControllerBase implements LanguageChange
         primaryStage.show();
     }
 
-    public void startPreparingDataTask() {
-        // get a new instance of PreparingDataTask
-        var preparingDataTask = preparingDataTaskProvider.get();
-
-        // add listener for state changing
-        preparingDataTask.stateProperty().addListener((_, _, newState) -> {
-            /*if (newState == Worker.State.RUNNING) {
-                GuiUtils.hideNode(errorPane);
-                GuiUtils.hideNode(btnRegister);
-                GuiUtils.showNode(piRegistering);
-            } else {
-                GuiUtils.hideNode(piRegistering);
-                GuiUtils.showNode(btnRegister);
-                Platform.runLater(txtBarqNumber::requestFocus);
-            }*/
-        });
-
-        // add listener to get the task output on success
-        preparingDataTask.valueProperty().addListener((_, _, value) -> {
-            if (value.validData()) {
-                GuiUtils.hideNode(loadingPane);
-                GuiUtils.showNode(homePane);
-            }
-        });
-
-        // add listener to get the exception on failure
-        preparingDataTask.exceptionProperty().addListener((_, _, exception) -> {
-            /*if (exception instanceof WebApplicationException e) {
-
-                String errorMessage = resources.getString("error.registrationRefused");
-                lblErrorMessage.setText(errorMessage);
-                GuiUtils.showNode(errorPane);
-
-                int statusCode = e.getResponse().getStatus();
-                String responseBody = e.getResponse().getEntity() != null ? e.getResponse().getEntity().toString() : null;
-                btnErrorDetails.setOnAction(_ -> guiFactory.showHttpErrorDialog(statusCode, responseBody));
-            } else {
-                String errorMessage = resources.getString("error.failedToContactServer");
-                lblErrorMessage.setText(errorMessage);
-                GuiUtils.showNode(errorPane);
-                btnErrorDetails.setOnAction(_ -> guiFactory.showErrorStacktraceDialog(exception));
-            }*/
-        });
-
-        // start the task
-        Thread.startVirtualThread(preparingDataTask);
-    }
-
     /// Switch the language of the application to a different language.
     ///
     /// @param toLanguage the language to apply to the application GUI
@@ -161,15 +110,24 @@ public class MainFxController extends FxControllerBase implements LanguageChange
         var preferences = Preferences.userNodeForPackage(AppConstants.PREF_NODE_CLASS);
         preferences.put(AppConstants.PREF_UI_LANGUAGE, toLanguage.getLocale().getLanguage());
 
+        // hide the primary stage to show it again later in case the language orientation is different
+        if (currentLanguage.getNodeOrientation() != toLanguage.getNodeOrientation()) {
+            primaryStage.hide();
+        }
+
         // propagate language change to all controllers
         onLanguageChanged(toLanguage);
 
-        // hide the primary stage and show it again in case the language orientation is different
+        // show the primary stage again in case the language orientation is different
         if (currentLanguage.getNodeOrientation() != toLanguage.getNodeOrientation()) {
-            primaryStage.hide();
             primaryStage.show();
         }
 
         return true;
+    }
+
+    public void switchToHome() {
+        GuiUtils.hideNode(loadingPane);
+        GuiUtils.showNode(homePane);
     }
 }
