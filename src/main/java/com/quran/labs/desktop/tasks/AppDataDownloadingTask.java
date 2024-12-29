@@ -1,54 +1,46 @@
 package com.quran.labs.desktop.tasks;
 
-import com.quran.labs.desktop.core.utils.AppConstants;
-import com.quran.labs.desktop.db.AyahInfoDatabase;
-import com.quran.labs.desktop.db.QuranDatabase;
+import com.quran.labs.desktop.core.utils.FileUtils;
 import io.quarkus.arc.Unremovable;
 import io.quarkus.logging.Log;
 import jakarta.enterprise.context.Dependent;
-import jakarta.inject.Inject;
 import javafx.concurrent.Task;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Locale;
 
 @Dependent
 @Unremovable
-public class AppDataDownloadingTask extends Task<AppDataDownloadingTask.PreparingDataOutput> {
+public class AppDataDownloadingTask extends Task<Void> {
 
-    public record PreparingDataOutput(boolean validData, boolean purgeData, boolean downloadPatch, Path appRootPath) {
-        
-        public static PreparingDataOutput invalidWithPurgeData() {
-            return new PreparingDataOutput(false, true, false,
-                                           AppConstants.PATH_APP_ROOT_DIR);
-        }
+    boolean downloadPatch;
 
-        public static PreparingDataOutput invalidWithoutPurgeData() {
-            return new PreparingDataOutput(false, false, false,
-                                           AppConstants.PATH_APP_ROOT_DIR);
-        }
-        
-        public static PreparingDataOutput valid(boolean downloadPatch) {
-            return new PreparingDataOutput(true, false, downloadPatch,
-                                           AppConstants.PATH_APP_ROOT_DIR);
-        }
+    public void setDownloadPatch(boolean downloadPatch) {
+        this.downloadPatch = downloadPatch;
     }
 
     @Override
-    protected PreparingDataOutput call() {
+    protected Void call() {
         long startMs = System.currentTimeMillis();
-        boolean downloadPatch = false;
-        try {
-            // TODO: download the zip file or the patch with reporting progress to UI
-            // TODO: extract the zip file
+        // TODO: fill these
+        String downloadUrl = "";
+        var downloadFilePath = Path.of("");
+        var decompressDirPath = Path.of("");
 
-            Log.info(String.format(Locale.ENGLISH, "Preparing data succeeded (took %d ms)",
-                                   System.currentTimeMillis() - startMs));
-            return PreparingDataOutput.valid(downloadPatch);
-        } catch (Throwable t) {
-            Log.error("A failure occurs while preparing data!", t);
-            return PreparingDataOutput.invalidWithPurgeData();
-        }
+        // download the zip file or the patch with reporting progress to UI
+        FileUtils.downloadFile(downloadUrl, downloadFilePath, p -> {
+            if (p.total() != null) {
+                updateProgress(p.soFar(), p.total());
+            } else {
+                updateProgress(-1, -1);
+            }
+        });
+
+        // extract the zip file
+        FileUtils.decompressZipFile(downloadFilePath, decompressDirPath);
+
+        Log.info(String.format(Locale.ENGLISH, "AppDataDownloadingTask completed successfully (took %d ms)",
+                System.currentTimeMillis() - startMs));
+        return null;
     }
 }

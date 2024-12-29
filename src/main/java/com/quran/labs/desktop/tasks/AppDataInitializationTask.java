@@ -31,7 +31,6 @@ public class AppDataInitializationTask extends Task<Void> {
         Log.info(String.format(Locale.ENGLISH,
                 "AppDataInitializationTask completed successfully (took %d ms)",
                 System.currentTimeMillis() - startMs));
-
         return null;
     }
 }

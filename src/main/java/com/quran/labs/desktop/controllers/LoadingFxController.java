@@ -4,6 +4,7 @@ import com.quran.labs.desktop.core.enums.GuiLanguage;
 import com.quran.labs.desktop.core.fx.FxControllerBase;
 import com.quran.labs.desktop.core.fx.LanguageChangeAware;
 import com.quran.labs.desktop.core.ui.GuiFactory;
+import com.quran.labs.desktop.tasks.AppDataDownloadingTask;
 import com.quran.labs.desktop.tasks.AppDataInitializationTask;
 import com.quran.labs.desktop.tasks.RequiredAppFilesCheckingTask;
 import jakarta.enterprise.inject.Instance;
@@ -32,6 +33,7 @@ public class LoadingFxController extends FxControllerBase implements LanguageCha
     @Inject MainFxController mainFxController;
     @Inject Instance<RequiredAppFilesCheckingTask> requiredAppFilesCheckingTaskProvider;
     @Inject Instance<AppDataInitializationTask> appDataInitializationTaskProvider;
+    @Inject Instance<AppDataDownloadingTask> appDataDownloadingTaskProvider;
 
     @FXML Pane paneProgressIndicator;
     @FXML Pane paneProgressBar;
@@ -44,6 +46,8 @@ public class LoadingFxController extends FxControllerBase implements LanguageCha
     @FXML Button btnRetry;
     @FXML Button btnShowErrorDetails;
     @FXML MenuButton mbLanguage;
+
+    boolean downloadPatch;
 
     @Override
     protected void initialize() {
@@ -70,13 +74,14 @@ public class LoadingFxController extends FxControllerBase implements LanguageCha
         // add listener to get the task output on success
         requiredAppFilesCheckingTask.valueProperty().addListener((_, _, value) -> {
             if (value.validData()) {
-                if (value.downloadPatch()) {
-                    startAppDataPatchDownloadingTask();
+                downloadPatch = value.downloadPatch();
+                if (downloadPatch) {
+                    showPane(LoadingPane.DOWNLOAD_BUTTON);
                 } else {
                     startAppDataInitializationTask();
                 }
             } else {
-                startAppDataDownloadingTask();
+                showPane(LoadingPane.DOWNLOAD_BUTTON);
             }
         });
 
@@ -107,6 +112,11 @@ public class LoadingFxController extends FxControllerBase implements LanguageCha
             }
         });
 
+        // add listener for progress changing
+        appDataInitializationTask.progressProperty().addListener((_, _, newState) -> {
+            // TODO
+        });
+
         // add listener to get the exception on failure
         appDataInitializationTask.exceptionProperty().addListener((_, _, exception) -> {
             showPane(LoadingPane.ERROR);
@@ -119,14 +129,29 @@ public class LoadingFxController extends FxControllerBase implements LanguageCha
         Thread.startVirtualThread(appDataInitializationTask);
     }
 
-    private void startAppDataPatchDownloadingTask() {
-        showPane(LoadingPane.PROGRESS_BAR);
-        // TODO
-    }
-
     public void startAppDataDownloadingTask() {
         showPane(LoadingPane.PROGRESS_BAR);
-        // TODO
+
+        // get a new instance of AppDataDownloadingTask
+        var appDataDownloadingTask = appDataDownloadingTaskProvider.get();
+
+        // add listener for state changing
+        appDataDownloadingTask.stateProperty().addListener((_, _, newState) -> {
+            if (newState == Worker.State.SUCCEEDED) {
+                startAppDataInitializationTask();
+            }
+        });
+
+        // add listener to get the exception on failure
+        appDataDownloadingTask.exceptionProperty().addListener((_, _, exception) -> {
+            showPane(LoadingPane.ERROR);
+            lblError.setText(resources.getString("label.errorOnDownloadingFiles"));
+            btnRetry.setOnAction(_ -> startAppDataDownloadingTask());
+            btnShowErrorDetails.setOnAction(_ -> guiFactory.showErrorStacktraceDialog(exception));
+        });
+
+        // start the task
+        Thread.startVirtualThread(appDataDownloadingTask);
     }
 
     private enum LoadingPane {PROGRESS_INDICATOR, PROGRESS_BAR, DOWNLOAD_BUTTON, ERROR}
