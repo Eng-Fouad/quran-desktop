@@ -16,6 +16,7 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Locale;
@@ -35,10 +36,11 @@ public class FileUtils {
     public enum FileError implements LabelAndCode {
         FAILED_TO_DELETE_PATH("QD-C0010"),
         FAILED_TO_DELETE_DIRECTORY_RECURSIVELY("QD-C0011"),
-        FAILED_TO_CREATE_DIRECTORY("QD-C0012"),
-        FAILED_TO_DOWNLOAD_FILE("QD-C0013"),
-        ZIP_FILE_HAS_ZIP_SLIP("QD-C0014"),
-        FAILED_TO_DECOMPRESS_ZIP_FILE("QD-C0015"),
+        FAILED_TO_CREATE_FILE("QD-C0012"),
+        FAILED_TO_CREATE_DIRECTORY("QD-C0013"),
+        FAILED_TO_DOWNLOAD_FILE("QD-C0014"),
+        ZIP_FILE_HAS_ZIP_SLIP("QD-C0015"),
+        FAILED_TO_DECOMPRESS_ZIP_FILE("QD-C0016"),
 
         ;
 
@@ -100,12 +102,17 @@ public class FileUtils {
 
     private static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
 
-    public static void deleteDirectoryRecursively(Path dirPath) {
-        try (var pathStream = Files.walk(dirPath)) {
-            pathStream.sorted(Comparator.reverseOrder()).forEach(FileUtils::deletePath);
-        } catch (Throwable t) {
-            Log.error(String.format(Locale.ENGLISH, "Failed to delete directory recursively (%s)", dirPath), t);
-            throw new UtilityException(t, FileError.FAILED_TO_DELETE_DIRECTORY_RECURSIVELY);
+    public static void deletePathRecursively(Path path) {
+        if (!Files.exists(path)) return;
+        if (Files.isDirectory(path)) {
+            try (var pathStream = Files.walk(path)) {
+                pathStream.sorted(Comparator.reverseOrder()).forEach(FileUtils::deletePath);
+            } catch (Throwable t) {
+                Log.error(String.format(Locale.ENGLISH, "Failed to delete directory recursively (%s)", path), t);
+                throw new UtilityException(t, FileError.FAILED_TO_DELETE_DIRECTORY_RECURSIVELY);
+            }
+        } else {
+            deletePath(path);
         }
     }
 
@@ -125,12 +132,13 @@ public class FileUtils {
             Log.warn(String.format(Locale.ENGLISH, "Failed to retrieve file size from server (%s)", url), t);
         }
 
-        // make sure the directory and its parent directories are created
+        // make sure the file, the directory and its parent directories are created
         var parentDirPath = filePath.getParent();
         createDirectory(parentDirPath);
+        createEmptyFile(filePath);
 
         // start streaming file from server to local file
-        try (var targetChannel = FileChannel.open(filePath);
+        try (var targetChannel = FileChannel.open(filePath, StandardOpenOption.WRITE);
              var sourceChannel = new TrackableReadableByteChannel(
                                         Channels.newChannel(uri.toURL().openStream()), progressListener, totalBytes)) {
             targetChannel.transferFrom(sourceChannel, 0, Long.MAX_VALUE);
@@ -154,11 +162,12 @@ public class FileUtils {
                 if (zipEntry.isDirectory()) {
                     createDirectory(destSubPath);
                 } else {
-                    // make sure the directory and its parent directories are created
+                    // make sure the file, the directory and its parent directories are created
                     var parentDirPath = destDirPath.getParent();
                     createDirectory(parentDirPath);
+                    createEmptyFile(destSubPath);
 
-                    try (var targetChannel = FileChannel.open(destDirPath);
+                    try (var targetChannel = FileChannel.open(destSubPath, StandardOpenOption.WRITE);
                          var sourceChannel = Channels.newChannel(zipFile.getInputStream(zipEntry))) {
                         targetChannel.transferFrom(sourceChannel, 0, Long.MAX_VALUE);
                     }
@@ -172,12 +181,21 @@ public class FileUtils {
         }
     }
 
-    private static void deletePath(Path path) {
+    public static void deletePath(Path path) {
         try {
             Files.deleteIfExists(path);
         } catch (Throwable t) {
             Log.error(String.format(Locale.ENGLISH, "Failed to delete the path (%s)", path), t);
             throw new UtilityException(t, FileError.FAILED_TO_DELETE_PATH);
+        }
+    }
+
+    private static void createEmptyFile(Path path) {
+        try {
+            Files.createFile(path);
+        } catch (Throwable t) {
+            Log.error(String.format(Locale.ENGLISH, "Failed to create the file (%s)", path), t);
+            throw new UtilityException(t, FileError.FAILED_TO_CREATE_FILE);
         }
     }
 

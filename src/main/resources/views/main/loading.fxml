@@ -31,9 +31,9 @@
                             <Label text="%label.someFilesMustBeDownloaded"/>
                             <Button text="%button.downloadFiles" onAction="#onDownloadFilesButtonClicked"/>
                         </VBox>
-                        <HBox fx:id="paneError" spacing="5.0" alignment="TOP_CENTER" visible="false">
+                        <HBox fx:id="paneError" spacing="5.0" alignment="CENTER" visible="false">
                             <Label fx:id="lblError"/>
-                            <Button fx:id="btnRetry" text="%button.retry"/>
+                            <Button fx:id="btnRetry" text="%button.retry" onAction="#onRetryButtonClicked"/>
                             <Button fx:id="btnShowErrorDetails" text="%button.showErrorDetails"/>
                         </HBox>
                     </StackPane>

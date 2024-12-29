@@ -61,11 +61,16 @@ public class LoadingFxController extends FxControllerBase implements LanguageCha
 
     @FXML
     void onDownloadFilesButtonClicked(ActionEvent ignoredActionEvent) {
-        startAppDataDownloadingTask();
+        startAppDataDownloadingTask(downloadPatch);
+    }
+
+    @FXML
+    void onRetryButtonClicked(ActionEvent ignoredActionEvent) {
+        startAppDataDownloadingTask(false);
     }
 
     public void startRequiredAppFilesCheckingTask() {
-        lblProgressBar.setText(resources.getString("label.checkingInstalledFiles"));
+        lblProgressIndicator.setText(resources.getString("label.checkingInstalledFiles"));
         showPane(LoadingPane.PROGRESS_INDICATOR);
 
         // get a new instance of RequiredAppFilesCheckingTask
@@ -89,7 +94,6 @@ public class LoadingFxController extends FxControllerBase implements LanguageCha
         requiredAppFilesCheckingTask.exceptionProperty().addListener((_, _, exception) -> {
             showPane(LoadingPane.ERROR);
             lblError.setText(resources.getString("label.errorOnCheckingRequiredFiles"));
-            btnRetry.setOnAction(_ -> startRequiredAppFilesCheckingTask());
             btnShowErrorDetails.setOnAction(_ -> guiFactory.showErrorStacktraceDialog(exception));
         });
 
@@ -112,16 +116,10 @@ public class LoadingFxController extends FxControllerBase implements LanguageCha
             }
         });
 
-        // add listener for progress changing
-        appDataInitializationTask.progressProperty().addListener((_, _, newState) -> {
-            // TODO
-        });
-
         // add listener to get the exception on failure
         appDataInitializationTask.exceptionProperty().addListener((_, _, exception) -> {
             showPane(LoadingPane.ERROR);
             lblError.setText(resources.getString("label.errorOnInitializingAppData"));
-            btnRetry.setOnAction(_ -> startAppDataInitializationTask());
             btnShowErrorDetails.setOnAction(_ -> guiFactory.showErrorStacktraceDialog(exception));
         });
 
@@ -129,11 +127,12 @@ public class LoadingFxController extends FxControllerBase implements LanguageCha
         Thread.startVirtualThread(appDataInitializationTask);
     }
 
-    public void startAppDataDownloadingTask() {
+    public void startAppDataDownloadingTask(boolean downloadPatch) {
         showPane(LoadingPane.PROGRESS_BAR);
 
         // get a new instance of AppDataDownloadingTask
         var appDataDownloadingTask = appDataDownloadingTaskProvider.get();
+        appDataDownloadingTask.setDownloadPatch(downloadPatch);
 
         // add listener for state changing
         appDataDownloadingTask.stateProperty().addListener((_, _, newState) -> {
@@ -142,11 +141,36 @@ public class LoadingFxController extends FxControllerBase implements LanguageCha
             }
         });
 
+        // add listener for progress changing
+        appDataDownloadingTask.progressProperty().addListener((_, _, newState) -> {
+            if (newState.doubleValue() >= 0.0) {
+                double soFarMegaBytes = appDataDownloadingTask.soFarBytes() / (1024.0 * 1024.0);
+                double totalMegaBytes = appDataDownloadingTask.totalBytes() / (1024.0 * 1024.0);
+                pbLoading.setProgress(newState.doubleValue());
+                lblProgressBar.setText(resources.getString("label.downloadingProgress")
+                                    .formatted(newState.doubleValue() * 100.0, soFarMegaBytes, totalMegaBytes));
+            } else {
+                pbLoading.setProgress(-1);
+                lblProgressBar.setText(resources.getString("label.downloadingProgressUnknownTotal"));
+            }
+        });
+
+        appDataDownloadingTask.valueProperty().addListener((_, _, value) -> {
+            if (value == AppDataDownloadingTask.AppDataDownloadingPhase.DELETING_OLD_FILES) {
+                lblProgressBar.setText(resources.getString("label.deletingOldFiles"));
+            } else if (value == AppDataDownloadingTask.AppDataDownloadingPhase.DOWNLOADING_FILE) {
+                lblProgressBar.setText(resources.getString("label.downloadingProgressUnknownTotal"));
+            } else if (value == AppDataDownloadingTask.AppDataDownloadingPhase.DECOMPRESSING_FILE) {
+                lblProgressBar.setText(resources.getString("label.extractingCompressedFiles"));
+            } else if (value == AppDataDownloadingTask.AppDataDownloadingPhase.DELETING_TEMP_FILE) {
+                lblProgressBar.setText(resources.getString("label.deletingTempFiles"));
+            }
+        });
+
         // add listener to get the exception on failure
         appDataDownloadingTask.exceptionProperty().addListener((_, _, exception) -> {
             showPane(LoadingPane.ERROR);
             lblError.setText(resources.getString("label.errorOnDownloadingFiles"));
-            btnRetry.setOnAction(_ -> startAppDataDownloadingTask());
             btnShowErrorDetails.setOnAction(_ -> guiFactory.showErrorStacktraceDialog(exception));
         });
 
