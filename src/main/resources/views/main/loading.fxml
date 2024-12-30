@@ -20,7 +20,7 @@
                     </ImageView>
                     <StackPane alignment="TOP_CENTER">
                         <VBox fx:id="paneProgressIndicator" spacing="5.0" alignment="TOP_CENTER">
-                            <ProgressIndicator maxHeight="25.0" maxWidth="25.0" styleClass="blue-progress"/>
+                            <ProgressIndicator maxHeight="25.0" maxWidth="25.0"/>
                             <Label fx:id="lblProgressIndicator"/>
                         </VBox>
                         <VBox fx:id="paneProgressBar" spacing="5.0" alignment="TOP_CENTER" visible="false">

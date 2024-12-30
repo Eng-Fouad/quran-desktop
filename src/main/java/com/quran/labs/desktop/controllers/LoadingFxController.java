@@ -193,10 +193,10 @@ public class LoadingFxController extends FxControllerBase implements LanguageCha
 
     private enum LoadingPane {PROGRESS_INDICATOR, PROGRESS_BAR, DOWNLOAD_BUTTON, ERROR}
     private void showPane(LoadingPane loadingPane) {
-        paneProgressIndicator.setVisible(loadingPane == LoadingPane.PROGRESS_INDICATOR);
-        paneProgressBar.setVisible(loadingPane == LoadingPane.PROGRESS_BAR);
-        paneError.setVisible(loadingPane == LoadingPane.ERROR);
         paneDownloadButton.setVisible(loadingPane == LoadingPane.DOWNLOAD_BUTTON);
+        paneError.setVisible(loadingPane == LoadingPane.ERROR);
+        paneProgressBar.setVisible(loadingPane == LoadingPane.PROGRESS_BAR);
+        paneProgressIndicator.setVisible(loadingPane == LoadingPane.PROGRESS_INDICATOR);
         mbLanguage.setVisible(loadingPane == LoadingPane.DOWNLOAD_BUTTON || loadingPane == LoadingPane.ERROR);
     }
 }
