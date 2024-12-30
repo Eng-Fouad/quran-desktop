@@ -165,6 +165,9 @@ public class FileUtils {
                     // make sure the file, the directory and its parent directories are created
                     var parentDirPath = destDirPath.getParent();
                     createDirectory(parentDirPath);
+                    if (Files.exists(destSubPath)) {
+                        FileUtils.deletePath(destSubPath);
+                    }
                     createEmptyFile(destSubPath);
 
                     try (var targetChannel = FileChannel.open(destSubPath, StandardOpenOption.WRITE);

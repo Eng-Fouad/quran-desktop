@@ -59,6 +59,9 @@ public abstract class AlertDialogFxControllerBase extends FxControllerBase imple
             dialogStage.initOwner(primaryStage);
             hasBeenVisible = true;
         }
+        if (alertDialog.isShowing()) {
+            return Optional.empty();
+        }
         return alertDialog.showAndWait();
     }
 }

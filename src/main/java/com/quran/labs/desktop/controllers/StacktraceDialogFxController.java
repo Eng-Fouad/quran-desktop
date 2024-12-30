@@ -22,6 +22,7 @@ public class StacktraceDialogFxController extends AlertDialogFxControllerBase {
     @FXML TextArea txtStacktrace;
 
     public void setException(Throwable throwable) {
+        alertDialog.setTitle(resources.getString("dialogs.stacktrace.title"));
         alertDialog.getButtonTypes().setAll(new ButtonType(resources.getString("dialogs.buttons.close"),
                 ButtonBar.ButtonData.CANCEL_CLOSE));
 

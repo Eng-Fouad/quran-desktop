@@ -28,8 +28,8 @@
                             <Label fx:id="lblProgressBar"/>
                         </VBox>
                         <VBox fx:id="paneDownloadButton" spacing="5.0" alignment="TOP_CENTER" visible="false">
-                            <Label text="%label.someFilesMustBeDownloaded"/>
-                            <Button text="%button.downloadFiles" onAction="#onDownloadFilesButtonClicked"/>
+                            <Label fx:id="lblDownloadFiles" text="%label.someFilesMustBeDownloaded"/>
+                            <Button fx:id="btnDownloadFiles" text="%button.downloadFiles" onAction="#onDownloadFilesButtonClicked"/>
                         </VBox>
                         <HBox fx:id="paneError" spacing="5.0" alignment="CENTER" visible="false">
                             <Label fx:id="lblError"/>

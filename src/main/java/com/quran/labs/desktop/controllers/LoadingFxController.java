@@ -39,15 +39,18 @@ public class LoadingFxController extends FxControllerBase implements LanguageCha
     @FXML Pane paneProgressBar;
     @FXML Pane paneDownloadButton;
     @FXML Pane paneError;
+    @FXML Label lblDownloadFiles;
     @FXML Label lblProgressIndicator;
     @FXML Label lblProgressBar;
     @FXML Label lblError;
     @FXML ProgressBar pbLoading;
+    @FXML Button btnDownloadFiles;
     @FXML Button btnRetry;
     @FXML Button btnShowErrorDetails;
     @FXML MenuButton mbLanguage;
 
     boolean downloadPatch;
+    String errorLabelKey;
 
     @Override
     protected void initialize() {
@@ -57,6 +60,11 @@ public class LoadingFxController extends FxControllerBase implements LanguageCha
     @Override
     public void onLanguageChanged(GuiLanguage language) {
         resources = ResourceBundle.getBundle(resources.getBaseBundleName(), language.getLocale());
+        btnDownloadFiles.setText(resources.getString("button.downloadFiles"));
+        btnRetry.setText(resources.getString("button.retry"));
+        btnShowErrorDetails.setText(resources.getString("button.showErrorDetails"));
+        lblDownloadFiles.setText(resources.getString("label.someFilesMustBeDownloaded"));
+        if (errorLabelKey != null) lblError.setText(resources.getString(errorLabelKey));
     }
 
     @FXML
@@ -82,18 +90,21 @@ public class LoadingFxController extends FxControllerBase implements LanguageCha
                 downloadPatch = value.downloadPatch();
                 if (downloadPatch) {
                     showPane(LoadingPane.DOWNLOAD_BUTTON);
+                    btnDownloadFiles.requestFocus();
                 } else {
                     startAppDataInitializationTask();
                 }
             } else {
                 showPane(LoadingPane.DOWNLOAD_BUTTON);
+                btnDownloadFiles.requestFocus();
             }
         });
 
         // add listener to get the exception on failure
         requiredAppFilesCheckingTask.exceptionProperty().addListener((_, _, exception) -> {
             showPane(LoadingPane.ERROR);
-            lblError.setText(resources.getString("label.errorOnCheckingRequiredFiles"));
+            errorLabelKey = "label.errorOnCheckingRequiredFiles";
+            lblError.setText(resources.getString(errorLabelKey));
             btnShowErrorDetails.setOnAction(_ -> guiFactory.showErrorStacktraceDialog(exception));
         });
 
@@ -119,7 +130,8 @@ public class LoadingFxController extends FxControllerBase implements LanguageCha
         // add listener to get the exception on failure
         appDataInitializationTask.exceptionProperty().addListener((_, _, exception) -> {
             showPane(LoadingPane.ERROR);
-            lblError.setText(resources.getString("label.errorOnInitializingAppData"));
+            errorLabelKey = "label.errorOnInitializingAppData";
+            lblError.setText(resources.getString(errorLabelKey));
             btnShowErrorDetails.setOnAction(_ -> guiFactory.showErrorStacktraceDialog(exception));
         });
 
@@ -170,7 +182,8 @@ public class LoadingFxController extends FxControllerBase implements LanguageCha
         // add listener to get the exception on failure
         appDataDownloadingTask.exceptionProperty().addListener((_, _, exception) -> {
             showPane(LoadingPane.ERROR);
-            lblError.setText(resources.getString("label.errorOnDownloadingFiles"));
+            errorLabelKey = "label.errorOnDownloadingFiles";
+            lblError.setText(resources.getString(errorLabelKey));
             btnShowErrorDetails.setOnAction(_ -> guiFactory.showErrorStacktraceDialog(exception));
         });
 
@@ -184,5 +197,6 @@ public class LoadingFxController extends FxControllerBase implements LanguageCha
         paneProgressBar.setVisible(loadingPane == LoadingPane.PROGRESS_BAR);
         paneError.setVisible(loadingPane == LoadingPane.ERROR);
         paneDownloadButton.setVisible(loadingPane == LoadingPane.DOWNLOAD_BUTTON);
+        mbLanguage.setVisible(loadingPane == LoadingPane.DOWNLOAD_BUTTON || loadingPane == LoadingPane.ERROR);
     }
 }

@@ -21,6 +21,7 @@ public class HttpErrorDialogFxController extends AlertDialogFxControllerBase {
     @FXML TextArea txtResponseBody;
 
     public void setHttpResponse(int statusCode, String body) {
+        alertDialog.setTitle(resources.getString("dialogs.httpError.title"));
         alertDialog.getButtonTypes().setAll(new ButtonType(resources.getString("dialogs.buttons.close"),
                 ButtonBar.ButtonData.CANCEL_CLOSE));
         lblStatusCode.setText(String.valueOf(statusCode));

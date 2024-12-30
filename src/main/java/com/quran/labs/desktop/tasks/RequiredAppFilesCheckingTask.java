@@ -66,11 +66,10 @@ public class RequiredAppFilesCheckingTask extends Task<RequiredAppFilesCheckingT
                                                   .resolve(String.format(Locale.ENGLISH,
                                                            ".v%d", AppConstants.MADANI_PAGES_VERSION));
                 if (!Files.exists(versionFilePath)) {
-                    if (!Files.isRegularFile(versionFilePath)) {
-                        Log.warnf("Version file path is not a file (%s)", versionFilePath);
-                        return RequiredAppFilesCheckingOutput.invalid();
-                    }
                     downloadPatch = true;
+                } else if (!Files.isRegularFile(versionFilePath)) {
+                    Log.warnf("Version file path is not a file (%s)", versionFilePath);
+                    return RequiredAppFilesCheckingOutput.invalid();
                 }
             }
 
