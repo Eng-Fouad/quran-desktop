@@ -30,13 +30,13 @@
         </buttons>
     </SegmentedButton>
     <Separator orientation="VERTICAL"/>
-    <Label text="%label.part" labelFor="$txtPart" minWidth="-Infinity"/>
+    <Label fx:id="lblPart" text="%label.part" labelFor="$txtPart" minWidth="-Infinity"/>
     <TextField fx:id="txtPart" prefWidth="30.0" editable="false" minWidth="-Infinity"/>
     <Separator orientation="VERTICAL"/>
-    <Label text="%label.chapter" labelFor="$txtChapter" minWidth="-Infinity"/>
+    <Label fx:id="lblChapter" text="%label.chapter" labelFor="$txtChapter" minWidth="-Infinity"/>
     <TextField fx:id="txtChapter" prefWidth="70.0" editable="false" minWidth="-Infinity"/>
     <Separator orientation="VERTICAL"/>
-    <Label text="%label.page" labelFor="$txtPage" minWidth="-Infinity"/>
+    <Label fx:id="lblPage" text="%label.page" labelFor="$txtPage" minWidth="-Infinity"/>
     <TextField fx:id="txtPage" prefWidth="30.0" editable="false" minWidth="-Infinity"/>
     <Slider fx:id="sPage" min="1" max="604" blockIncrement="1.0" majorTickUnit="1.0" minorTickCount="0" snapToTicks="true" minWidth="0" HBox.hgrow="ALWAYS"/>
 </HBox>

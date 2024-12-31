@@ -6,6 +6,7 @@ import com.quran.labs.desktop.core.fx.LanguageChangeAware;
 import jakarta.inject.Singleton;
 import javafx.beans.binding.Bindings;
 import javafx.fxml.FXML;
+import javafx.scene.control.Label;
 import javafx.scene.control.Slider;
 import javafx.scene.control.TextField;
 import javafx.scene.control.ToggleButton;
@@ -28,6 +29,9 @@ public class ReadingToolbarFxController extends FxControllerBase implements Lang
     @FXML TextField txtChapter;
     @FXML TextField txtPart;
     @FXML TextField txtPage;
+    @FXML Label lblPart;
+    @FXML Label lblChapter;
+    @FXML Label lblPage;
     @FXML Slider sPage;
 
     @Override
@@ -41,5 +45,8 @@ public class ReadingToolbarFxController extends FxControllerBase implements Lang
     @Override
     public void onLanguageChanged(GuiLanguage language) {
         resources = ResourceBundle.getBundle(resources.getBaseBundleName(), language.getLocale());
+        lblPart.setText(resources.getString("label.part"));
+        lblChapter.setText(resources.getString("label.chapter"));
+        lblPage.setText(resources.getString("label.page"));
     }
 }

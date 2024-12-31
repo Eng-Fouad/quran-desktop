@@ -13,13 +13,13 @@
                 <center>
                     <VBox>
                         <TabPane tabClosingPolicy="UNAVAILABLE" minWidth="250.0" VBox.vgrow="ALWAYS">
-                            <Tab text="%label.chaptersList">
+                            <Tab fx:id="tabChapterList" text="%label.chaptersList">
                                 <graphic>
                                     <FontIcon iconLiteral="ci-menu" iconSize="14"/>
                                 </graphic>
                                 <fx:include source="/views/main/chapters-list.fxml"/>
                             </Tab>
-                            <Tab text="%label.bookmarks">
+                            <Tab fx:id="tabBookmarks" text="%label.bookmarks">
                                 <graphic>
                                     <FontIcon iconLiteral="ci-bookmark-filled" iconSize="14"/>
                                 </graphic>
@@ -27,7 +27,7 @@
                             </Tab>
                         </TabPane>
                         <VBox>
-                            <TitledPane text="%label.recitation" alignment="CENTER" collapsible="false">
+                            <TitledPane fx:id="paneRecitation" text="%label.recitation" alignment="CENTER" collapsible="false">
                                 <graphic>
                                     <FontIcon iconLiteral="ci-volume-up-filled" iconSize="14"/>
                                 </graphic>
@@ -43,13 +43,13 @@
                 </top>
                 <center>
                     <TabPane tabClosingPolicy="UNAVAILABLE" minWidth="300.0">
-                        <Tab text="%label.reading">
+                        <Tab fx:id="tabReading" text="%label.reading">
                             <graphic>
                                 <FontIcon iconLiteral="ci-view-filled" iconSize="14"/>
                             </graphic>
                             <fx:include source="/views/main/reading-view.fxml"/>
                         </Tab>
-                        <Tab text="%label.translations">
+                        <Tab fx:id="tabTranslations" text="%label.translations">
                             <graphic>
                                 <FontIcon iconLiteral="ci-translate" iconSize="14"/>
                             </graphic>
