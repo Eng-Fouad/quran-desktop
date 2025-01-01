@@ -28,6 +28,7 @@ public class AppDataInitializationTask extends Task<Void> {
 
         // TODO: prepare chapters list
 
+
         Log.info(String.format(Locale.ENGLISH,
                 "AppDataInitializationTask completed successfully (took %d ms)",
                 System.currentTimeMillis() - startMs));
