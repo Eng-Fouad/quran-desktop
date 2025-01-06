@@ -13,11 +13,17 @@
                 <center>
                     <VBox>
                         <TabPane tabClosingPolicy="UNAVAILABLE" minWidth="250.0" VBox.vgrow="ALWAYS">
-                            <Tab fx:id="tabChapterList" text="%label.chaptersList">
+                            <Tab fx:id="tabSuras" text="%label.suras">
                                 <graphic>
                                     <FontIcon iconLiteral="ci-menu" iconSize="14"/>
                                 </graphic>
-                                <fx:include source="/views/main/chapters-list.fxml"/>
+                                <fx:include source="/views/main/sura-list.fxml"/>
+                            </Tab>
+                            <Tab fx:id="tabHizbs" text="%label.hizbs">
+                                <graphic>
+                                    <FontIcon iconLiteral="ci-3rd-party-connected" iconSize="14"/>
+                                </graphic>
+                                <fx:include source="/views/main/hizb-list.fxml"/>
                             </Tab>
                             <Tab fx:id="tabBookmarks" text="%label.bookmarks">
                                 <graphic>

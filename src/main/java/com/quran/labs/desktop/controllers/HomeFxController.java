@@ -7,7 +7,6 @@ import jakarta.inject.Singleton;
 import javafx.fxml.FXML;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TitledPane;
-import javafx.scene.layout.Pane;
 
 import java.util.ResourceBundle;
 
@@ -20,7 +19,8 @@ import java.util.ResourceBundle;
 public class HomeFxController extends FxControllerBase implements LanguageChangeAware {
 
     @FXML TitledPane paneRecitation;
-    @FXML Tab tabChapterList;
+    @FXML Tab tabSuras;
+    @FXML Tab tabHizbs;
     @FXML Tab tabBookmarks;
     @FXML Tab tabReading;
     @FXML Tab tabTranslations;
@@ -29,7 +29,8 @@ public class HomeFxController extends FxControllerBase implements LanguageChange
     public void onLanguageChanged(GuiLanguage language) {
         resources = ResourceBundle.getBundle(resources.getBaseBundleName(), language.getLocale());
         paneRecitation.setText(resources.getString("label.recitation"));
-        tabChapterList.setText(resources.getString("label.chaptersList"));
+        tabSuras.setText(resources.getString("label.suras"));
+        tabHizbs.setText(resources.getString("label.hizbs"));
         tabBookmarks.setText(resources.getString("label.bookmarks"));
         tabReading.setText(resources.getString("label.reading"));
         tabTranslations.setText(resources.getString("label.translations"));
