@@ -2,7 +2,9 @@ package com.quran.labs.desktop.controllers;
 
 import com.quran.labs.desktop.core.enums.GuiLanguage;
 import com.quran.labs.desktop.core.fx.FxControllerBase;
+import com.quran.labs.desktop.core.fx.GuiVisibility;
 import com.quran.labs.desktop.core.fx.LanguageChangeAware;
+import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import javafx.fxml.FXML;
 import javafx.scene.control.Tab;
@@ -16,7 +18,16 @@ import java.util.ResourceBundle;
  * @author Fouad Almalki
  */
 @Singleton
-public class HomeFxController extends FxControllerBase implements LanguageChangeAware {
+public class HomeFxController extends FxControllerBase implements LanguageChangeAware, GuiVisibility {
+
+    @Inject ActionBarFxController actionBarFxController;
+    @Inject BookmarksListFxController bookmarksListFxController;
+    @Inject HizbListFxController hizbListFxController;
+    @Inject ReadingToolbarFxController readingToolbarFxController;
+    @Inject ReadingViewFxController readingViewFxController;
+    @Inject RecitationPanelFxController recitationPanelFxController;
+    @Inject SuraListFxController suraListFxController;
+    @Inject TranslationsViewFxController translationsViewFxController;
 
     @FXML TitledPane paneRecitation;
     @FXML Tab tabSuras;
@@ -34,5 +45,17 @@ public class HomeFxController extends FxControllerBase implements LanguageChange
         tabBookmarks.setText(resources.getString("label.bookmarks"));
         tabReading.setText(resources.getString("label.reading"));
         tabTranslations.setText(resources.getString("label.translations"));
+    }
+
+    @Override
+    public void onShowing() {
+        actionBarFxController.onShowing();
+        bookmarksListFxController.onShowing();
+        hizbListFxController.onShowing();
+        readingToolbarFxController.onShowing();
+        readingViewFxController.onShowing();
+        recitationPanelFxController.onShowing();
+        suraListFxController.onShowing();
+        translationsViewFxController.onShowing();
     }
 }

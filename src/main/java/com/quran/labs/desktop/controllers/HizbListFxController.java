@@ -2,6 +2,7 @@ package com.quran.labs.desktop.controllers;
 
 import com.quran.labs.desktop.core.enums.GuiLanguage;
 import com.quran.labs.desktop.core.fx.FxControllerBase;
+import com.quran.labs.desktop.core.fx.GuiVisibility;
 import com.quran.labs.desktop.core.fx.LanguageChangeAware;
 import jakarta.inject.Singleton;
 import javafx.fxml.FXML;
@@ -15,7 +16,7 @@ import java.util.ResourceBundle;
  * @author Fouad Almalki
  */
 @Singleton
-public class HizbListFxController extends FxControllerBase implements LanguageChangeAware {
+public class HizbListFxController extends FxControllerBase implements LanguageChangeAware, GuiVisibility {
 
     @FXML ListView<?> lvHizbList;
 

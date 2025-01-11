@@ -37,6 +37,7 @@ public class MainFxController extends FxControllerBase implements LanguageChange
 
     @Inject GuiFactory guiFactory;
     @Inject GuiStateManager guiStateManager;
+    @Inject HomeFxController homeFxController;
     @Inject Instance<FxControllerBase> fxControllerBaseInstances;
 
     @FXML Stage primaryStage;
@@ -129,5 +130,6 @@ public class MainFxController extends FxControllerBase implements LanguageChange
     public void switchToHome() {
         GuiUtils.hideNode(loadingPane);
         GuiUtils.showNode(homePane);
+        homeFxController.onShowing();
     }
 }

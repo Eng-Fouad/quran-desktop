@@ -2,6 +2,7 @@ package com.quran.labs.desktop.controllers;
 
 import com.quran.labs.desktop.core.enums.GuiLanguage;
 import com.quran.labs.desktop.core.fx.FxControllerBase;
+import com.quran.labs.desktop.core.fx.GuiVisibility;
 import com.quran.labs.desktop.core.fx.LanguageChangeAware;
 import com.quran.labs.desktop.core.ui.GuiFactory;
 import jakarta.inject.Inject;
@@ -18,7 +19,7 @@ import java.util.ResourceBundle;
  * @author Fouad Almalki
  */
 @Singleton
-public class ActionBarFxController extends FxControllerBase implements LanguageChangeAware {
+public class ActionBarFxController extends FxControllerBase implements LanguageChangeAware, GuiVisibility {
 
     @Inject GuiFactory guiFactory;
 

@@ -2,6 +2,7 @@ package com.quran.labs.desktop.controllers;
 
 import com.quran.labs.desktop.core.enums.GuiLanguage;
 import com.quran.labs.desktop.core.fx.FxControllerBase;
+import com.quran.labs.desktop.core.fx.GuiVisibility;
 import com.quran.labs.desktop.core.fx.LanguageChangeAware;
 import jakarta.inject.Singleton;
 
@@ -13,7 +14,7 @@ import java.util.ResourceBundle;
  * @author Fouad Almalki
  */
 @Singleton
-public class TranslationsViewFxController extends FxControllerBase implements LanguageChangeAware {
+public class TranslationsViewFxController extends FxControllerBase implements LanguageChangeAware, GuiVisibility {
 
     @Override
     public void onLanguageChanged(GuiLanguage language) {

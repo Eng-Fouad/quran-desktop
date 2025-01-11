@@ -2,6 +2,7 @@ package com.quran.labs.desktop.controllers;
 
 import com.quran.labs.desktop.core.enums.GuiLanguage;
 import com.quran.labs.desktop.core.fx.FxControllerBase;
+import com.quran.labs.desktop.core.fx.GuiVisibility;
 import com.quran.labs.desktop.core.fx.LanguageChangeAware;
 import jakarta.inject.Singleton;
 import javafx.beans.binding.Bindings;
@@ -20,7 +21,7 @@ import java.util.ResourceBundle;
  * @author Fouad Almalki
  */
 @Singleton
-public class ReadingToolbarFxController extends FxControllerBase implements LanguageChangeAware {
+public class ReadingToolbarFxController extends FxControllerBase implements LanguageChangeAware, GuiVisibility {
 
     @FXML SegmentedButton sbReadingLayout;
     @FXML ToggleButton tbZoomedSinglePage;
