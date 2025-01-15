@@ -33,9 +33,9 @@
                             </Tab>
                         </TabPane>
                         <VBox>
-                            <TitledPane fx:id="paneRecitation" text="%label.recitation" alignment="CENTER" collapsible="false">
+                            <TitledPane fx:id="paneRecitation" text="%label.recitation" alignment="CENTER" animated="false">
                                 <graphic>
-                                    <FontIcon iconLiteral="ci-volume-up-filled" iconSize="14"/>
+                                    <FontIcon iconLiteral="ci-volume-mute-filled" iconSize="14"/>
                                 </graphic>
                                 <fx:include source="/views/main/recitation-panel.fxml"/>
                             </TitledPane>

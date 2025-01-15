@@ -28,3 +28,12 @@
 .progress-indicator {
     -fx-progress-color: steelblue;
 }
+
+/*
+.list-cell {
+    -fx-background-color: white;
+}
+
+.list-cell:header {
+    -fx-background-color: #dddddd;
+}*/

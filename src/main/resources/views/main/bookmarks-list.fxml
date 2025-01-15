@@ -2,4 +2,4 @@
 
 <?import javafx.scene.control.ListView?>
 <ListView xmlns:fx="http://javafx.com/fxml" fx:controller="com.quran.labs.desktop.controllers.BookmarksListFxController"
-          fx:id="lvBookmarksList" fixedCellSize="64.0"/>
+          fx:id="lvBookmarksList"/>
