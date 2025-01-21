@@ -39,7 +39,7 @@ public class QuranDataProvider {
             int startingPageForJuz = quranInfo().getStartingPageForJuz(juz);
             suraNavRows.add(SuraNavRow.ofJuz(juz, startingPageForJuz));
 
-            next = juz == QuranConstants.JUZ_COUNT ? quranInfo().numberOfPages() :
+            next = juz == QuranConstants.JUZ_COUNT ? quranInfo().numberOfPages() + 1 :
                                                      quranInfo().getStartingPageForJuz(juz + 1);
 
             // add sura rows

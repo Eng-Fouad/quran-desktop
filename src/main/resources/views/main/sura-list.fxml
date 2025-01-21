@@ -2,4 +2,4 @@
 
 <?import javafx.scene.control.ListView?>
 <ListView xmlns:fx="http://javafx.com/fxml" fx:controller="com.quran.labs.desktop.controllers.SuraListFxController"
-          fx:id="lvSuraList" styleClass="sura-title-list"/>
+          fx:id="lvSuraList"/>

@@ -41,12 +41,14 @@ public class SuraListFxController extends FxControllerBase implements LanguageCh
     private static final PseudoClass HEADER_PSEUDO_CLASS = PseudoClass.getPseudoClass("header");
 
     @Inject QuranDataProvider quranDataProvider;
+    @Inject ReadingViewFxController readingViewFxController;
 
     @FXML ListView<SuraNavRow> lvSuraList;
 
     @Override
     public void onLanguageChanged(GuiLanguage language) {
         resources = ResourceBundle.getBundle(resources.getBaseBundleName(), language.getLocale());
+        lvSuraList.getItems().setAll(FXCollections.observableList(quranDataProvider.suraNavRows()));
     }
 
     @Override
@@ -67,10 +69,17 @@ public class SuraListFxController extends FxControllerBase implements LanguageCh
                 }
             }
         });
-        lvSuraList.getItems().addAll(FXCollections.observableList(quranDataProvider.suraNavRows()));
+        lvSuraList.getItems().setAll(FXCollections.observableList(quranDataProvider.suraNavRows()));
 
         // workaround to fix a bug of sync issues between the listview and its scrollbar
         Platform.runLater(() -> lvSuraList.requestFocus());
+
+        lvSuraList.getSelectionModel().selectedItemProperty().addListener((_, oldValue, newValue) -> {
+            if (newValue != null && (oldValue == null || oldValue.page() != newValue.page())) {
+                readingViewFxController.setPage(newValue.page());
+            }
+        });
+        lvSuraList.getSelectionModel().select(1);
     }
 
     private record RowControl(Node rowNode, BiConsumer<ListCell<SuraNavRow>, SuraNavRow> rowDataApplier){}

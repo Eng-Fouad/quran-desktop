@@ -29,34 +29,42 @@
     -fx-progress-color: steelblue;
 }
 
-/*
-.list-cell {
-    -fx-background-color: white;
-}
-
-.list-cell:header {
-    -fx-background-color: #dddddd;
-}*/
-
-.sura-title-list .scroll-bar:horizontal .increment-arrow,
-.sura-title-list .scroll-bar:horizontal .decrement-arrow,
-.sura-title-list .scroll-bar:horizontal .increment-button,
-.sura-title-list .scroll-bar:horizontal .decrement-button {
-    -fx-padding:0;
-}
-
-.sura-title-list, .sura-title-list .list-cell {
+.list-view, .list-view .list-cell {
     -fx-background-color: #f0f0f0;
 }
 
-.sura-title-list .list-cell:hover:filled {
+.list-view .list-cell:hover:filled {
     -fx-background-color: #e9e9e9;
 }
 
-.sura-title-list .list-cell:hover:selected {
-    -fx-background-color: #dedede;
+.list-view .list-cell:hover:selected {
+    -fx-background-color: #86b2da;
 }
 
-.sura-title-list .list-cell:selected {
-    -fx-background-color: #dedede;
+.list-view .list-cell:selected {
+    -fx-background-color: #8dbbe4;
+}
+
+.list-view, .list-view .list-cell:header {
+    -fx-background-color: #d3d3d3;
+}
+
+.list-view .list-cell:hover:filled:header {
+    -fx-background-color: #c8c8c8;
+}
+
+.list-view .list-cell:hover:selected:header {
+    -fx-background-color: #86b2da;
+}
+
+.list-view .list-cell:selected:header {
+    -fx-background-color: #8dbbe4;
+}
+
+.list-view .list-cell .text {
+    -fx-fill: black;
+}
+
+.list-view .list-cell:selected .text {
+    -fx-fill: white;
 }

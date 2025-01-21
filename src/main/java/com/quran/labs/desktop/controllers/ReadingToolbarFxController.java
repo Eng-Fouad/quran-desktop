@@ -4,6 +4,7 @@ import com.quran.labs.desktop.core.enums.GuiLanguage;
 import com.quran.labs.desktop.core.fx.FxControllerBase;
 import com.quran.labs.desktop.core.fx.GuiVisibility;
 import com.quran.labs.desktop.core.fx.LanguageChangeAware;
+import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import javafx.beans.binding.Bindings;
 import javafx.fxml.FXML;
@@ -23,10 +24,12 @@ import java.util.ResourceBundle;
 @Singleton
 public class ReadingToolbarFxController extends FxControllerBase implements LanguageChangeAware, GuiVisibility {
 
+    @Inject ReadingViewFxController readingViewFxController;
+
     @FXML SegmentedButton sbReadingLayout;
     @FXML ToggleButton tbZoomedSinglePage;
-    @FXML ToggleButton tbFullOnePage;
-    @FXML ToggleButton tbFullTwoPages;
+    @FXML ToggleButton tbFullSinglePage;
+    @FXML ToggleButton tbFullDoublePage;
     @FXML TextField txtChapter;
     @FXML TextField txtPart;
     @FXML TextField txtPage;
@@ -40,6 +43,24 @@ public class ReadingToolbarFxController extends FxControllerBase implements Lang
         txtPage.textProperty().bind(Bindings.format("%.0f", sPage.valueProperty()));
         sbReadingLayout.getToggleGroup().selectedToggleProperty().addListener((_, oldVal, newVal) -> {
             if (newVal == null) oldVal.setSelected(true);
+        });
+        sPage.valueProperty().addListener((_, oldVal, newVal) -> {
+            readingViewFxController.setPage(newVal.intValue());
+        });
+        tbZoomedSinglePage.selectedProperty().addListener((_, _, newVal) -> {
+           if (newVal) {
+               readingViewFxController.setPageLayout(ReadingViewFxController.PageLayout.ZOOMED_SINGLE_PAGE);
+           }
+        });
+        tbFullSinglePage.selectedProperty().addListener((_, _, newVal) -> {
+            if (newVal) {
+                readingViewFxController.setPageLayout(ReadingViewFxController.PageLayout.FULL_SINGLE_PAGE);
+            }
+        });
+        tbFullDoublePage.selectedProperty().addListener((_, _, newVal) -> {
+            if (newVal) {
+                readingViewFxController.setPageLayout(ReadingViewFxController.PageLayout.FULL_DOUBLE_PAGE);
+            }
         });
     }
 

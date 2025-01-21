@@ -17,12 +17,12 @@
                     <FontIcon iconLiteral="ci-zoom-in" iconSize="14"/>
                 </graphic>
             </ToggleButton>
-            <ToggleButton fx:id="tbFullOnePage">
+            <ToggleButton fx:id="tbFullSinglePage" selected="true">
                 <graphic>
                     <FontIcon iconLiteral="ci-notebook" iconSize="14"/>
                 </graphic>
             </ToggleButton>
-            <ToggleButton fx:id="tbFullTwoPages">
+            <ToggleButton fx:id="tbFullDoublePage">
                 <graphic>
                     <FontIcon iconLiteral="ci-book" iconSize="14"/>
                 </graphic>

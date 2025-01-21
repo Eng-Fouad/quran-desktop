@@ -2,19 +2,40 @@
 
 <?import com.quran.labs.desktop.core.ui.ImageViewPane?>
 <?import javafx.scene.control.ScrollPane?>
-<?import javafx.scene.image.Image?>
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.HBox?>
 <BorderPane xmlns:fx="http://javafx.com/fxml" fx:controller="com.quran.labs.desktop.controllers.ReadingViewFxController">
     <center>
-        <ScrollPane pannable="true" fitToWidth="true" hbarPolicy="NEVER" vbarPolicy="ALWAYS" style="-fx-background-color:transparent;">
-            <ImageViewPane>
-                <imageView>
-                    <ImageView fx:id="ivPage" preserveRatio="true">
-                        <Image url="@/page006.png"/>
-                    </ImageView>
-                </imageView>
-            </ImageViewPane>
-        </ScrollPane>
+        <StackPane>
+            <ScrollPane fx:id="panZoomedSinglePage" pannable="true" fitToWidth="true" hbarPolicy="NEVER" vbarPolicy="ALWAYS" managed="false" visible="false">
+                <ImageViewPane fitWidth="true">
+                    <imageView>
+                        <ImageView fx:id="ivZoomedSinglePage" preserveRatio="true"/>
+                    </imageView>
+                </ImageViewPane>
+            </ScrollPane>
+            <HBox fx:id="panFullSinglePage" alignment="CENTER">
+                <ImageViewPane fitHeight="true">
+                    <imageView>
+                        <ImageView fx:id="ivFullSinglePage" preserveRatio="true"/>
+                    </imageView>
+                </ImageViewPane>
+            </HBox>
+            <HBox fx:id="panFullDoublePage" alignment="CENTER" nodeOrientation="LEFT_TO_RIGHT" managed="false" visible="false">
+                <ImageViewPane fitHeight="true">
+                    <imageView>
+                        <ImageView fx:id="ivFullDoubleLeftPage" preserveRatio="true"/>
+                    </imageView>
+                </ImageViewPane>
+                <ImageViewPane fitHeight="true">
+                    <imageView>
+                        <ImageView fx:id="ivFullDoubleRightPage" preserveRatio="true"/>
+                    </imageView>
+                </ImageViewPane>
+            </HBox>
+        </StackPane>
     </center>
 </BorderPane>
