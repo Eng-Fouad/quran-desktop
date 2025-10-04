@@ -29,7 +29,7 @@ import java.util.prefs.Preferences;
 @Singleton
 public class MainFxController extends FxControllerBase implements LanguageChangeAware {
 
-    public static final String STRINGS_RESOURCE_BUNDLE = "/i18n/strings";
+    public static final String STRINGS_RESOURCE_BUNDLE = "i18n.strings";
     public static final String FXML = "/views/main/main.fxml";
 
     @ConfigProperty(name = "quarkus.application.version", defaultValue = "0.0")

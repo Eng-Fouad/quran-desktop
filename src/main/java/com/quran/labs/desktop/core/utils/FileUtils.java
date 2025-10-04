@@ -100,8 +100,6 @@ public class FileUtils {
         }
     }
 
-    private static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
-
     public static void deletePathRecursively(Path path) {
         if (!Files.exists(path)) return;
         if (Files.isDirectory(path)) {
@@ -122,8 +120,11 @@ public class FileUtils {
 
         // get total size from server
         try {
-            HttpResponse<Void> httpResponse = HTTP_CLIENT.send(HttpRequest.newBuilder().uri(uri).HEAD().build(),
-                                                               HttpResponse.BodyHandlers.discarding());
+            HttpResponse<Void> httpResponse;
+            try (var httpClient = HttpClient.newHttpClient()) {
+                httpResponse = httpClient.send(HttpRequest.newBuilder().uri(uri).HEAD().build(),
+                                               HttpResponse.BodyHandlers.discarding());
+            }
             long contentLength = httpResponse.headers().firstValueAsLong(HttpHeaders.CONTENT_LENGTH).orElse(-1L);
             if (contentLength > 0) {
                 totalBytes = Math.toIntExact(contentLength);

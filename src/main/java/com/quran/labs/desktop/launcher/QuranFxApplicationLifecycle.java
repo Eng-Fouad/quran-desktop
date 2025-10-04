@@ -11,6 +11,7 @@ import io.quarkiverse.fx.FxApplicationStartupEvent;
 import io.quarkiverse.fx.FxPostStartupEvent;
 import io.quarkiverse.fx.style.StylesheetWatchService;
 import io.quarkus.logging.Log;
+import io.quarkus.runtime.LaunchMode;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
 import jakarta.enterprise.inject.Instance;
@@ -85,9 +86,12 @@ public class QuranFxApplicationLifecycle {
         // load the main FXML
         var loader = fxmlLoader.get();
         loader.setResources(ResourceBundle.getBundle(MainFxController.STRINGS_RESOURCE_BUNDLE));
-        loader.setLocation(Thread.currentThread().getContextClassLoader().getResource(MainFxController.FXML));
+        loader.setLocation(QuranFxApplicationLifecycle.class.getResource(MainFxController.FXML));
         Stage stage = loader.load();
-        StylesheetWatchService.setStyleAndStartWatchingTask(() -> stage.getScene().getStylesheets(), CSS_MAIN_FILE_PATH);
+
+        if (LaunchMode.current().isDev()) {
+            StylesheetWatchService.setStyleAndStartWatchingTask(() -> stage.getScene().getStylesheets(), CSS_MAIN_FILE_PATH);
+        }
     }
 
     /// Callback that is invoked when the application has finished starting and that Stage instance is available for use.

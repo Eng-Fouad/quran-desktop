@@ -21,6 +21,7 @@ dependencies {
     implementation(deps.libs.quarkus.rest.client)
     implementation(deps.libs.quarkus.arc)
     implementation(deps.libs.quarkus.agroal)
+    implementation(deps.libs.quarkus.container.image.docker)
     implementation(deps.libs.quarkusFx)
     implementation(deps.libs.controlsFx)
     implementation(deps.libs.ikonli)
@@ -28,7 +29,7 @@ dependencies {
     implementation(deps.libs.jdbi.sqlobject)
     implementation(deps.libs.sqlite.jdbc)
     implementation(deps.libs.jackson)
-    compileOnly(deps.libs.osgi.annotation)
+    implementation("org.osgi:org.osgi.framework:1.10.0")
     compileOnly(files("libs/scenicview.jar"))
     quarkusDev(files("libs/scenicview.jar"))
 }
@@ -49,7 +50,7 @@ tasks.compileTestJava {
 
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(23))
+        languageVersion.set(JavaLanguageVersion.of(25))
     }
 }
 
@@ -62,7 +63,7 @@ tasks.test {
     useJUnitPlatform()
 }
 
-configurations.matching { it.name.contains("downloadSources") }
+configurations.matching { it.name.contains("download", true) }
     .configureEach {
         attributes {
             val os = org.gradle.nativeplatform.platform.internal.DefaultNativePlatform.getCurrentOperatingSystem().toFamilyName()
@@ -97,4 +98,19 @@ tasks.quarkusDev {
     workingDirectory.set(project.projectDir)
     environmentVariables.putAll(devEnvironmentVariables)
     devSystemProperties.forEach { jvmArguments.add("-D${it.key}=${it.value}") }
+}
+
+quarkus {
+    //set("package.jar.enabled", "true")
+    //set("native.enabled", "false")
+
+    set("package.jar.enabled", "false")
+    set("native.enabled", "true")
+
+    //set("package.jar.enabled", "false")
+    //set("native.enabled", "true")
+    //set("native.container-build", "true")
+    //set("native.container-runtime", "docker")
+    //set("native.builder-image", deps.versions.quarkusGraalvmceBuilderImage.get())
+    //set("container-image.build", "true")
 }
