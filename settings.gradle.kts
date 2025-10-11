@@ -5,7 +5,7 @@ dependencyResolutionManagement {
             version("javafxPluginVersion", "0.1.0") // https://plugins.gradle.org/plugin/org.openjfx.javafxplugin
             version("quarkusLibVersion", "3.28.2") // https://central.sonatype.com/artifact/io.quarkus/quarkus-bom
             version("javafxLibVersion", "25") // https://central.sonatype.com/artifact/org.openjfx/javafx
-            version("quarkusFxLibVersion", "0.9.1") // https://central.sonatype.com/artifact/io.quarkiverse.fx/quarkus-fx
+            version("quarkusFxLibVersion", "999-SNAPSHOT") // https://central.sonatype.com/artifact/io.quarkiverse.fx/quarkus-fx
             version("controlsFxLibVersion", "11.2.2") // https://central.sonatype.com/artifact/org.controlsfx/controlsfx
             version("ikonliLibVersion", "12.4.0") // https://central.sonatype.com/artifact/org.kordamp.ikonli/ikonli-javafx
             version("jdbiLibVersion", "3.49.6") // https://central.sonatype.com/artifact/org.jdbi/jdbi3-bom

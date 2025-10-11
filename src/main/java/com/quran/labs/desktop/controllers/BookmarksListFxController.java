@@ -4,6 +4,7 @@ import com.quran.labs.desktop.core.enums.GuiLanguage;
 import com.quran.labs.desktop.core.fx.FxControllerBase;
 import com.quran.labs.desktop.core.fx.GuiVisibility;
 import com.quran.labs.desktop.core.fx.LanguageChangeAware;
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import jakarta.inject.Singleton;
 import javafx.fxml.FXML;
 import javafx.scene.control.ListView;
@@ -16,6 +17,7 @@ import java.util.ResourceBundle;
  * @author Fouad Almalki
  */
 @Singleton
+@RegisterForReflection
 public class BookmarksListFxController extends FxControllerBase implements LanguageChangeAware, GuiVisibility {
 
     @FXML ListView<?> lvBookmarksList;

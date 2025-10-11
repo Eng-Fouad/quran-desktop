@@ -7,6 +7,8 @@ import com.quran.labs.desktop.core.ui.GuiFactory;
 import com.quran.labs.desktop.tasks.AppDataDownloadingTask;
 import com.quran.labs.desktop.tasks.AppDataInitializationTask;
 import com.quran.labs.desktop.tasks.RequiredAppFilesCheckingTask;
+import io.quarkus.logging.Log;
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
@@ -27,6 +29,7 @@ import java.util.ResourceBundle;
  * @author Fouad Almalki
  */
 @Singleton
+@RegisterForReflection
 public class LoadingFxController extends FxControllerBase implements LanguageChangeAware {
 
     @Inject GuiFactory guiFactory;
@@ -133,6 +136,7 @@ public class LoadingFxController extends FxControllerBase implements LanguageCha
             errorLabelKey = "label.errorOnInitializingAppData";
             lblError.setText(resources.getString(errorLabelKey));
             btnShowErrorDetails.setOnAction(_ -> guiFactory.showErrorStacktraceDialog(exception));
+            Log.errorf(exception, "error on initializing app data");
         });
 
         // start the task

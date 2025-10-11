@@ -7,6 +7,7 @@ import com.quran.labs.desktop.core.fx.LanguageChangeAware;
 import com.quran.labs.desktop.core.utils.GuiUtils;
 import com.quran.labs.desktop.data.QuranDataProvider;
 import com.quran.labs.desktop.data.model.SuraNavRow;
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import javafx.application.Platform;
@@ -36,6 +37,7 @@ import java.util.function.Consumer;
  * @author Fouad Almalki
  */
 @Singleton
+@RegisterForReflection
 public class SuraListFxController extends FxControllerBase implements LanguageChangeAware, GuiVisibility {
 
     private static final PseudoClass HEADER_PSEUDO_CLASS = PseudoClass.getPseudoClass("header");

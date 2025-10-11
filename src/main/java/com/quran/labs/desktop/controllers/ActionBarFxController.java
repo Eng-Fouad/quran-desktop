@@ -5,6 +5,7 @@ import com.quran.labs.desktop.core.fx.FxControllerBase;
 import com.quran.labs.desktop.core.fx.GuiVisibility;
 import com.quran.labs.desktop.core.fx.LanguageChangeAware;
 import com.quran.labs.desktop.core.ui.GuiFactory;
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import javafx.fxml.FXML;
@@ -19,6 +20,7 @@ import java.util.ResourceBundle;
  * @author Fouad Almalki
  */
 @Singleton
+@RegisterForReflection
 public class ActionBarFxController extends FxControllerBase implements LanguageChangeAware, GuiVisibility {
 
     @Inject GuiFactory guiFactory;

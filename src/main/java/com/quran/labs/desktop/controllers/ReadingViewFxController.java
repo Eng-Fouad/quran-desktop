@@ -6,6 +6,7 @@ import com.quran.labs.desktop.core.fx.GuiVisibility;
 import com.quran.labs.desktop.core.fx.LanguageChangeAware;
 import com.quran.labs.desktop.core.utils.AppConstants;
 import com.quran.labs.desktop.core.utils.GuiUtils;
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import jakarta.inject.Singleton;
 import javafx.fxml.FXML;
 import javafx.scene.control.ScrollPane;
@@ -22,6 +23,7 @@ import java.util.ResourceBundle;
  * @author Fouad Almalki
  */
 @Singleton
+@RegisterForReflection
 public class ReadingViewFxController extends FxControllerBase implements LanguageChangeAware, GuiVisibility {
 
     @FXML ScrollPane panZoomedSinglePage;

@@ -1,5 +1,6 @@
 package com.quran.labs.desktop.core.fx;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import javafx.fxml.FXML;
 
 import java.net.URL;
@@ -8,6 +9,7 @@ import java.util.ResourceBundle;
 /// A base class for all JavaFX controllers.
 ///
 /// @author Fouad Almalki
+@RegisterForReflection
 public class FxControllerBase {
 
     /// Location of the FXML file.

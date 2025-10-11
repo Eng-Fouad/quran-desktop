@@ -4,6 +4,7 @@ import com.quran.labs.desktop.controllers.MainFxController;
 import com.quran.labs.desktop.core.enums.GuiLanguage;
 import com.quran.labs.desktop.core.fx.FxControllerBase;
 import com.quran.labs.desktop.core.fx.LanguageChangeAware;
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import jakarta.inject.Inject;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
@@ -20,6 +21,7 @@ import java.util.ResourceBundle;
  *
  * @author Fouad Almalki
  */
+@RegisterForReflection
 public abstract class AlertDialogFxControllerBase extends FxControllerBase implements LanguageChangeAware {
 
     @FXML protected Alert alertDialog;

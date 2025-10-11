@@ -48,6 +48,15 @@ public class QuranFxApplicationLifecycle {
     /// Callback that is invoked when the application is started. Initializations can be performed here.
     void onApplicationStartup(@Observes FxApplicationStartupEvent event) throws IOException {
 
+        System.out.println("123");
+        System.err.println("456");
+
+        try {
+            Thread.sleep(5000);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
         // check the last selected language by the user, otherwise use the OS default language
         var preferences = Preferences.userNodeForPackage(AppConstants.PREF_NODE_CLASS);
         String userLanguage = preferences.get(AppConstants.PREF_UI_LANGUAGE, null);
@@ -97,13 +106,13 @@ public class QuranFxApplicationLifecycle {
     /// Callback that is invoked when the application has finished starting and that Stage instance is available for use.
     /// Views (constructed by @FxView) are also available.
     void onPostStartup(@Observes FxPostStartupEvent event) throws IOException {
-        if (anotherInstanceRunning) {
+        /*if (anotherInstanceRunning) {
             Log.warn("Another instance of the application is already running!");
             guiFactory.showWarningDialog(mainFxController.getResources().getString("message.anotherInstanceRunning"));
             Platform.exit();
             System.exit(0);
             return;
-        }
+        }*/
 
         // show the primary stage
         mainFxController.showPrimaryStage(initialLanguage);

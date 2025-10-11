@@ -30,6 +30,7 @@ dependencies {
     implementation(deps.libs.sqlite.jdbc)
     implementation(deps.libs.jackson)
     implementation("org.osgi:org.osgi.framework:1.10.0")
+    implementation(files("libs/javafx-patch.jar"))
     compileOnly(files("libs/scenicview.jar"))
     quarkusDev(files("libs/scenicview.jar"))
 }
@@ -56,7 +57,7 @@ java {
 
 javafx {
     version = deps.versions.javafxLibVersion.get()
-    modules = listOf("javafx.controls", "javafx.fxml", "javafx.web")
+    modules = listOf("javafx.controls", "javafx.fxml", "javafx.web", "javafx.media", "javafx.swing")
 }
 
 tasks.test {
@@ -90,6 +91,8 @@ val devSystemProperties = mutableMapOf<String, String>()
 if (org.apache.tools.ant.taskdefs.condition.Os.isFamily(org.apache.tools.ant.taskdefs.condition.Os.FAMILY_WINDOWS)) {
     devSystemProperties.put("java.library.path", "${project.projectDir}/src/main/resources/win/")
 }
+devSystemProperties.put("javafx.enablePreview", "true")
+devSystemProperties.put("javafx.suppressPreviewWarning", "true")
 
 tasks.quarkusDev {
     doFirst {

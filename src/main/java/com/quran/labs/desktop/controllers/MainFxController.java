@@ -8,6 +8,7 @@ import com.quran.labs.desktop.core.ui.GuiFactory;
 import com.quran.labs.desktop.core.utils.AppConstants;
 import com.quran.labs.desktop.core.utils.GuiUtils;
 import io.quarkus.logging.Log;
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
@@ -27,6 +28,7 @@ import java.util.prefs.Preferences;
 ///
 /// @author Fouad Almalki
 @Singleton
+@RegisterForReflection
 public class MainFxController extends FxControllerBase implements LanguageChangeAware {
 
     public static final String STRINGS_RESOURCE_BUNDLE = "i18n.strings";
@@ -86,6 +88,7 @@ public class MainFxController extends FxControllerBase implements LanguageChange
     public void showPrimaryStage(GuiLanguage language) {
         primaryStage.setTitle("%s %s".formatted(resources.getString("window.title"), appVersion));
         primaryStage.getScene().setNodeOrientation(language.getNodeOrientation());
+        //primaryStage.initStyle(StageStyle.EXTENDED);
         primaryStage.centerOnScreen();
         primaryStage.show();
     }

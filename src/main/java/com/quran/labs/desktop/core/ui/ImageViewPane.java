@@ -1,5 +1,6 @@
 package com.quran.labs.desktop.core.ui;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import javafx.beans.NamedArg;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
@@ -10,6 +11,7 @@ import javafx.geometry.VPos;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.Region;
 
+@RegisterForReflection
 public class ImageViewPane extends Region {
 
 	private ObjectProperty<ImageView> imageViewProperty = new SimpleObjectProperty<>();

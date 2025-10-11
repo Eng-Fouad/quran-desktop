@@ -2,6 +2,7 @@ package com.quran.labs.desktop.controllers;
 
 import com.quran.labs.desktop.core.ui.AlertDialogFxControllerBase;
 import com.quran.labs.desktop.core.ui.GuiFactory;
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import jakarta.inject.Singleton;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
@@ -16,6 +17,7 @@ import java.util.Arrays;
  * @author Fouad Almalki
  */
 @Singleton
+@RegisterForReflection
 public class MessageDialogFxController extends AlertDialogFxControllerBase {
 
     @FXML TextArea txtDetails;
