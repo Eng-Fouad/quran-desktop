@@ -1,10 +1,9 @@
 package com.quran.labs.desktop.launcher;
 
-import io.quarkiverse.fx.FxApplication;
+import io.quarkiverse.fx.QuarkusFxApplication;
 import io.quarkus.runtime.Quarkus;
 import io.quarkus.runtime.QuarkusApplication;
 import io.quarkus.runtime.annotations.QuarkusMain;
-import javafx.application.Application;
 
 /// The main entry point for launching the application.
 ///
@@ -14,8 +13,8 @@ public class MainLauncher implements QuarkusApplication {
 
     @Override
     public int run(String... args) {
-        Application.launch(FxApplication.class, args);
-        return 0;
+        // the quarkus-fx launcher starts the JavaFX toolkit on the main thread in macOS native executables
+        return new QuarkusFxApplication().run(args);
     }
 
     public static void main(String[] args) {

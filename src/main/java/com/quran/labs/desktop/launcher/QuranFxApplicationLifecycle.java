@@ -48,15 +48,6 @@ public class QuranFxApplicationLifecycle {
     /// Callback that is invoked when the application is started. Initializations can be performed here.
     void onApplicationStartup(@Observes FxApplicationStartupEvent event) throws IOException {
 
-        System.out.println("123");
-        System.err.println("456");
-
-        try {
-            Thread.sleep(5000);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-
         // check the last selected language by the user, otherwise use the OS default language
         var preferences = Preferences.userNodeForPackage(AppConstants.PREF_NODE_CLASS);
         String userLanguage = preferences.get(AppConstants.PREF_UI_LANGUAGE, null);
