@@ -71,10 +71,11 @@
     letter-spacing: 0;
   }
 
-  /* Three digits: smaller and tighter, so 114 (and ayah 286) stay clear of the star's points: 9 px at 24, 9.7 px at 28,
-     11 px at 36. */
+  /* Three digits: 0.32 of the edge, so 114 (and ayah 286) stay inside the star at every size (6.4 px at 20, 7.7 px at
+     24, 9 px at 28, 11.5 px at 36). Near the digits the star is as wide as its square (2 × 7.78 of 24), and three
+     tabular Inter digits take 1.88 em: at 24 px, 14.4 px of 15.6. */
   .long .num {
-    font-size: calc(var(--_size) / 6 + 5px);
+    font-size: calc(var(--_size) * 0.32);
     letter-spacing: -0.02em;
   }
 

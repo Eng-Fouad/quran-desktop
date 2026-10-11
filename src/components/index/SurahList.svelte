@@ -603,6 +603,10 @@
     /* Clips a wide name glyph sideways; its Naskh ink (dots, marks) may pass the line box above and below. */
     overflow-x: clip;
     overflow-y: visible;
+    /* The clip edge sits 7 px into the row's padding at the inline end, where the glyph aligns: Yusuf's glyph draws its
+       first letter 6.4 px past its advance (0.25 em at 26 px; every other surah 0.2 px at most), which the edge cut. */
+    margin-inline-end: -7px;
+    padding-inline-end: 7px;
   }
 
   .ar {
