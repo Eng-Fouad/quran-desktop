@@ -37,7 +37,7 @@
   import type { MenuEntry } from '$components/ui/types'
   import type { ShortcutDef } from '$lib/contracts/shortcuts'
   import type { HighlightColor } from '$lib/ipc/bindings'
-  import { ACTION_BAR_EVENT, type ActionBarRequest } from '$lib/mushaf/interactions'
+  import { ACTION_BAR_EVENT, type ActionBarRequest, openAyahMenu } from '$lib/mushaf/interactions'
   import {
     app,
     i18n,
@@ -344,7 +344,7 @@
     const y = button ? Math.round(button.bottom) : e.clientY
     const ayahId = target
     dismiss()
-    ui.openContextMenu({ x, y, ayahId })
+    openAyahMenu({ x, y, ayahId })
   }
 
   // --- toolbar keyboard (roving tab stop) --------------------------------------------------------------------------

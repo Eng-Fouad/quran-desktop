@@ -404,6 +404,42 @@ describe('pointer gestures', () => {
     expect(play).toHaveBeenLastCalledWith({ ayahId: 2 })
     await userEvent.click(arabic, { button: 'right' })
     expect(ui.contextMenu?.ayahId).toBe(2)
+    // The verse is already the selection: the right-click keeps it and selects nothing again.
+    expect(reader.selection).toEqual({ fromAyahId: 2, toAyahId: 2, anchorAyahId: 2 })
+    expect(select).toHaveBeenCalledTimes(2)
+  })
+
+  it('right-click and More select a verse outside the selection and keep a selection that holds it', async () => {
+    await boot()
+    await mount()
+    reader.selection = { fromAyahId: 3, toAyahId: 4, anchorAyahId: 3 }
+    await settle()
+    const arabic = (ayahId: number) => {
+      const el = verse(ayahId)?.querySelector<HTMLElement>('.arabic')
+      if (!el) throw new Error(`no verse ${ayahId}`)
+      return el
+    }
+    await userEvent.click(arabic(4), { button: 'right' })
+    expect(reader.selection).toEqual({ fromAyahId: 3, toAyahId: 4, anchorAyahId: 3 })
+    expect(ui.contextMenu?.ayahId).toBe(4)
+    ui.closeContextMenu()
+    await userEvent.click(arabic(6), { button: 'right' })
+    expect(reader.selection).toEqual({ fromAyahId: 6, toAyahId: 6, anchorAyahId: 6 })
+    expect(ui.contextMenu?.ayahId).toBe(6)
+    await settle()
+    expect(verse(6)?.classList.contains('selected')).toBe(true)
+    expect(verse(3)?.classList.contains('selected')).toBe(false)
+    ui.closeContextMenu()
+    const row = await until(() => verse(7), 'verse 7')
+    await userEvent.hover(row)
+    const more = await until(
+      () => row.querySelector<HTMLButtonElement>('button[aria-label="More actions"]'),
+      'the More button',
+    )
+    await userEvent.click(more)
+    expect(reader.selection).toEqual({ fromAyahId: 7, toAyahId: 7, anchorAyahId: 7 })
+    expect(ui.contextMenu?.ayahId).toBe(7)
+    ui.closeContextMenu()
   })
 
   it('shows the selection and the actions; actions apply to the verse', async () => {

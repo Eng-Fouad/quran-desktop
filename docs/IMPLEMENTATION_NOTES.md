@@ -566,6 +566,12 @@ is the lead's fold-in of every accepted deviation (`docs/deviations/WP*.md`), ev
   since a left drag pans or turns the page (§10.5). The native drag-selection copy of §8.14 is gone: copy is `C`,
   `Mod+C`, the action bar or the context menu on the ayah selection; `Mod+A` no longer selects the glyphs. A word click
   no longer bails out while a DOM selection exists (one made elsewhere, which a press on the page collapses).
+- **A context menu selects its ayah** (owner request): a right-click on an ayah (the Mushaf's words or a verse row),
+  `Shift+F10` / the Menu key and the More buttons select the ayah first unless the selection holds it (`openAyahMenu`),
+  so the menu acts on the tinted span. Inside a multi-ayah selection the selection is kept; modifiers never extend. The
+  selection stays after the menu closes (Escape closes the menu; the next one clears the selection), and the action bar
+  does not come back; a click-selection's pending bar never opens under an open menu (a click after a macOS
+  Ctrl+click).
 
 ### 10.4 Furniture and marks (§8.8–8.9)
 

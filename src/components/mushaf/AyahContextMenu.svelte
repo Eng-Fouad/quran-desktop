@@ -1,10 +1,12 @@
 <!--
   AyahContextMenu (§10.3, §7.4): the one ayah context menu of the app, opened by `ui.contextMenu = { x, y, ayahId }`
-  (a right-click on the Mushaf or a verse row, the action bar's More, `Shift+F10` / the Menu key). Owner: WP11c.
-  Takes no props: it reads stores (§7.9).
+  (a right-click on the Mushaf or a verse row, the action bar's or a verse's More, `Shift+F10` / the Menu key). Owner:
+  WP11c. Takes no props: it reads stores (§7.9).
 
   - It applies to the selection when the clicked ayah lies inside it, else to that ayah (§10.3); a bookmark and the
-    reading bookmark take the span's first ayah.
+    reading bookmark take the span's first ayah. Every opener goes through `openAyahMenu` (interactions.ts), which
+    selects the clicked ayah unless the selection holds it, so the span is the visible selection; a menu opened with
+    `ui.openContextMenu` alone still follows `spanAround`.
   - Rows (§10.3): Play from here (Ctrl/⌘+Click) · Play this ayah only · Repeat ▸ │ Bookmark (B) · Move reading bookmark
     here (Shift+B) · Highlight ▸ (1–5, Remove 0) · Add/Edit note… (N) · Add to collection ▸ │ Copy ▸ (C, Mod+Shift+C) ·
     Translation · Tafsir · Word by word │ Memorize ▸. Hints come from the shortcut registry, so they show the user's

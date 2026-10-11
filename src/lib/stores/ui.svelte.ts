@@ -381,7 +381,10 @@ class UiStore implements Store {
     untrack(() => (this.modals = Math.max(0, this.modals - 1)))
   }
 
-  /** Opens the ayah context menu (§10.3) at a point for an ayah (or word). */
+  /**
+   * Opens the ayah context menu (§10.3) at a point for an ayah (or word). User-facing openers call `openAyahMenu`
+   * (interactions.ts), which selects the ayah first: this store cannot see the reader (§7.2).
+   */
   openContextMenu(target: ContextMenuTarget): void {
     this.contextMenu = target
   }

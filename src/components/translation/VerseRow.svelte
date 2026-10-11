@@ -8,7 +8,8 @@
     selection ring), a flash after a jump, skeleton lines sized from the verse's word count while loading, and an inline
     error with Retry (plain text: the view says it once, politely, instead of an alert per mounted row).
   - Pointer (§8.17): click selects (Shift extends), double-click also opens the study pane, Mod+click plays from here,
-    right-click opens the ayah menu. Clicks on controls, links and footnotes, or that end a text selection, do nothing.
+    right-click selects the verse (unless the selection holds it) and opens the ayah menu (`openAyahMenu`). Clicks on
+    controls, links and footnotes, or that end a text selection, do nothing.
   Owner: WP11a.
 -->
 <script lang="ts">
@@ -17,6 +18,7 @@
   import type { HighlightColor } from '$lib/ipc/bindings'
   import Button from '$components/ui/Button.svelte'
   import Skeleton from '$components/ui/Skeleton.svelte'
+  import { openAyahMenu } from '$lib/mushaf/interactions'
   import { app, i18n, player, quran, reader, settings, translations, ui } from '$lib/stores'
   import type { PackMeta } from '$lib/stores/translations.svelte'
   import { isModPressed } from '$lib/util/platform'
@@ -116,7 +118,7 @@
   function oncontextmenu(e: MouseEvent): void {
     if (e.target instanceof Element && e.target.closest('a, input')) return
     e.preventDefault()
-    ui.openContextMenu({ x: e.clientX, y: e.clientY, ayahId })
+    openAyahMenu({ x: e.clientX, y: e.clientY, ayahId })
   }
 
   function onmousedown(e: MouseEvent): void {

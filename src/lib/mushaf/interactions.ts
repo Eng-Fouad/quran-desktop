@@ -13,7 +13,7 @@
  * | Shift+click                     | extend the selection to the ayah                                                |
  * | double-click                    | select and open the side pane on Translation                                   |
  * | Mod+click (Alt+click on Win/mac)| play from the ayah                                                              |
- * | right-click                     | the ayah context menu (`ui.contextMenu`)                                        |
+ * | right-click                     | select the ayah unless the selection holds it, then the ayah context menu       |
  * | click an end-of-ayah marker     | select and open the side pane on Tafsir                                         |
  * | click empty paper or canvas     | clear the selection (the action bar goes with it)                               |
  * | drag, zoom ≤ 100 % (the fit)    | horizontal ≥ 80 px turns one page on release, right = next (pan.ts)             |
@@ -25,6 +25,10 @@
  * pan.ts swallows the click of its release and quiets the hover, the tooltip and a pending action bar while it runs
  * (`pointerDragStarted` / `pointerDragEnded`).
  *
+ * Every opener of the ayah context menu (§10.3) goes through `openAyahMenu`: a right-click here or on a verse row,
+ * `Shift+F10` / the Menu key, a More button. It selects the ayah first unless the selection holds it, so the menu acts
+ * on exactly what the selection tint shows; the selection stays once the menu closes, without the action bar.
+ *
  * §8.14: no native text selection starts on the page (the canvas and the glyphs are `user-select: none`); copy goes
  * through the ayah selection. A `mousedown` with `detail ≥ 2` in a rendition still clears any DOM selection, so a
  * double-click never flashes a native word selection over the PUA glyphs.
@@ -32,6 +36,7 @@
  * The tooltip and the action bar are separate components (mounted once by the Mushaf view); this module talks to them
  * through window events (`WORD_DWELL_EVENT`, `ACTION_BAR_EVENT`) so it holds no reactive state of its own.
  */
+import type { ContextMenuTarget } from '$lib/contracts/stores'
 import type { MushafStyle, PageData } from '$lib/ipc/bindings'
 import { app } from '$lib/stores/app.svelte'
 import { pages } from '$lib/stores/pages.svelte'
@@ -109,12 +114,17 @@ export function dismissActionBar(): void {
 
 let barTimer: ReturnType<typeof setTimeout> | undefined
 
-/** Shows the action bar `ACTION_BAR_DELAY_MS` after a pointer click-selection (never on hover or keyboard focus, D26). */
+/**
+ * Shows the action bar `ACTION_BAR_DELAY_MS` after a pointer click-selection (never on hover or keyboard focus, D26),
+ * and never under an open context menu: a click that follows the menu's `contextmenu` (macOS Ctrl+click, where a
+ * webview may still dispatch one) does not bring the bar up beneath it.
+ */
 function scheduleActionBar(): void {
   clearTimeout(barTimer)
   barTimer = setTimeout(() => {
     barTimer = undefined
-    if (settings.value.ayahActionBar && reader.selection !== null) emit(ACTION_BAR_EVENT, { open: true })
+    if (settings.value.ayahActionBar && reader.selection !== null && ui.contextMenu === null)
+      emit(ACTION_BAR_EVENT, { open: true })
   }, ACTION_BAR_DELAY_MS)
 }
 
@@ -145,6 +155,20 @@ export function selectFromPointer(ayahId: number, opts: { extend?: boolean } = {
   hideWordTooltip()
   selectAyah(ayahId, opts.extend ?? false)
   scheduleActionBar()
+}
+
+/**
+ * Opens the ayah context menu (§10.3) for an ayah: a right-click on its words or its verse row, `Shift+F10` / the Menu
+ * key, a More button. The ayah is selected first unless the selection already holds it, so the menu acts on exactly
+ * what the selection tint shows; a right-click inside a multi-ayah selection keeps it, and modifiers never extend.
+ * The selection stays once the menu closes, and the action bar does not come back for it (it follows click-selections,
+ * D26). `ui.openContextMenu` alone skips the select-first rule (`ui` is L0 and cannot see the reader, §7.2).
+ */
+export function openAyahMenu(target: ContextMenuTarget): void {
+  hideWordTooltip()
+  dismissActionBar()
+  if (!selectionHas(target.ayahId)) selectAyah(target.ayahId)
+  ui.openContextMenu(target)
 }
 
 // --- pointer state ----------------------------------------------------------------------------------------------------
@@ -498,14 +522,7 @@ export function interactions(node: HTMLElement): { destroy(): void } {
     const wordId = num(word.dataset.w)
     if (!Number.isInteger(ayahId)) return
     e.preventDefault()
-    hideWordTooltip()
-    dismissActionBar()
-    ui.openContextMenu({
-      x: e.clientX,
-      y: e.clientY,
-      ayahId,
-      ...(Number.isInteger(wordId) ? { wordId } : {}),
-    })
+    openAyahMenu({ x: e.clientX, y: e.clientY, ayahId, ...(Number.isInteger(wordId) ? { wordId } : {}) })
   }
 
   node.addEventListener('pointerover', onPointerMove)

@@ -1,8 +1,9 @@
 /**
  * The ayah context menu and the study shortcuts in a real browser (§10.3, §10.1, §7.7; WP11c acceptance): the menu's
  * rows and keyboard hints, typeahead that never reaches the reader shortcuts (typing `b` in the menu does not
- * bookmark), the selection rule, every study action (bookmark, reading bookmark, highlight 1–5 / 0, note, copy, side
- * pane, Shift+F10, undo/redo), and the "New collection…" and "Custom…" dialogs.
+ * bookmark), the selection rule (a right-click or Shift+F10 selects its ayah unless the selection holds it), every
+ * study action (bookmark, reading bookmark, highlight 1–5 / 0, note, copy, side pane, Shift+F10, undo/redo), and the
+ * "New collection…" and "Custom…" dialogs.
  */
 import { flushSync } from 'svelte'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -38,6 +39,13 @@ async function openMenu(ayahId: number): Promise<HTMLElement> {
   await until(() => menu() !== null)
   await settle(60)
   return menu() as HTMLElement
+}
+
+/** The first word of an ayah in an interactive rendition of the Mushaf (a right-click target). */
+function wordOf(ayahId: number): HTMLElement {
+  const w = $(`section.mp .mp-glyphs[data-interactive] .w[data-a="${ayahId}"]:not(.e)`)
+  if (!w) throw new Error(`no word of ayah ${ayahId} on screen`)
+  return w
 }
 
 /** A keydown on the page body, where the reader shortcuts listen (§7.7). */
@@ -118,6 +126,44 @@ describe('AyahContextMenu (§10.3)', () => {
     await until(() => library.bookmarkedAyahs.has(20))
     await openMenu(20)
     expect(item('Remove bookmark')).toBeDefined()
+  })
+
+  it('a right-click on an ayah selects and tints it while the menu is open; the selection stays after it closes', async () => {
+    await bootApp()
+    reader.goToAyah(262)
+    await until(() => reader.visiblePages.includes(42) && !reader.turning, 5000)
+    await until(() => $('section.mp[data-page="42"] .mp-glyphs[data-interactive] .w[data-a="262"]') !== null)
+    await userEvent.click(wordOf(262), { button: 'right' })
+    await until(() => menu() !== null)
+    expect(reader.selection).toEqual({ fromAyahId: 262, toAyahId: 262, anchorAyahId: 262 })
+    expect(plainText(menu()?.getAttribute('aria-label'))).toContain('2:255')
+    await until(() => $('.mp-hl[data-page="42"] .hl-selection-ring') !== null)
+    // The menu's Escape closes only the menu; the next one clears the selection (the action bar's rule).
+    await userEvent.keyboard('{Escape}')
+    await until(() => ui.contextMenu === null)
+    await settle(60)
+    expect(reader.selection).toEqual({ fromAyahId: 262, toAyahId: 262, anchorAyahId: 262 })
+    expect($('[role="toolbar"].ab')).toBeNull()
+    await press('{Escape}')
+    await until(() => reader.selection === null)
+  })
+
+  it('a right-click inside the selection keeps it and the menu acts on all of it; outside, on that ayah', async () => {
+    await bootApp()
+    await until(() => $('section.mp .mp-glyphs[data-interactive] .w[data-a="12"]') !== null)
+    reader.selection = { fromAyahId: 8, toAyahId: 10, anchorAyahId: 8 }
+    await userEvent.click(wordOf(9), { button: 'right' })
+    await until(() => menu() !== null)
+    expect(reader.selection).toEqual({ fromAyahId: 8, toAyahId: 10, anchorAyahId: 8 })
+    expect(plainText(menu()?.getAttribute('aria-label'))).toContain('2:1–3')
+    await userEvent.keyboard('{Escape}')
+    await until(() => ui.contextMenu === null && menu() === null)
+    await userEvent.click(wordOf(12), { button: 'right' })
+    await until(() => menu() !== null)
+    expect(reader.selection).toEqual({ fromAyahId: 12, toAyahId: 12, anchorAyahId: 12 })
+    expect(plainText(menu()?.getAttribute('aria-label'))).toContain('2:5')
+    await userEvent.keyboard('{Escape}')
+    await until(() => ui.contextMenu === null)
   })
 
   it('creates a collection from "New collection…" and puts the ayah in it', async () => {
@@ -247,6 +293,18 @@ describe('study shortcuts (§10.1)', () => {
     await press('{Shift>}{F10}{/Shift}')
     await until(() => ui.contextMenu !== null)
     expect(ui.contextMenu?.ayahId).toBe(8)
+    // The target lies inside the selection: it stays.
+    expect(reader.selection).toEqual({ fromAyahId: 8, toAyahId: 10, anchorAyahId: 8 })
+  })
+
+  it('Shift+F10 with only a cursor selects the cursor ayah, so the menu’s ayah is tinted', async () => {
+    await bootApp()
+    reader.selection = null
+    reader.cursorAyahId = 9
+    await press('{Shift>}{F10}{/Shift}')
+    await until(() => ui.contextMenu !== null)
+    expect(ui.contextMenu?.ayahId).toBe(9)
+    expect(reader.selection).toEqual({ fromAyahId: 9, toAyahId: 9, anchorAyahId: 9 })
   })
 
   it('never runs while the context menu, an input or a focused button has the keys', async () => {

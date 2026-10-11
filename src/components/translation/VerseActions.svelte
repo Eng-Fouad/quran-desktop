@@ -2,8 +2,9 @@
   VerseActions (§9.7 "ActionBar", §8.17): the ghost icon buttons at the top inline end of a verse row, shown on row
   hover or focus (and while the verse is selected): Play from here · Bookmark (pressed when bookmarked) · Highlight
   (five swatches and Remove, in a popover) · Note · Copy · Tafsir and word by word (the study pane) · More (the ayah
-  context menu, §10.3). Actions apply to the reader's selection when this verse is part of it, else to the verse
-  (the context-menu rule, §10.3). Every result is toasted by the store that performs it; Copy toasts here. Owner: WP11a.
+  context menu, §10.3; it selects the verse unless the selection holds it). Actions apply to the reader's selection
+  when this verse is part of it, else to the verse (the context-menu rule, §10.3). Every result is toasted by the store
+  that performs it; Copy toasts here. Owner: WP11a.
 -->
 <script lang="ts">
   import Bookmark from '@lucide/svelte/icons/bookmark'
@@ -18,6 +19,7 @@
   import type { HighlightColor } from '$lib/ipc/bindings'
   import IconButton from '$components/ui/IconButton.svelte'
   import Popover from '$components/ui/Popover.svelte'
+  import { openAyahMenu } from '$lib/mushaf/interactions'
   import { i18n, library, player, quran, reader, translations, ui } from '$lib/stores'
 
   interface Props {
@@ -93,7 +95,7 @@
   function more(e: MouseEvent & { currentTarget: HTMLButtonElement }): void {
     const r = e.currentTarget.getBoundingClientRect()
     const x = i18n.dir === 'rtl' ? r.right : r.left
-    ui.openContextMenu({ x: Math.round(x), y: Math.round(r.bottom + 4), ayahId })
+    openAyahMenu({ x: Math.round(x), y: Math.round(r.bottom + 4), ayahId })
   }
 </script>
 

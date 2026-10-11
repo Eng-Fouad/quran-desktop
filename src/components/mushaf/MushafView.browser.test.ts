@@ -370,6 +370,27 @@ describe('the ayah action bar (§8.17)', () => {
     await userEvent.keyboard('{Escape}')
     await until(() => reader.selection === null, 2_000, 'the second Escape clears the selection')
   })
+
+  it('More opens the ayah menu on the selection and keeps it; the bar goes', async () => {
+    await bootApp({ settings: { pageMode: 'spread', mushafStyle: 'hafs', pageTurnAnimation: false } })
+    await goTo(50)
+    const items = [...document.querySelectorAll<HTMLElement>('section.mp[data-page="50"] .mp-a11y li')]
+    const from = Number(items[0]?.dataset.ayah)
+    const to = Number(items[2]?.dataset.ayah)
+    expect(to).toBeGreaterThan(from)
+    reader.select(from)
+    reader.select(to, true)
+    const selection = reader.selection
+    window.dispatchEvent(new CustomEvent(ACTION_BAR_EVENT, { detail: { open: true } }))
+    await until(() => $(BAR) !== null, 2_000, 'the action bar')
+
+    await userEvent.click($(`${BAR} button[aria-label="More actions"]`) as HTMLElement)
+    await until(() => ui.contextMenu !== null, 2_000, 'the context menu')
+    expect(ui.contextMenu?.ayahId).toBe(from)
+    expect(reader.selection).toEqual(selection)
+    await until(() => $(BAR) === null, 2_000, 'the bar closes')
+    ui.closeContextMenu()
+  })
 })
 
 describe('wheel and zoom (§8.13)', () => {

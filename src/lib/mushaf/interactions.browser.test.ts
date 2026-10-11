@@ -2,7 +2,8 @@
  * Word interactions (WP8d; §8.14, §8.17) in a real browser: a real interactive MushafPage (page 262, hafs) inside a
  * `<main>` canvas, driven with real pointer input (Playwright through `userEvent`) and, for the dwell rule, with
  * pointer events at exact coordinates. The glyphs are never a native text-selection surface (§8.14: copy goes through
- * the ayah selection); the drag gesture itself (pan.ts) is the Mushaf view's and is tested there.
+ * the ayah selection); the drag gesture itself (pan.ts) is the Mushaf view's and is tested there. A right-click selects
+ * its ayah before the context menu opens (§10.3), unless the selection already holds it.
  */
 import { flushSync } from 'svelte'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -281,13 +282,66 @@ describe('clicks (§8.17, D26)', () => {
     }
   })
 
-  it('opens the ayah context menu at the pointer for a right-click', async () => {
-    const { word } = await show()
+  it('selects the ayah and opens the ayah context menu at the pointer for a right-click', async () => {
+    const { word, section } = await show()
     const w = word(1814, 1)
     await userEvent.click(w, { button: 'right' })
     expect(ui.contextMenu?.ayahId).toBe(1814)
     expect(ui.contextMenu?.wordId).toBe(Number(w.dataset.w))
-    ui.contextMenu = null
+    // The menu's ayah is the selection, tinted and ringed while the menu is open (the hover goes with the pointer).
+    expect(reader.selection).toEqual({ fromAyahId: 1814, toAyahId: 1814, anchorAyahId: 1814 })
+    expect(reader.cursorAyahId).toBe(1814)
+    await expect.poll(() => section.querySelectorAll('.mp-hl .hl-selection-ring').length).toBeGreaterThan(0)
+    // A right-click is no click-selection: no action bar, and the selection outlives the menu.
+    await sleep(ACTION_BAR_DELAY_MS + 60)
+    expect(bars).not.toContain(true)
+    ui.closeContextMenu()
+    expect(reader.selection).toEqual({ fromAyahId: 1814, toAyahId: 1814, anchorAyahId: 1814 })
+  })
+
+  it('keeps a multi-ayah selection that holds the right-clicked ayah; outside it selects that ayah alone', async () => {
+    const { word } = await show()
+    await userEvent.click(word(1806, 1))
+    await userEvent.click(word(1809, 1), { modifiers: ['Shift'] })
+    await userEvent.click(word(1807, 1), { button: 'right' })
+    expect(reader.selection).toEqual({ fromAyahId: 1806, toAyahId: 1809, anchorAyahId: 1806 })
+    expect(reader.cursorAyahId).toBe(1809)
+    expect(ui.contextMenu?.ayahId).toBe(1807)
+    ui.closeContextMenu()
+    await userEvent.click(word(1812, 1), { button: 'right' })
+    expect(reader.selection).toEqual({ fromAyahId: 1812, toAyahId: 1812, anchorAyahId: 1812 })
+    expect(ui.contextMenu?.ayahId).toBe(1812)
+    ui.closeContextMenu()
+    // Modifiers never extend: Shift+right-click replaces the selection too.
+    await userEvent.click(word(1813, 1), { button: 'right', modifiers: ['Shift'] })
+    expect(reader.selection).toEqual({ fromAyahId: 1813, toAyahId: 1813, anchorAyahId: 1813 })
+    ui.closeContextMenu()
+  })
+
+  it('dismisses a shown action bar for a right-click and never brings it back', async () => {
+    const { word } = await show()
+    await userEvent.click(word(1811, 1))
+    await expect.poll(() => bars).toEqual([true])
+    await userEvent.click(word(1811, 2), { button: 'right' })
+    expect(bars.at(-1)).toBe(false)
+    expect(reader.selection).toEqual({ fromAyahId: 1811, toAyahId: 1811, anchorAyahId: 1811 })
+    await sleep(ACTION_BAR_DELAY_MS + 60)
+    ui.closeContextMenu()
+    await sleep(ACTION_BAR_DELAY_MS + 60)
+    expect(bars.filter((open) => open)).toHaveLength(1)
+  })
+
+  it('never shows the action bar under an open context menu: a click that follows it (macOS Ctrl+click)', async () => {
+    const { word } = await show()
+    await userEvent.click(word(1811, 2), { button: 'right' })
+    expect(ui.contextMenu?.ayahId).toBe(1811)
+    // A webview may still dispatch the click of a Ctrl+click after its `contextmenu`: it selects, but no bar opens.
+    await userEvent.click(word(1811, 2))
+    await sleep(ACTION_BAR_DELAY_MS + 60)
+    expect(bars).not.toContain(true)
+    ui.closeContextMenu()
+    await userEvent.click(word(1811, 2))
+    await expect.poll(() => bars.at(-1)).toBe(true)
   })
 
   it('clears the selection for a click on empty paper or canvas, not for a click on a word', async () => {

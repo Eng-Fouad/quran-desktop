@@ -3404,7 +3404,8 @@ needed. `Mod+Z` / `Mod+Shift+Z` (§10.1) and every toast's Undo action call `und
   menus, the AyahActionBar's swatch popover) register through `ui.pushFloating()/popFloating()` in the `src/components/ui`
   wrappers. For shortcut purposes they count as overlays (§7.7 rule 1).
 - **Context menu:** one `AyahContextMenu` instance (WP11c), opened by `ui.contextMenu = {…}` (right-click or `Shift+F10`/
-  `ContextMenu` on the focused ayah).
+  `ContextMenu` on the focused ayah). (v1.2) Its openers call `openAyahMenu`, which selects the ayah first unless the
+  selection holds it (§10.3).
 - **Focus after navigation.** Overlays restore focus on close, **except** after a jump (palette, Go to, search hit, bookmark,
   history entry): then focus moves to the target ayah's roving `li` once it renders (`focus({ preventScroll: true })`) and the
   live region announces "Al-Baqarah 2:255, page 42" (§8.15).
@@ -4082,7 +4083,7 @@ html[data-turn="prev"] { --qd-out: qd-out-left;  --qd-in: qd-in-right; }
 | Shift+click | extend the selection to this ayah |
 | double-click | select and open the side pane (Translation tab) |
 | Mod+click (Ctrl on Windows/Linux, ⌘ on macOS) | play from this ayah (`player.playFrom({ayahId})`); Alt+click is an alias on Windows and macOS only (Linux window managers take Alt+drag) |
-| right-click | `AyahContextMenu` (§10.3) for the ayah (or the selection if it contains it) |
+| right-click | `AyahContextMenu` (§10.3) for the selection if it contains the ayah; (v1.2) otherwise the ayah is selected first (cursor moves there, Shift never extends), so the menu acts on the tinted span. The selection stays after the menu closes; no action bar |
 | click the end-of-ayah marker | select the ayah and open the side pane (Tafsir tab) |
 | drag, zoom ≤ 100 % | past 8 px it is no click; on release, ≥ 80 px horizontal (or a 30 px flick) turns one page, right = next (§8.13) |
 | drag, zoom > 100 % | past 4 px it is no click; the canvas follows the pointer (§8.13) |
@@ -4691,7 +4692,10 @@ every row above into the frozen `shortcuts.ts` dictionaries (en + ar, §11.1).
 
 ### 10.3 Context menus
 **Ayah context menu** (`AyahContextMenu`, WP11c; Mushaf and translation mode; applies to the selection when the clicked ayah is
-inside it; it is a floating layer, §7.4, so its typeahead never triggers reader shortcuts):
+inside it; it is a floating layer, §7.4, so its typeahead never triggers reader shortcuts). (v1.2) Every opener (a right-click
+on the words or a verse row, `Shift+F10` / `ContextMenu`, the action bar's or a verse's More) goes through `openAyahMenu`
+(`interactions.ts`): an ayah outside the selection becomes the selection first, so what the menu acts on is always tinted.
+The selection stays after the menu closes: Escape closes only the menu, the next Escape clears the selection.
 ```
 Play from here                      Ctrl+Click (⌘+Click)
 Play this ayah only

@@ -9,13 +9,14 @@
  *
  * `AyahContextMenu` (mounted once by the App) registers `studyShortcuts` (`registerStudyShortcuts`). The shortcut store
  * keeps them away from text inputs, from focused widgets (§7.7 rule 3) and from open layers, so typing `b` in the open
- * context menu moves to "Bookmark" and never toggles a bookmark (§7.7 rule 1).
+ * context menu moves to "Bookmark" and never toggles a bookmark (§7.7 rule 1). `Shift+F10` opens the menu through
+ * `openAyahMenu` (interactions.ts), like every other opener: its ayah becomes the selection unless it lies inside it.
  */
 import type { ShortcutDef } from '$lib/contracts/shortcuts'
 import type { ShortcutLabelKey } from '$lib/contracts/i18n'
 import { api, call } from '$lib/ipc'
 import type { HighlightColor } from '$lib/ipc/bindings'
-import { selectAyah } from '$lib/mushaf/interactions'
+import { openAyahMenu, selectAyah } from '$lib/mushaf/interactions'
 import { i18n } from '$lib/stores/i18n.svelte'
 import { type AyahSpan, HIGHLIGHT_COLORS, library } from '$lib/stores/library.svelte'
 import { quran } from '$lib/stores/quran.svelte'
@@ -181,11 +182,15 @@ export function menuAnchor(ayahId: number): { x: number; y: number } {
     : { x: Math.round(window.innerWidth / 2), y: Math.round(window.innerHeight / 3) }
 }
 
-/** `Shift+F10` / the Menu key (§10.1): the ayah context menu for the cursor or the selection. */
+/**
+ * `Shift+F10` / the Menu key (§10.1): the ayah context menu for the action target. The target is selected unless the
+ * selection holds it (a visible cursor, or the first visible ayah, becomes the selection), so the menu's ayah is tinted
+ * for keyboard users too.
+ */
 export function openMenuForTarget(): void {
   const id = targetAyah()
   if (id === null) return
-  ui.openContextMenu({ ...menuAnchor(id), ayahId: id })
+  openAyahMenu({ ...menuAnchor(id), ayahId: id })
 }
 
 /** A non-empty native text selection (the browser's own copy then wins over `Mod+C`, §8.14). */
