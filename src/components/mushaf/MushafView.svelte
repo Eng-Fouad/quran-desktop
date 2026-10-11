@@ -6,7 +6,7 @@
                  ─ PageTurnZones · FlipHUD · PageRail (WP8f)
                  ─ overlay slot (bottom centre): FollowChip · DivisionChip · HintChip, then MemoToolbar · SelfTestBar
                    (WP9b) at its foot
-                 ─ zoom indicator · WordTooltip · AyahActionBar (WP8d) · SurahInfoPopover (WP8c)
+                 ─ ZoomControl (top inline-end corner) · WordTooltip · AyahActionBar (WP8d) · SurahInfoPopover (WP8c)
 
   - Measures the canvas for the reader's fit (`reader.setViewport`), loads the visible pages (`pages.ensure`) and shows
     each slot's page; a style change keeps showing the old style's page until the new style's data arrives, so the
@@ -21,6 +21,8 @@
     point (the pointer, else the canvas centre) fixed: `scroll' = (scroll + p) · qfs'/qfs − p` on both axes, measured
     on the book itself so the stage padding and centring cancel out. A new page on a scrolled canvas starts at its
     top, on the reading side (right). Cursor moves and jumps scroll their ayah into view (`reader.revealRequest`).
+  - Zoom control (§8.13, `ZoomControl`): + / the level (back to the fit) / − in the canvas's top inline-end corner,
+    outside the scroll viewport; it is also the zoom readout, woken for 0.9 s by any zoom.
   - Drag (§8.13, `use:pan`): at the fit or below (≤ 100 %) a horizontal drag turns one page on release (right = next,
     book order, in both UI languages; a vertical one pans while the canvas still scrolls at `QFS_MIN`); zoomed past the
     fit the canvas follows the pointer (grab / grabbing cursor). A press that does not travel stays a click, and the
@@ -32,7 +34,6 @@
 -->
 <script lang="ts">
   import { untrack } from 'svelte'
-  import { fade } from 'svelte/transition'
   import MemoToolbar from '$components/memo/MemoToolbar.svelte'
   import SelfTestBar from '$components/memo/SelfTestBar.svelte'
   import { overlayReach } from '$components/shell/overlayReach'
@@ -66,9 +67,7 @@
   import SpreadStage, { type StageSlot } from './SpreadStage.svelte'
   import SurahInfoPopover from './SurahInfoPopover.svelte'
   import WordTooltip from './WordTooltip.svelte'
-
-  /** How long the zoom indicator stays after the last zoom step. */
-  const ZOOM_HUD_MS = 900
+  import ZoomControl from './ZoomControl.svelte'
 
   let width = $state(0)
   let height = $state(0)
@@ -283,24 +282,6 @@
       vp.scrollBy({ left: dx, top: dy, behavior: settings.reducedMotion ? 'instant' : 'smooth' })
   }
 
-  // --- zoom indicator ------------------------------------------------------------------------------------------------
-
-  let zoomShown = $state(false)
-  let zoomTimer: ReturnType<typeof setTimeout> | undefined
-  let zoomSeen = untrack(() => reader.zoomPct)
-  $effect(() => {
-    const pct = reader.zoomPct
-    untrack(() => {
-      if (pct === zoomSeen) return
-      zoomSeen = pct
-      zoomShown = true
-      clearTimeout(zoomTimer)
-      zoomTimer = setTimeout(() => (zoomShown = false), ZOOM_HUD_MS)
-      ui.announce(i18n.t('reader.zoom.announce', { pct: i18n.num(pct) }))
-    })
-  })
-  $effect(() => () => clearTimeout(zoomTimer))
-
   // --- copy (§8.14) --------------------------------------------------------------------------------------------------
 
   function oncopy(e: ClipboardEvent): void {
@@ -397,13 +378,8 @@
     </div>
   </div>
 
-  {#if zoomShown}
-    <div class="mv-zoom" aria-hidden="true" transition:fade={{ duration: settings.reducedMotion ? 0 : 150 }}>
-      {reader.zoomPct === 100
-        ? i18n.t('reader.zoom.fit')
-        : i18n.t('reader.zoom.level', { pct: i18n.num(reader.zoomPct) })}
-    </div>
-  {/if}
+  <!-- Outside the scroll viewport (no drag starts on it), after the slot in tab order. -->
+  <ZoomControl />
 
   <WordTooltip />
   <AyahActionBar />
@@ -472,27 +448,6 @@
 
   .mv-slot > .mv-slot-bars:not(:has(> :global(*))) {
     display: none;
-  }
-
-  /* The zoom level, briefly, at the top of the page area. */
-  .mv-zoom {
-    position: absolute;
-    inset-block-start: var(--space-4);
-    inset-inline: 0 var(--mv-reserve-end);
-    z-index: var(--z-popover);
-    inline-size: fit-content;
-    margin-inline: auto;
-    padding-block: var(--space-1);
-    padding-inline: var(--space-3);
-    border-radius: var(--radius-full);
-    background-color: var(--glass-fill);
-    backdrop-filter: var(--backdrop-dock);
-    box-shadow: var(--shadow-2);
-    color: var(--text);
-    font-size: var(--text-sm);
-    font-weight: var(--weight-label);
-    font-variant-numeric: tabular-nums;
-    pointer-events: none;
   }
 
   .mv-error {

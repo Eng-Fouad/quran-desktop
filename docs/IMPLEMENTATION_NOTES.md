@@ -624,9 +624,17 @@ is the lead's fold-in of every accepted deviation (`docs/deviations/WP*.md`), ev
   paper in final geometry; the stage reserves the dock (84/64 px) and the side card (288 px) except in zen (WP8e 3).
 - Turns: a turn requested during another replaces the waiting one and skips the running animation; turns do not animate
   while the canvas scrolls; single-page mode animates too (WP8e 2).
-- Zoom keeps the point under the pointer on the book; a 0.9 s indicator shows the level; `Mod++` also zooms in (WP8e 4).
+- Zoom keeps the point under the pointer on the book; the zoom control in the canvas's top inline-end corner shows the
+  level and wakes for 0.9 s on any zoom; `Mod++` also zooms in (WP8e 4).
   Wheel: a single large event (≥ 50 px, one Windows notch) turns at once; a notch is one 10 % zoom step; a pinch 60 px per
   step (WP8e 5).
+- **Zoom control** (`ZoomControl.svelte`, owner request: zoom without the wheel): + / the level (a click is the fit) /
+  − in a vertical capsule, around the canvas centre. Always present while the Mushaf shows (owner: a quieter idle state
+  is fine): 40 % with the pointer off the canvas, 60 % over it, 100 % hovered, focused or woken. It replaces the
+  top-centre indicator, so there is one readout. Over the text of a zoomed book it yields (hidden, click-through) until
+  the pointer comes within 24 px; at the fit it never covers the page (58 px of margin against its 52). A toolbar with
+  one tab stop and vertical arrows; a pointer never takes focus; Escape returns to the reading cursor and keeps the
+  selection.
 - **Drag** (`pan.ts`, owner request): the mode is fixed at the press from `zoomPct`, not `reader.scrolls`. At ≤ 100 % a
   horizontal-dominant drag turns one page on release (≥ 80 px, or 30 px within 250 ms; right = next, never mirrored);
   while the canvas still scrolls at `QFS_MIN`, a drag that sets off vertical-dominant pans vertically. Above 100 % a

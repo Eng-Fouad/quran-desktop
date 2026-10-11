@@ -67,7 +67,8 @@ export default async function s28(ctx) {
   equal(wheel, false, 'a plain wheel event is left to native scrolling while zoomed')
   equal((await qd.state()).visiblePages, [261, 262], 'the pages after a wheel event')
 
-  // The zoom indicator shows for 0.9 s after a zoom change (§8.13): let it go before the review shots.
+  // The zoom control wakes at full strength for 0.9 s after a zoom change (§8.13): let it settle before the review
+  // shots (it then rests, quiet, in the canvas's top inline-end corner).
   await ctx.wait(1200)
   await ctx.shot()
   await ctx.shot('block', { selector: `${mushaf.page(PAGE)} .mp-block` })

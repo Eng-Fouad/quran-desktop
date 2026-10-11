@@ -1,10 +1,11 @@
 /**
  * Wheel and touchpad gestures (§8.13, §10.2; WP8e): `deltaMode` normalisation, one page per gesture, the thresholds,
- * the 400 ms floor, notches, horizontal swipes in book direction, native scrolling past the fit, and zoom steps from
- * wheel notches and pinches.
+ * the 400 ms floor, notches, horizontal swipes in book direction, native scrolling past the fit, zoom steps from
+ * wheel notches and pinches, and the wheel over a control floating on a zoomed canvas (`forwardWheel`).
  */
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
+  forwardWheel,
   GESTURE_IDLE_MS,
   normalizeDelta,
   PINCH_STEP_PX,
@@ -155,5 +156,39 @@ describe('WheelGestures: zoom (§8.13)', () => {
     const g = new WheelGestures()
     expect(feed(g, stream(0, 5, { deltaY: -10, ctrlKey: true }))).toEqual([])
     expect(feed(g, stream(1000, 5, { deltaY: -10, ctrlKey: true }))).toEqual([])
+  })
+})
+
+describe('forwardWheel (the zoom control over a zoomed canvas)', () => {
+  /** A canvas whose scroll viewport is 800 px high, with `scrollBy` recorded. */
+  function canvas(): { view: HTMLElement; scrollBy: ReturnType<typeof vi.fn> } {
+    const view = document.createElement('div')
+    const scroller = document.createElement('div')
+    scroller.setAttribute('data-scroll-area-viewport', '')
+    Object.defineProperty(scroller, 'clientHeight', { value: 800 })
+    const scrollBy = vi.fn()
+    scroller.scrollBy = scrollBy
+    view.append(scroller)
+    return { view, scrollBy }
+  }
+
+  it('scrolls the canvas by the normalised deltas while it scrolls', () => {
+    const { view, scrollBy } = canvas()
+    forwardWheel(new WheelEvent('wheel', { deltaX: 5, deltaY: 40 }), view, true)
+    expect(scrollBy).toHaveBeenLastCalledWith({ left: 5, top: 40 })
+    forwardWheel(new WheelEvent('wheel', { deltaY: 3, deltaMode: 1 }), view, true)
+    expect(scrollBy).toHaveBeenLastCalledWith({ left: 0, top: 48 })
+    forwardWheel(new WheelEvent('wheel', { deltaY: 1, deltaMode: 2 }), view, true)
+    expect(scrollBy).toHaveBeenLastCalledWith({ left: 0, top: 800 })
+  })
+
+  it('leaves a fitted page (use:wheel turns it) and Ctrl or Mod (a zoom at the pointer) alone', () => {
+    const { view, scrollBy } = canvas()
+    forwardWheel(new WheelEvent('wheel', { deltaY: 100 }), view, false)
+    forwardWheel(new WheelEvent('wheel', { deltaY: -100, ctrlKey: true }), view, true)
+    forwardWheel(new WheelEvent('wheel', { deltaY: -100, metaKey: true }), view, true)
+    expect(scrollBy).not.toHaveBeenCalled()
+    // No scroll viewport: nothing to scroll.
+    forwardWheel(new WheelEvent('wheel', { deltaY: 100 }), document.createElement('div'), true)
   })
 })

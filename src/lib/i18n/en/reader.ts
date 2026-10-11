@@ -1,7 +1,7 @@
 /**
  * `reader` messages, English (§11.1). Owner: WP8e. The same keys live in `../ar/reader.ts`.
- * The Mushaf view: page and jump announcements (§8.15), page mode and reading mode (§10.1), zoom (§8.13), the
- * "Return to recitation" chip (§8.12) and the page error state.
+ * The Mushaf view: page and jump announcements (§8.15), page mode and reading mode (§10.1), the zoom control
+ * (§8.13), the "Return to recitation" chip (§8.12) and the page error state.
  */
 export const reader = {
   announce: {
@@ -22,10 +22,14 @@ export const reader = {
     spread: 'two-page spread',
   },
   zoom: {
-    /** The zoom indicator (§8.13). */
+    /** The zoom control's toolbar (§8.13): + / level / − in the canvas's top inline-end corner. */
+    control: 'Zoom',
+    /** The zoom control's level. */
     level: '{pct}%',
-    /** The indicator at 100 %: the page fits the canvas. */
+    /** The level button's tooltip: a click goes back to the fit (100 %). */
     fit: 'Fit to window',
+    /** The level button's accessible name (it contains the visible level). */
+    reset: 'Zoom {pct}%, fit to window',
     announce: 'Zoom {pct}%',
   },
   follow: {

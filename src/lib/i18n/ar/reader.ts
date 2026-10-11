@@ -18,8 +18,10 @@ export const reader = {
     spread: 'صفحتان متقابلتان',
   },
   zoom: {
+    control: 'التكبير',
     level: '{pct}٪',
     fit: 'ملاءمة النافذة',
+    reset: 'التكبير {pct}٪، ملاءمة النافذة',
     announce: 'التكبير {pct}٪',
   },
   follow: {

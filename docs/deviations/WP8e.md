@@ -117,7 +117,8 @@ Tests:
   - Window resizes keep the centre the same way.
 - **The indicator.** A small indicator ("150%", "Fit to window" at 100 %) shows at the top of the page area for 0.9 s
   after each zoom change, and the change is announced politely. §8.13 has no indicator; without one, a keyboard zoom
-  of 10 % is easy to miss.
+  of 10 % is easy to miss. (Later replaced by the zoom control in the canvas's top inline-end corner, §8.13: it shows
+  the level and wakes for the same 0.9 s; the announcement is unchanged.)
 - **`Mod++`.** Zoom in also accepts `Mod++`: the numeric keypad, and layouts where `+` has its own key (German). There,
   `Ctrl+=` is `Ctrl+Shift+0`, which the app's exact UI-scale chord takes. On US keyboards the app's exact `Mod+Shift+=`
   still wins (§7.7 precedence).
@@ -255,7 +256,7 @@ Tests:
   - It asserts: the doubled `qfs` (within a quarter step of 2 × the floored fit); scrolling on both axes; overlay
     scrollbars taking no space; the page sized from `--qfs` with no CSS zoom or transform; the glyph size; and the
     wheel scrolling.
-  - It waits for the zoom indicator to fade before its shots.
+  - It waits for the zoom indicator to fade before its shots (now the zoom control's 0.9 s wake).
 - **S29.** §12.6 expects "single page, qfs = 18" at 1024×700 and 130 %. The browser mock and the real app differ:
   - *Browser mock.* The mock's CSS zoom leaves `innerWidth` at 1024, so the sidebar docks. The 436×660 canvas then
     fits a single page below `QFS_MIN`, and `qfs` is held at 18.

@@ -153,6 +153,22 @@ export class WheelGestures {
 }
 
 /**
+ * A plain wheel over a control that floats on the canvas outside its scroll viewport (the zoom control): it scrolls a
+ * zoomed canvas as it would over the pages (§8.13), by the event's normalised deltas. Nothing happens while the page
+ * fits (`use:wheel` turns it as the event bubbles on) or with `Mod`/Ctrl held (a zoom at the pointer).
+ */
+export function forwardWheel(e: WheelEvent, view: Element, scrolls = reader.scrolls): void {
+  if (!scrolls || e.ctrlKey || e.metaKey) return
+  const scroller = view.querySelector<HTMLElement>('[data-scroll-area-viewport]')
+  if (!scroller) return
+  const h = scroller.clientHeight
+  scroller.scrollBy({
+    left: normalizeDelta(e.deltaX, e.deltaMode, h),
+    top: normalizeDelta(e.deltaY, e.deltaMode, h),
+  })
+}
+
+/**
  * The Svelte action on the Mushaf canvas (`use:wheel` in `MushafView`): zoom anchored at the pointer, one page per
  * gesture while the page fits, native scrolling otherwise. Nothing happens while a menu, popover or dialog is open.
  */

@@ -3321,8 +3321,9 @@ src/
 │  │              SelfTestDialog (WP9b)
 │  ├─ mushaf/     MushafPage, GlyphLayer (WP8a) · RenditionStack (WP8b) · PageFrame, SurahCartouche, HeaderLine, BasmalaLine,
 │  │              RunningHead, PageFooter, MarginMarkers, MarginMarks, OpeningMedallion, SurahInfoPopover (WP8c) ·
-│  │              HighlightLayer, A11yLayer, WordTooltip, AyahActionBar (WP8d) · MushafView, SpreadStage, FollowChip (WP8e) ·
-│  │              PageTurnZones, FlipHUD, PageRail, HintChip, DivisionChip (WP8f) · AyahContextMenu (WP11c)
+│  │              HighlightLayer, A11yLayer, WordTooltip, AyahActionBar (WP8d) · MushafView, SpreadStage, FollowChip,
+│  │              ZoomControl (WP8e) · PageTurnZones, FlipHUD, PageRail, HintChip, DivisionChip (WP8f) ·
+│  │              AyahContextMenu (WP11c)
 │  ├─ translation/ TranslationView, VerseRow, SurahCard, FootnotePopover (WP11a)
 │  ├─ sidepane/   SidePane, AyahHeader, TranslationTab, TafsirTab, NotesTab, WordsTab (WP11b)
 │  ├─ library/    BookmarksPanel, HighlightsPanel, NotesPanel, HistoryPanel (WP11c); CollectionsPicker, TagPicker (WP11d)
@@ -3432,9 +3433,10 @@ App (WP7c)
 ```
 - `MushafView` (WP8e):
   `SpreadStage → MushafPage×{1,2} → {PageFrame, RunningHead, mp-block{HighlightLayer, RenditionStack{GlyphLayer×{1,2}},
-  A11yLayer}, MarginMarkers, MarginMarks, PageFooter}`, plus `PageTurnZones`, `FlipHUD`, `PageRail`, `WordTooltip`,
-  `AyahActionBar`, `SurahInfoPopover`, and an **overlay slot** (bottom-centre of the canvas) that renders, in order,
-  `FollowChip` ("Return to recitation", WP8e), `MemoToolbar` + `SelfTestBar` (WP9b), `DivisionChip` and `HintChip` (WP8f).
+  A11yLayer}, MarginMarkers, MarginMarks, PageFooter}`, plus `PageTurnZones`, `FlipHUD`, `PageRail`, `ZoomControl`
+  (top inline-end corner, §8.13), `WordTooltip`, `AyahActionBar`, `SurahInfoPopover`, and an **overlay slot**
+  (bottom-centre of the canvas) that renders, in order, `FollowChip` ("Return to recitation", WP8e), `MemoToolbar` +
+  `SelfTestBar` (WP9b), `DivisionChip` and `HintChip` (WP8f).
 - `TranslationView` (WP11a): `VList → (SurahCard | VerseRow{KeyBadge, ActionBar, ArabicText, TranslationBlock×n{FootnotePopover}})`.
 - `DownloadsView` (WP12a): `DiskUsageBar · Filters · PackSection(mushaf) · PackSection(recitations → ReciterRow{SurahGrid}) ·
   PackSection(translations by language) · PackSection(tafsir) · PackSection(wbw)`.
@@ -3977,11 +3979,38 @@ html[data-turn="prev"] { --qd-out: qd-out-left;  --qd-in: qd-in-right; }
 - **Division arrival** (WP8f `DivisionChip`): when reading or follow-along first enters a new juz (or hizb), show
   `بداية الجزء الخامس عشر · Juz 15` for 2.5 s and announce it politely.
 
-### 8.13 Zoom, wheel and drag (WP8e, `src/lib/mushaf/wheel.ts`, `src/lib/mushaf/pan.ts`)
+### 8.13 Zoom, wheel and drag (WP8e, `src/lib/mushaf/wheel.ts`, `src/lib/mushaf/pan.ts`, `ZoomControl.svelte`)
 - `Mod+wheel` and touchpad pinch (which arrives as Ctrl+wheel) call `reader.zoomAt(±10, clientX, clientY)` (step 10 %, 50–300 %).
 - Anchor: after `qfs` changes, set `scroll = (scroll + pointer) × qfs'/qfs − pointer` on both axes, so the point under the cursor
   stays put.
 - `Mod+=`, `Mod+-` and `Mod+0` work the same around the canvas centre. (UI scale has its own keys, §10.1.)
+- **Zoom control (v1.2, `ZoomControl`).** Zoom without the wheel: a vertical glass capsule (40 × 92 px, `--glass-fill`,
+  `shadow-2`) in the canvas's **top inline-end corner** (top right in the English UI, top left in the Arabic UI), 16 px
+  from the top and 12 px from the edge (clear of the overlay scrollbars), outside the scroll viewport.
+  - **Buttons**, top to bottom: **+** (`reader.zoomIn()`), **the level** ("120%", UI digits; a click is
+    `reader.zoomReset()`, back to the fit), **−** (`reader.zoomOut()`), all around the canvas centre like the keys.
+    Tooltips point into the canvas and show the keys (`view.zoomIn` / `view.zoomFit` / `view.zoomOut`, as bound). The
+    button that would do nothing (+ at 300 %, the level at 100 %, − at 50 %) is `aria-disabled`, keeping focus; at the
+    fit the level stays a full-opacity readout. Names: "Zoom in", "Zoom 120%, fit to window", "Zoom out".
+  - **Clear of the page.** Every fit leaves at least `PAD_X + M_OUT·qfs` ≥ 24 + 1.9 × 18 = 58 px between the canvas edge
+    and the running head or the text; the capsule ends 52 px in, so at the fit it covers neither, in any dock mode. With
+    the side card it sits in the card's reserved column, above the card; the rail, dock, slot, follow chip and toasts
+    are at the bottom, the zen hint and top toasts centred, the turn-zone chevrons at the book's middle (it may cover
+    the top of a full-height zone's column, never its chevron).
+  - **Look.** Always present while the Mushaf shows, quiet at rest: 40 % with the pointer off the canvas, 60 % over it
+    (as the turn-zone chevrons, §8.11), 100 % hovered, keyboard-focused, or for 0.9 s after any zoom (wheel, pinch,
+    keys, palette, Settings): it is the zoom readout, and the change is announced ("Zoom 120%"). **Yield:** when the
+    text block, a running head, a dog-ear, the ribbon or a margin marker/mark lies within 4 px of it (a zoomed or
+    scrolled book, a dog-ear in the tightest fit), it is hidden and click-through until the pointer comes within 24 px
+    of it, it takes focus or a zoom wakes it; a held press (a drag) never brings it back. Measured in one frame after
+    a resize, scroll, turn or late mark, never while flipping.
+  - **Zen** (§9.6): hidden until the pointer moves, and again while it rests (`ui.pointerIdle`); it moves down by
+    `ZEN_TOP_ZONE_PX`, so reaching for it never reveals the title bar.
+  - **Keys and pointer.** `role="toolbar"` (`aria-orientation="vertical"`), one tab stop after the pages, the turn
+    zones, the rail and the slot's chips; ↑/↓ and Home/End move, Enter/Space press, Escape returns focus to the reading
+    cursor (consumed: the selection stays). A pointer press never takes focus (← → keep turning pages). A plain wheel
+    over it scrolls a zoomed canvas (`forwardWheel`) and turns the page while it fits; `Mod`+wheel zooms at the
+    pointer. It replaces WP8e's transient top-centre zoom indicator.
 - **Plain wheel when the page fits:**
   - Normalise `deltaMode`: lines × 16 px, pages × canvas height.
   - A **gesture** ends after 160 ms with no wheel events; one gesture turns **at most one page** (touchpad and free-spin
@@ -4351,7 +4380,8 @@ mirror (§11.3).
   At 1366×768, 1536×864 and 1920×1080 the pane docks even with the sidebar open (S32). Below 900 px window width the sidebar
   overlays too.
 - **Zen mode** (`Z`): hides chrome except the page; the cursor auto-hides after 2.5 s idle; the dock hides and reappears when the
-  pointer enters the bottom 80 px or an audio key is pressed; `PageTurnZones` stay hidden until the pointer moves.
+  pointer enters the bottom 80 px or an audio key is pressed; `PageTurnZones` and the zoom control stay hidden until the
+  pointer moves (§8.13).
 - **Chrome effect owner:** the frontend only. `settings.applyEffects()` calls `window_set_chrome` whenever the resolved theme or
   `chromeEffect` changes; Rust's `window::apply_settings` never touches chrome (it can't know what `system` resolved to).
 - **Windows:** `decorations:false, transparent:true, windowEffects:["mica"]`.
@@ -4678,6 +4708,7 @@ every row above into the frozen `shortcuts.ts` dictionaries (en + ar, §11.1).
 | drag (zoom ≤ 100 %) | Mushaf page and margins | on release, ≥ 80 px horizontal or a 30 px flick: right → next page, left → previous (§8.13); vertical pans at `QFS_MIN` |
 | drag (zoom > 100 %) | Mushaf page and margins | pan the canvas (§8.13) |
 | click a page-turn zone chevron | Mushaf canvas edges | left zone = next page, right zone = previous (§8.11) |
+| click + / the level / − | Mushaf canvas, top inline-end corner | zoom in / back to the fit / zoom out, around the canvas centre (§8.13) |
 | hover the bottom 24 px of the canvas | Mushaf canvas | reveal the page rail; drag previews, release turns (§8.11) |
 | hover / click / Shift+click / double-click / Mod+click / right-click | ayah words | §8.17 (click also shows the action bar) |
 | click empty paper or canvas | Mushaf | clear the selection |
