@@ -172,6 +172,10 @@ pub trait Geometry {
     fn outer_position(&self) -> Option<PhysicalPosition<i32>>;
     fn set_inner_size(&self, size: PhysicalSize<u32>);
     fn set_outer_position(&self, position: PhysicalPosition<i32>);
+    /// Whether a size request has taken effect when [`Geometry::set_inner_size`] returns, so that `inner_size` reads
+    /// what it produced. tao resizes at once on Windows; on macOS it queues `setContentSize:` on the main thread (and
+    /// GTK sizes a window when it configures it), so a read right after the request still sees the old size.
+    fn applies_size_at_once(&self) -> bool;
     /// Has the platform calculate the window's frame now, as showing it would, so that the client area it reports is
     /// the one the window will have on screen (a no-op where that is always so).
     fn settle_frame(&self);
@@ -184,11 +188,18 @@ pub trait Geometry {
 /// Sets the inner size and checks what the platform made of it. tao measures the frame afresh on every request, so a
 /// request skewed by a stale frame is simply made again; a platform that overshoots by the same amount every time is
 /// asked for the size less that amount, once. Returns the inner size reached.
+///
+/// Where a request takes effect later ([`Geometry::applies_size_at_once`]), it is made once and trusted: the check
+/// would read the old size, and its "correction" (twice the target less the old size) was queued after the request,
+/// so on macOS the window grew by the difference on every launch until it filled the screen.
 pub fn set_inner_size_exact(
     window: &impl Geometry,
     target: PhysicalSize<u32>,
 ) -> PhysicalSize<u32> {
     window.set_inner_size(target);
+    if !window.applies_size_at_once() {
+        return target;
+    }
     let Some(mut got) = window.inner_size() else {
         return target;
     };
@@ -341,6 +352,10 @@ impl<R: Runtime> Geometry for WebviewWindow<R> {
         if let Err(e) = self.set_position(position) {
             log::warn!("window: set_position: {e}");
         }
+    }
+
+    fn applies_size_at_once(&self) -> bool {
+        cfg!(windows)
     }
 
     #[cfg(windows)]
@@ -603,6 +618,9 @@ mod tests {
         fn set_outer_position(&self, position: PhysicalPosition<i32>) {
             self.position.set(position);
         }
+        fn applies_size_at_once(&self) -> bool {
+            true
+        }
         fn settle_frame(&self) {
             self.stale.set(false);
         }
@@ -729,5 +747,92 @@ mod tests {
         // A platform that overshoots by 43 px every time.
         let window = DriftingWindow::new(PhysicalSize::new(0, 0), 0, 43);
         assert_eq!(set_inner_size_exact(&window, want), want);
+    }
+
+    /// tao on macOS: `set_size` and `set_position` are queued on the main thread and take effect once the run loop
+    /// turns ([`QueuedWindow::run_loop`]); until then the window reports its old geometry. The window fills its frame
+    /// (the overlay title bar), so inner and outer sizes are the same.
+    struct QueuedWindow {
+        size: Cell<PhysicalSize<u32>>,
+        position: Cell<PhysicalPosition<i32>>,
+        queued: std::cell::RefCell<Vec<PhysicalSize<u32>>>,
+    }
+
+    impl QueuedWindow {
+        fn new() -> Self {
+            Self {
+                size: Cell::new(PhysicalSize::new(1440, 940)),
+                position: Cell::new(PhysicalPosition::new(1200, 40)),
+                queued: std::cell::RefCell::new(Vec::new()),
+            }
+        }
+
+        fn run_loop(&self) {
+            for size in self.queued.borrow_mut().drain(..) {
+                self.size.set(size);
+            }
+        }
+    }
+
+    impl Geometry for QueuedWindow {
+        fn inner_size(&self) -> Option<PhysicalSize<u32>> {
+            Some(self.size.get())
+        }
+        fn outer_size(&self) -> Option<PhysicalSize<u32>> {
+            Some(self.size.get())
+        }
+        fn outer_position(&self) -> Option<PhysicalPosition<i32>> {
+            Some(self.position.get())
+        }
+        fn set_inner_size(&self, size: PhysicalSize<u32>) {
+            self.queued.borrow_mut().push(size);
+        }
+        fn set_outer_position(&self, position: PhysicalPosition<i32>) {
+            self.position.set(position);
+        }
+        fn applies_size_at_once(&self) -> bool {
+            false
+        }
+        fn settle_frame(&self) {}
+        fn work_areas(&self) -> (Vec<Rect>, Option<usize>) {
+            (vec![rect(0, 30, 3840, 1050)], Some(0))
+        }
+        fn maximize(&self) {}
+        fn set_fullscreen(&self) {}
+    }
+
+    /// The macOS regression: the check read the old size, so a "correction" was queued after the request and the
+    /// window grew by the difference on every launch (1440 → 2640 → 3840 wide on a 3840 px display).
+    #[test]
+    fn a_queued_resize_is_asked_once_and_the_size_is_kept_across_launches() {
+        let mut saved = Saved {
+            width: 1600,
+            height: 900,
+            x: 500,
+            y: 100,
+            ..Saved::default()
+        };
+        for launch in 0..3 {
+            let window = QueuedWindow::new();
+            restore_with(&window, Some(saved));
+            assert_eq!(
+                *window.queued.borrow(),
+                [PhysicalSize::new(1600, 900)],
+                "launch {launch}"
+            );
+            window.run_loop();
+            let (size, pos) = (window.size.get(), window.position.get());
+            assert_eq!(
+                (size.width, size.height, pos.x, pos.y),
+                (1600, 900, 500, 100)
+            );
+            saved = Saved {
+                width: size.width,
+                height: size.height,
+                x: pos.x,
+                y: pos.y,
+                ..Saved::default()
+            };
+        }
     }
 }
