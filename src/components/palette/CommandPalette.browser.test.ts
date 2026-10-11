@@ -26,6 +26,12 @@ import { settings } from '$lib/stores/settings.svelte'
 import { shortcuts } from '$lib/stores/shortcuts.svelte'
 import { ui } from '$lib/stores/ui.svelte'
 
+/** `Mod` (§7.7): ⌘ when the browser runs on macOS (the mock reports the browser's platform), Ctrl elsewhere. */
+const mod = () => (app.isMac ? 'Meta' : 'Control')
+/** The caret's line-start and line-end keys: Home and End, ⌘← and ⌘→ on macOS (where Home and End scroll instead). */
+const lineStart = () => (app.isMac ? '{Meta>}{ArrowLeft}{/Meta}' : '{Home}')
+const lineEnd = () => (app.isMac ? '{Meta>}{ArrowRight}{/Meta}' : '{End}')
+
 const $ = <T extends Element = HTMLElement>(sel: string) => document.querySelector<T>(sel)
 const $$ = <T extends Element = HTMLElement>(sel: string) => [...document.querySelectorAll<T>(sel)]
 const input = () => $<HTMLInputElement>('[role="dialog"] [data-command-input]')
@@ -78,7 +84,7 @@ async function boot(options: { lang?: 'en' | 'ar'; settings?: Partial<Settings> 
 }
 
 async function openWithKeys(): Promise<void> {
-  await userEvent.keyboard('{Control>}k{/Control}')
+  await userEvent.keyboard(`{${mod()}>}k{/${mod()}}`)
   await settle(120)
 }
 
@@ -130,7 +136,7 @@ describe('Command palette: opening and closing', () => {
   it('closes with Mod+K again and gives focus back', async () => {
     await boot()
     await openWithKeys()
-    await userEvent.keyboard('{Control>}k{/Control}')
+    await userEvent.keyboard(`{${mod()}>}k{/${mod()}}`)
     expect(ui.isOpen('palette')).toBe(false)
     await afterClose()
     expect(input()).toBeNull()
@@ -219,9 +225,11 @@ describe('Command palette: keyboard flows', () => {
     await openWithKeys()
     await typeQuery('theme')
     const before = selected()[0]
-    await userEvent.keyboard('{Home}')
+    await userEvent.keyboard('{Home}{End}')
+    expect(selected()[0]).toBe(before)
+    await userEvent.keyboard(lineStart())
     expect(input()?.selectionStart).toBe(0)
-    await userEvent.keyboard('{End}')
+    await userEvent.keyboard(lineEnd())
     expect(input()?.selectionStart).toBe(5)
     expect(selected()[0]).toBe(before)
   })
@@ -239,7 +247,7 @@ describe('Command palette: keyboard flows', () => {
     await openWithKeys()
     await typeQuery('hide sidebar')
     expect(options()[0]?.getAttribute('data-value')).toBe('cmd:view.sidebar')
-    expect(plain(options()[0]?.querySelector('.kbd')).replace(/\s/gu, '')).toBe('Ctrl+B')
+    expect(plain(options()[0]?.querySelector('.kbd')).replace(/\s/gu, '')).toBe(app.isMac ? '⌘B' : 'Ctrl+B')
     await userEvent.keyboard('{Enter}')
     await afterClose()
     expect(seen).toEqual([{ layerOpen: false, focus: start() }])
@@ -299,7 +307,7 @@ describe('Command palette: keyboard flows', () => {
     await settle(80)
     expect(input()?.value).toBe('kahf')
     expect(options()[0]?.getAttribute('data-value')).toBe('surah:18')
-    await userEvent.keyboard('{Home}{Backspace}')
+    await userEvent.keyboard(`${lineStart()}{Backspace}`)
     await settle(80)
     expect(plain($('[role="dialog"] button.scope'))).toContain('Everything')
     expect(input()?.value).toBe('kahf')

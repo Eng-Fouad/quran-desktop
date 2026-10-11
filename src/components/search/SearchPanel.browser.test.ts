@@ -12,8 +12,11 @@ import '../../app.css'
 import type { SearchHit, SearchRequest, SearchResults, Settings } from '$lib/ipc/bindings'
 import { mockCommands } from '$lib/ipc/mock'
 import { err, ok } from '$lib/ipc/mock/result'
-import { quran, reader, search, settings, ui } from '$lib/stores'
+import { app, quran, reader, search, settings, ui } from '$lib/stores'
 import { bootApp, resetApp, settle } from '../shell/testing/boot'
+
+/** `Mod` (§7.7): ⌘ when the browser runs on macOS (the mock reports the browser's platform), Ctrl elsewhere. */
+const mod = () => (app.isMac ? 'Meta' : 'Control')
 
 const $ = <T extends Element = HTMLElement>(selector: string) => document.querySelector<T>(selector)
 const $$ = (selector: string) => [...document.querySelectorAll<HTMLElement>(selector)]
@@ -307,7 +310,7 @@ describe('hits', () => {
     const goToAyah = vi.spyOn(reader, 'goToAyah')
     await searchFor('الرحمن')
     ;(hitRow(1) as HTMLElement).focus()
-    await userEvent.keyboard('{Control>}{Enter}{/Control}')
+    await userEvent.keyboard(`{${mod()}>}{Enter}{/${mod()}}`)
     expect(openSidePane).toHaveBeenCalledTimes(1)
     expect(reader.selection?.fromAyahId).toBe(262)
     expect(goToAyah).not.toHaveBeenCalled()
@@ -321,7 +324,7 @@ describe('hits', () => {
     expect(
       $$('[role="menuitem"]').map((m) =>
         plain(m)
-          .replace(/Ctrl\+Enter|Enter$/u, '')
+          .replace(/Ctrl\+Enter|⌘↩|Enter$/u, '')
           .trim(),
       ),
     ).toEqual(['Open', 'Open in side pane', 'Copy', 'Bookmark'])
@@ -405,7 +408,7 @@ describe('controls', () => {
   it('focuses the field with Mod+F from the reader', async () => {
     await boot({ sidebar: { open: true, widthPx: 300, tab: 'index' } })
     ;(document.querySelector('main#qd-main') as HTMLElement).focus()
-    await userEvent.keyboard('{Control>}f{/Control}')
+    await userEvent.keyboard(`{${mod()}>}f{/${mod()}}`)
     await until(() => document.activeElement === field())
     expect(settings.value.sidebar.tab).toBe('search')
   })

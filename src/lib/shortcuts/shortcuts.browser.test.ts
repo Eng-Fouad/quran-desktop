@@ -11,7 +11,10 @@ import '../../app.css'
 import { bootApp, resetApp, settle } from '$components/shell/testing/boot'
 import { ContextMenu, Slider } from '$components/ui'
 import type { ShortcutDef, ShortcutGroup, ShortcutScope } from '$lib/contracts/shortcuts'
-import { reader, settings, shortcuts, ui } from '$lib/stores'
+import { app, reader, settings, shortcuts, ui } from '$lib/stores'
+
+/** `Mod` (§7.7): ⌘ when the browser runs on macOS (the mock reports the browser's platform), Ctrl elsewhere. */
+const mod = () => (app.isMac ? 'Meta' : 'Control')
 
 /** Registers a spy definition (another package's shortcut stand-in) and returns its `run` mock. */
 function spy(
@@ -117,7 +120,7 @@ describe('widget guard (§7.7 rule 3) with real focus', () => {
     await userEvent.keyboard('b')
     expect(input.value).toBe('b')
     expect(bookmark).not.toHaveBeenCalled()
-    await userEvent.keyboard('{Control>}k{/Control}')
+    await userEvent.keyboard(`{${mod()}>}k{/${mod()}}`)
     expect(ui.topOverlay?.kind).toBe('palette')
   })
 
@@ -208,7 +211,7 @@ describe('Escape (§10.1)', () => {
   it('in a narrow window a sidebar filter clears first; the next Escape closes the floating sidebar', async () => {
     await bootApp({ size: [860, 900] })
     blur()
-    await userEvent.keyboard('{Control>}f{/Control}')
+    await userEvent.keyboard(`{${mod()}>}f{/${mod()}}`)
     await settle(400)
     expect(ui.sidebarOverlay).toBe(true)
     const field = document.querySelector<HTMLInputElement>('[data-qd-focus="search"]') as HTMLInputElement

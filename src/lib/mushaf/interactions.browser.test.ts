@@ -9,10 +9,10 @@ import { userEvent } from 'vitest/browser'
 import { render } from 'vitest-browser-svelte'
 import '../../app.css'
 import MushafPage from '$components/mushaf/MushafPage.svelte'
-import { initIpc } from '$lib/ipc'
+import { api, call, initIpc } from '$lib/ipc'
 import type { PageData } from '$lib/ipc/bindings'
 import { fixtures } from '$lib/ipc/mock'
-import { pages, player, quran, reader, settings, ui } from '$lib/stores'
+import { app, pages, player, quran, reader, settings, ui } from '$lib/stores'
 import {
   ACTION_BAR_DELAY_MS,
   ACTION_BAR_EVENT,
@@ -244,13 +244,21 @@ describe('clicks (§8.17, D26)', () => {
   })
 
   it('plays from the ayah with Mod+click (and Alt+click off Linux), selecting nothing', async () => {
-    const play = vi.spyOn(player, 'playFrom').mockResolvedValue(undefined)
-    const { word } = await show()
-    await userEvent.click(word(1812, 1), { modifiers: ['ControlOrMeta'] })
-    expect(play).toHaveBeenCalledWith({ ayahId: 1812 })
-    expect(reader.selection).toBeNull()
-    await userEvent.click(word(1813, 1), { modifiers: ['Alt'] })
-    expect(play).toHaveBeenLastCalledWith({ ayahId: 1813 })
+    // The platform the browser runs on (the mock reports it), as in the app: on macOS, Ctrl+click is a right-click.
+    const before = app.info
+    app.info = { ...before, platform: (await call(api.appBootstrap())).app.platform }
+    try {
+      const play = vi.spyOn(player, 'playFrom').mockResolvedValue(undefined)
+      const { word } = await show()
+      await userEvent.click(word(1812, 1), { modifiers: [app.isMac ? 'Meta' : 'Control'] })
+      expect(play).toHaveBeenCalledWith({ ayahId: 1812 })
+      expect(reader.selection).toBeNull()
+      if (app.isLinux) return
+      await userEvent.click(word(1813, 1), { modifiers: ['Alt'] })
+      expect(play).toHaveBeenLastCalledWith({ ayahId: 1813 })
+    } finally {
+      app.info = before
+    }
   })
 
   it('opens the ayah context menu at the pointer for a right-click', async () => {

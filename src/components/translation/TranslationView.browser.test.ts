@@ -16,6 +16,9 @@ import { hitOpener } from '../search/open'
 import TranslationHarness from './testing/TranslationHarness.svelte'
 import { boot, EN, resetAll, scrollFeedTo, scroller, settle, topOf, UR, until, verse } from './testing/setup'
 
+/** `Mod` (§7.7): ⌘ when the browser runs on macOS (the mock reports the browser's platform), Ctrl elsewhere. */
+const mod = () => (app.isMac ? 'Meta' : 'Control')
+
 const $ = <T extends Element = HTMLElement>(sel: string) => document.querySelector<T>(sel)
 const $$ = <T extends Element = HTMLElement>(sel: string) => [...document.querySelectorAll<T>(sel)]
 /** Text without the bidi isolates that wrap references (§11.3). */
@@ -397,7 +400,7 @@ describe('pointer gestures', () => {
     expect(select).toHaveBeenLastCalledWith(2, false)
     await userEvent.click(arabic, { modifiers: ['Shift'] })
     expect(select).toHaveBeenLastCalledWith(2, true)
-    await userEvent.click(arabic, { modifiers: ['Control'] })
+    await userEvent.click(arabic, { modifiers: [mod()] })
     expect(play).toHaveBeenLastCalledWith({ ayahId: 2 })
     await userEvent.click(arabic, { button: 'right' })
     expect(ui.contextMenu?.ayahId).toBe(2)

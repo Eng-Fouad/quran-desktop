@@ -374,7 +374,7 @@ describe('starting', () => {
     const caps = $$(`${DIALOG} [data-key]`).map((k) =>
       [...k.querySelectorAll('.cap')].map((c) => c.textContent?.trim()).join('+'),
     )
-    expect(caps[0]).toMatch(/^(Ctrl\+K|⌘K)$/)
+    expect(caps[0]).toMatch(/^(Ctrl\+K|⌘\+K)$/) // the caps, joined with + here
     expect(caps[1]).toBe('Space')
     expect(caps[2]).toBe('?')
   })

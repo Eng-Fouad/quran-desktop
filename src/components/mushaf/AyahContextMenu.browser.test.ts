@@ -8,8 +8,11 @@ import { flushSync } from 'svelte'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { page, userEvent } from 'vitest/browser'
 import '../../app.css'
-import { library, player, reader, settings, ui } from '$lib/stores'
+import { app, library, player, reader, settings, ui } from '$lib/stores'
 import { bootApp, resetApp, settle } from '../shell/testing/boot'
+
+/** `Mod` (§7.7): ⌘ when the browser runs on macOS (the mock reports the browser's platform), Ctrl elsewhere. */
+const mod = () => (app.isMac ? 'Meta' : 'Control')
 
 const $ = <T extends Element = HTMLElement>(selector: string) => document.querySelector<T>(selector)
 const $$ = (selector: string) => [...document.querySelectorAll<HTMLElement>(selector)]
@@ -72,9 +75,9 @@ describe('AyahContextMenu (§10.3)', () => {
       'Memorize',
     ])
     const hint = (label: string) => plain(item(label)?.querySelector('.hint'))
-    expect(hint('Play from here')).toBe('Ctrl+Click')
+    expect(hint('Play from here')).toBe(app.isMac ? '⌘+Click' : 'Ctrl+Click')
     expect(hint('Bookmark')).toBe('B')
-    expect(hint('Move reading bookmark here')).toBe('Shift+B')
+    expect(hint('Move reading bookmark here')).toBe(app.isMac ? '⇧B' : 'Shift+B')
     expect(hint('Add note…')).toBe('N')
     // It is a floating layer while open.
     expect(ui.layerOpen).toBe(true)
@@ -169,7 +172,7 @@ describe('AyahContextMenu (§10.3)', () => {
     await copyMenu()
     expect(hint('Arabic with reference')).toBe('C')
     expect(hint('Arabic only')).toBe('')
-    expect(hint('With translation')).toBe('Ctrl+Shift+C')
+    expect(hint('With translation')).toBe(app.isMac ? '⇧⌘C' : 'Ctrl+Shift+C')
     await close()
     // Without the reference, C copies the Arabic alone.
     await settings.update({ copy: { ...settings.value.copy, includeReference: false } })
@@ -217,11 +220,11 @@ describe('study shortcuts (§10.1)', () => {
     await press('{Shift>}B{/Shift}')
     await until(() => library.readingBookmark?.ayahId === 262)
 
-    await press('{Control>}z{/Control}')
+    await press(`{${mod()}>}z{/${mod()}}`)
     await until(() => library.readingBookmark === null)
-    await press('{Control>}z{/Control}')
+    await press(`{${mod()}>}z{/${mod()}}`)
     await until(() => library.highlightAt(262)?.color === 'green')
-    await press('{Control>}{Shift>}Z{/Shift}{/Control}')
+    await press(`{${mod()}>}{Shift>}Z{/Shift}{/${mod()}}`)
     await until(() => library.highlightAt(262) === undefined)
   })
 
