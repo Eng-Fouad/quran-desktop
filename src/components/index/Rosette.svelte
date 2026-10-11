@@ -5,7 +5,7 @@
   Owner: WP10a.
 -->
 <script lang="ts">
-  import { i18n } from '$lib/stores'
+  import { i18n, settings } from '$lib/stores'
 
   interface Props {
     n: number
@@ -21,7 +21,7 @@
 </script>
 
 <span
-  class={['rosette', { active, long: label.length > 2 }, className]}
+  class={['rosette', { active, long: label.length > 2, arab: settings.arabicDigits }, className]}
   style:--_size="{size}px"
   aria-hidden="true"
 >
@@ -71,12 +71,20 @@
     letter-spacing: 0;
   }
 
-  /* Three digits: 0.32 of the edge, so 114 (and ayah 286) stay inside the star at every size (6.4 px at 20, 7.7 px at
-     24, 9 px at 28, 11.5 px at 36). Near the digits the star is as wide as its square (2 × 7.78 of 24), and three
-     tabular Inter digits take 1.88 em: at 24 px, 14.4 px of 15.6. */
+  /* Three Western Arabic digits: 0.32 of the edge, so 114 (and ayah 286) stay inside the star at every size (6.4 px at
+     20, 7.7 px at 24, 9 px at 28, 11.5 px at 36). Near the digits the star is as wide as its square (2 × 7.78 of 24),
+     and three tabular Inter digits take 1.88 em: at 24 px, 14.4 px of 15.6. */
   .long .num {
     font-size: calc(var(--_size) * 0.32);
     letter-spacing: -0.02em;
+  }
+
+  /* Three Eastern Arabic digits are narrower (IBM Plex Sans Arabic: 1.67 em at most, ٢٣٣), so they stay larger: 0.37
+     of the edge, never above the size of two (7.4 px at 20, 8.9 px at 24, 10.4 px at 28, 13 px at 36). At 24 px,
+     ١١٤ takes 8.2 px and ٢٣٣ 14.8 px of 15.6. */
+  .long.arab .num {
+    font-size: min(calc(var(--_size) * 0.37), calc(var(--_size) / 6 + 7px));
+    letter-spacing: 0;
   }
 
   .active {
