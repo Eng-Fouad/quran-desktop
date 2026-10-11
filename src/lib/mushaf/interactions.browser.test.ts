@@ -1,7 +1,8 @@
 /**
  * Word interactions (WP8d; §8.14, §8.17) in a real browser: a real interactive MushafPage (page 262, hafs) inside a
  * `<main>` canvas, driven with real pointer input (Playwright through `userEvent`) and, for the dwell rule, with
- * pointer events at exact coordinates.
+ * pointer events at exact coordinates. The glyphs are never a native text-selection surface (§8.14: copy goes through
+ * the ayah selection); the drag gesture itself (pan.ts) is the Mushaf view's and is tested there.
  */
 import { flushSync } from 'svelte'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -17,6 +18,8 @@ import {
   ACTION_BAR_DELAY_MS,
   ACTION_BAR_EVENT,
   nextSelection,
+  pointerDragEnded,
+  pointerDragStarted,
   TOOLTIP_DWELL_MS,
   WORD_DWELL_EVENT,
   type WordDwell,
@@ -193,6 +196,23 @@ describe('hover and the WBW dwell rule (§8.17)', () => {
     move(w, 6, 0)
     await expect.poll(() => dwells.filter((d) => d !== null).length, { timeout: 1500 }).toBe(2)
   })
+
+  it('shows none for a pointer parked on a word after a drag (pan.ts) until it moves 4 px', async () => {
+    const { word } = await show()
+    // The rendition last saw the pointer on another line, where the drag started.
+    move(word(1806, 1), 0, 0)
+    const w = word(1811, 2)
+    const r = w.getBoundingClientRect()
+    pointerDragStarted()
+    expect(reader.hover).toBeNull()
+    pointerDragEnded(r.left + r.width / 2, r.top + r.height / 2)
+    // The release hands the pointer back: the first event over the word is not travel.
+    move(w, 0, 0, 'pointerover')
+    await sleep(TOOLTIP_DWELL_MS + 150)
+    expect(dwells.filter((d) => d !== null)).toEqual([])
+    move(w, 6, 0)
+    await expect.poll(() => dwells.filter((d) => d !== null).length, { timeout: 1500 }).toBe(1)
+  })
 })
 
 describe('clicks (§8.17, D26)', () => {
@@ -282,6 +302,33 @@ describe('clicks (§8.17, D26)', () => {
     await userEvent.click(word(1811, 2))
     await userEvent.click(main, { position: { x: 2, y: 2 } })
     expect(reader.selection).toBeNull()
+  })
+
+  it('never starts a native selection with a drag across the words, and the drag selects no ayah', async () => {
+    const { word } = await show()
+    await userEvent.dragAndDrop(word(1806, 1), word(1814, 1))
+    expect(window.getSelection()?.toString() ?? '').toBe('')
+    expect(window.getSelection()?.isCollapsed ?? true).toBe(true)
+    expect(reader.selection).toBeNull()
+  })
+
+  it('selects the ayah of a clicked word while a text selection exists elsewhere', async () => {
+    const { word } = await show()
+    const p = document.createElement('p')
+    p.textContent = 'Selected elsewhere'
+    document.body.append(p)
+    try {
+      const range = document.createRange()
+      range.selectNodeContents(p)
+      window.getSelection()?.removeAllRanges()
+      window.getSelection()?.addRange(range)
+      expect(window.getSelection()?.toString()).toBe('Selected elsewhere')
+      await userEvent.click(word(1811, 2))
+      expect(reader.selection?.fromAyahId).toBe(1811)
+    } finally {
+      window.getSelection()?.removeAllRanges()
+      p.remove()
+    }
   })
 
   it('cancels the native selection of a double-click inside the glyphs (§8.14)', async () => {

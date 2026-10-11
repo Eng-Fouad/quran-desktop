@@ -16,13 +16,18 @@
  * | right-click                     | the ayah context menu (`ui.contextMenu`)                                        |
  * | click an end-of-ayah marker     | select and open the side pane on Tafsir                                         |
  * | click empty paper or canvas     | clear the selection (the action bar goes with it)                               |
+ * | drag, zoom ≤ 100 % (the fit)    | horizontal ≥ 80 px turns one page on release, right = next (pan.ts)             |
+ * | drag, zoom > 100 %              | moves the canvas (pan.ts)                                                       |
  *
  * A surah header handles its own click and hover (WP8c's `HeaderLine`, which stops them before they reach this
  * delegation); a basmala line hovers ayah 1 of its surah here. Pointer selections made elsewhere on the page (margin
- * markers) can use `selectFromPointer`, which selects like a word click, action bar included.
+ * markers) can use `selectFromPointer`, which selects like a word click, action bar included. A drag is not a click:
+ * pan.ts swallows the click of its release and quiets the hover, the tooltip and a pending action bar while it runs
+ * (`pointerDragStarted` / `pointerDragEnded`).
  *
- * §8.14: a `mousedown` with `detail ≥ 2` in a rendition never starts a native word selection over the PUA glyphs, and a
- * click that ends a native drag-selection selects nothing (the copy handler owns that text).
+ * §8.14: no native text selection starts on the page (the canvas and the glyphs are `user-select: none`); copy goes
+ * through the ayah selection. A `mousedown` with `detail ≥ 2` in a rendition still clears any DOM selection, so a
+ * double-click never flashes a native word selection over the PUA glyphs.
  *
  * The tooltip and the action bar are separate components (mounted once by the Mushaf view); this module talks to them
  * through window events (`WORD_DWELL_EVENT`, `ACTION_BAR_EVENT`) so it holds no reactive state of its own.
@@ -47,8 +52,8 @@ export const TOOLTIP_MOVE_PX = 4
 export const TOOLTIP_DWELL_MS = 450
 /** The action bar appears this long after a pointer click-selection. */
 export const ACTION_BAR_DELAY_MS = 120
-/** A press that travels further than this is a drag (text selection, a scroll), not a click on empty paper. */
-const CLICK_SLOP_PX = 4
+/** A press that travels further than this is a drag (pan.ts: a pan or a page turn), not a click on empty paper. */
+export const CLICK_SLOP_PX = 4
 
 // --- events --------------------------------------------------------------------------------------------------------------
 
@@ -311,6 +316,30 @@ function hasTextSelection(): boolean {
   return s !== null && !s.isCollapsed && s.toString().trim() !== ''
 }
 
+/**
+ * A drag on the canvas started (pan.ts): no tooltip, no hover tint, no pending action bar, and its release is no click
+ * on empty paper. Under pointer capture the engines differ in the boundary events the rendition gets, so this does not
+ * wait for them.
+ */
+export function pointerDragStarted(): void {
+  hideWordTooltip()
+  dwell.reset(null)
+  clearTimeout(barTimer)
+  barTimer = undefined
+  press = null
+  if (reader.hover !== null) reader.setHover(null, null)
+}
+
+/**
+ * …and ended at (`x`, `y`): the pointer counts as parked there, so the first `pointerover` after the release never
+ * counts the drag as travel, and no tooltip pops until the pointer moves 4 px onto a word (§8.17).
+ */
+export function pointerDragEnded(x: number, y: number): void {
+  lastX = x
+  lastY = y
+  dwell.reset(null)
+}
+
 function installGlobal(): void {
   const onKey = (): void => hideWordTooltip()
   const onScroll = (): void => hideWordTooltip()
@@ -429,8 +458,9 @@ export function interactions(node: HTMLElement): { destroy(): void } {
     if (e.button !== 0) return
     // Not a word: empty line space is "empty paper" (the document listener clears the selection); a surah header
     // handles its own click (WP8c's HeaderLine opens the surah info popover).
+    // A DOM selection elsewhere (the side pane) never stops it: no native selection can end on the glyphs any more.
     const word = wordAt(node, e.target)
-    if (!word || hasTextSelection()) return
+    if (!word) return
     const ayahId = num(word.dataset.a)
     if (!Number.isInteger(ayahId)) return
     if (isPlayClick(e)) {

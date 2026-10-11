@@ -21,9 +21,14 @@
     point (the pointer, else the canvas centre) fixed: `scroll' = (scroll + p) · qfs'/qfs − p` on both axes, measured
     on the book itself so the stage padding and centring cancel out. A new page on a scrolled canvas starts at its
     top, on the reading side (right). Cursor moves and jumps scroll their ayah into view (`reader.revealRequest`).
-  - Copy (§8.14): a native selection over the glyphs copies the selected words' Unicode text in the user's copy
-    format (`buildCopyText`), never the PUA glyph codes; with a translation in the copy settings, the clipboard is
-    completed with it from `quran_copy_text` a moment later.
+  - Drag (§8.13, `use:pan`): at the fit or below (≤ 100 %) a horizontal drag turns one page on release (right = next,
+    book order, in both UI languages; a vertical one pans while the canvas still scrolls at `QFS_MIN`); zoomed past the
+    fit the canvas follows the pointer (grab / grabbing cursor). A press that does not travel stays a click, and the
+    canvas is never a native text-selection surface (`user-select: none`).
+  - Copy (§8.14): copy goes through the ayah selection (`C`, `Mod+C`, the action bar, the context menu). A DOM
+    selection that still reaches the glyphs (programmatic, assistive technology) copies the selected words' Unicode
+    text in the user's copy format (`buildCopyText`), never the PUA glyph codes; with a translation in the copy
+    settings, the clipboard is completed with it from `quran_copy_text` a moment later.
 -->
 <script lang="ts">
   import { untrack } from 'svelte'
@@ -46,6 +51,7 @@
     slotBottom as slotBottomOf,
     slotClearance,
   } from '$lib/mushaf/geometry'
+  import { pan } from '$lib/mushaf/pan'
   import { unicodeScale } from '$lib/mushaf/unicodeFit'
   import { shapeWarmer, warmPageOf, type WarmPage } from '$lib/mushaf/warmup'
   import { wheel } from '$lib/mushaf/wheel'
@@ -344,11 +350,13 @@
   data-qd-view="mushaf"
   data-dock={reader.dock}
   data-scrolls={reader.scrolls ? '' : undefined}
+  data-zoomed={reader.zoomPct > 100 ? '' : undefined}
   bind:clientWidth={width}
   bind:clientHeight={height}
   style:--mv-reserve-end={`${reserveEnd}px`}
   style:--mv-slot-bottom={`${slotBottom}px`}
   use:wheel
+  use:pan
   {oncopy}
 >
   <!-- The shaping warm-up's host (warmup.ts): unseen and size-contained; its lines are added and removed in one slice. -->
@@ -413,6 +421,27 @@
   .mushaf-view :global(.mv-scroll) {
     inline-size: 100%;
     block-size: 100%;
+  }
+
+  /*
+   * §8.13 drag (pan.ts): a press on the page or its margins is a click or a drag, never a native text selection (copy
+   * goes through the ayah selection, §8.14). Unlayered, so it beats the `mushaf` layer; WKWebView needs the prefix.
+   */
+  .mushaf-view :global([data-scroll-area-viewport]) {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* Zoomed past the fit the book can be grabbed; end markers, headers and margin marks keep their pointer. */
+  .mushaf-view[data-zoomed] :global([data-scroll-area-viewport]),
+  .mushaf-view[data-zoomed] :global(.mp-glyphs[data-interactive]) {
+    cursor: grab;
+  }
+
+  /* While a drag runs (`data-drag`, set by the action), over everything it crosses: the canvas holds the capture. */
+  .mushaf-view:global([data-drag]),
+  .mushaf-view:global([data-drag]) :global(*) {
+    cursor: grabbing;
   }
 
   /* §7.5 overlay slot: bottom centre of the page area, above the bar dock (or low beside the side card). */

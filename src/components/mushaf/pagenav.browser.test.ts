@@ -1,7 +1,7 @@
 /**
  * The page-navigation affordances besides the rail (§8.11, §8.12; WP8f), in the real `App` on the browser mock:
  * - PageTurnZones: placement in the free canvas beside the paper (never over the text block), book order in both UI
- *   languages, the 0 / 60 % / 100 % chevron, no focus on click, zen;
+ *   languages, the 0 / 60 % / 100 % chevron, the chevron a drag on the page would turn to, no focus on click, zen;
  * - FlipHUD: shown while flipping with the spread's label, gone 600 ms after the last flip;
  * - DivisionChip: a forward turn or the recitation entering a juz or hizb, once per session, never on a jump;
  * - HintChip: once after the welcome flow, gone for good after "Got it" or a page turn.
@@ -142,6 +142,67 @@ describe('PageTurnZones (§8.11)', () => {
     await settle(300)
     expect(opacity(NEXT)).toBe(0)
   })
+
+  it.each([
+    ['full-height zones', [1600, 1000], false],
+    ['compact chevrons', [1280, 800], true],
+  ] as const)(
+    'lights the chevron a drag on the page would turn to, until the release or a cancel (%s)',
+    async (_label, size, compact) => {
+      await boot({ size: [...size] })
+      await goTo(262)
+      await until(() => $(NEXT) !== null && $(PREV) !== null, 2_000, 'both zones')
+      expect($(`${NEXT}.compact`) !== null).toBe(compact)
+      const view = $('.mushaf-view') as HTMLElement
+      await userEvent.hover(view, { position: { x: view.clientWidth / 2, y: 300 } })
+      const layers = document.querySelectorAll<HTMLElement>('section.mp[data-page="262"] .mp-glyphs')
+      const word = layers[layers.length - 1]?.querySelector<HTMLElement>('.w:not(.e)') as HTMLElement
+      const r = word.getBoundingClientRect()
+      const send = (type: string, dx: number) =>
+        word.dispatchEvent(
+          new PointerEvent(type, {
+            bubbles: true,
+            cancelable: true,
+            clientX: r.left + r.width / 2 + dx,
+            clientY: r.top + r.height / 2,
+            button: 0,
+            buttons: type === 'pointerup' ? 0 : 1,
+            isPrimary: true,
+            pointerId: 7,
+            pointerType: 'mouse',
+          }),
+        )
+      send('pointerdown', 0)
+      send('pointermove', 40)
+      await settle(300)
+      expect(opacity(NEXT)).toBeCloseTo(0.6, 2)
+      // Far enough to turn on release: right is the next page (book order), the left zone.
+      send('pointermove', 120)
+      await settle(300)
+      expect(opacity(NEXT)).toBe(1)
+      expect(opacity(PREV)).toBeCloseTo(0.6, 2)
+      send('pointermove', -120)
+      await settle(300)
+      expect(opacity(PREV)).toBe(1)
+      expect(opacity(NEXT)).toBeCloseTo(0.6, 2)
+      // Escape cancels the drag: nothing stays lit, nothing turns.
+      await userEvent.keyboard('{Escape}')
+      await settle(300)
+      expect(opacity(PREV)).toBeCloseTo(0.6, 2)
+      send('pointerup', -120)
+      await settle(150)
+      expect(reader.visiblePages).toEqual([261, 262])
+      // A release that turns lets the chevron go as well.
+      send('pointerdown', 0)
+      send('pointermove', 120)
+      await settle(300)
+      expect(opacity(NEXT)).toBe(1)
+      send('pointerup', 120)
+      await until(() => reader.visiblePages.includes(263) && !reader.turning, 2_000, 'the next spread')
+      await settle(300)
+      expect(opacity(NEXT)).toBeCloseTo(0.6, 2)
+    },
+  )
 
   it('offers no previous page at the first spread and no next page at the last', async () => {
     await boot()

@@ -7,6 +7,8 @@
  * - Line-fit (bounded): `fitLines()` (geometry.ts) writes `--fx`/`--fy` per line; the transform never changes the line
  *   box, so nothing shifts (CLS 0). Horizontal-only squeeze stops at 0.96, below that the line scales uniformly.
  * - Opening pages (1–2): the 8 lines are centred in the 15-line block, inset inside the medallion.
+ * - No native text selection: a press on the glyphs is a click or a drag (pan.ts, §8.13); copy goes through the ayah
+ *   selection (§8.14). WKWebView still needs the prefixed property.
  */
 @layer mushaf {
   .mp-glyphs {
@@ -16,7 +18,8 @@
     --center-gap: 0.3;
 
     cursor: default;
-    user-select: text;
+    -webkit-user-select: none;
+    user-select: none;
   }
 
   .ln {
@@ -77,7 +80,7 @@
     font-palette: --qd-v4;
   }
 
-  /* §8.17: the pointer only over end markers and surah headers; plain words keep the default cursor. */
+  /* §8.17: the pointer only over end markers and surah headers; plain words keep the default cursor (zoomed: grab). */
   .mp-glyphs[data-interactive] .w.e,
   .mp-glyphs[data-interactive] .ln[data-k='surah_name'] {
     cursor: pointer;
@@ -110,11 +113,5 @@
   .qd-warm-ln > span {
     display: inline-block;
     white-space: nowrap;
-  }
-
-  /* §8.14: native drag-selection over the glyphs, tinted with the accent (copy maps it to Unicode text, WP8e). */
-  .mp-glyphs ::selection {
-    background: color-mix(in srgb, var(--accent) 28%, transparent);
-    color: inherit;
   }
 }

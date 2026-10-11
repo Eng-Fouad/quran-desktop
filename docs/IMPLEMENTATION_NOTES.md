@@ -562,6 +562,10 @@ is the lead's fold-in of every accepted deviation (`docs/deviations/WP*.md`), ev
 - Dwell rule for the word tooltip: ≥ 4 px of travel on the word, then 450 ms at rest; end markers get none; a hidden
   memorised word gets none (WP8d 8, INT web). The action bar is a `role="toolbar"` anchored on the selection ring; Escape
   closes it before the selection (WP8d 9, INT gate 3).
+- **No native text selection on the page** (owner request): the scroll viewport and the glyphs are `user-select: none`,
+  since a left drag pans or turns the page (§10.5). The native drag-selection copy of §8.14 is gone: copy is `C`,
+  `Mod+C`, the action bar or the context menu on the ayah selection; `Mod+A` no longer selects the glyphs. A word click
+  no longer bails out while a DOM selection exists (one made elsewhere, which a press on the page collapses).
 
 ### 10.4 Furniture and marks (§8.8–8.9)
 
@@ -617,6 +621,14 @@ is the lead's fold-in of every accepted deviation (`docs/deviations/WP*.md`), ev
 - Zoom keeps the point under the pointer on the book; a 0.9 s indicator shows the level; `Mod++` also zooms in (WP8e 4).
   Wheel: a single large event (≥ 50 px, one Windows notch) turns at once; a notch is one 10 % zoom step; a pinch 60 px per
   step (WP8e 5).
+- **Drag** (`pan.ts`, owner request): the mode is fixed at the press from `zoomPct`, not `reader.scrolls`. At ≤ 100 % a
+  horizontal-dominant drag turns one page on release (≥ 80 px, or 30 px within 250 ms; right = next, never mirrored);
+  while the canvas still scrolls at `QFS_MIN`, a drag that sets off vertical-dominant pans vertically. Above 100 % a
+  drag pans. Slop 8 px for a swipe (a shaky click still selects), 4 px for a pan; capture only past the slop; the
+  release's click and dblclick are swallowed at `window` for that task; Escape, a context menu, blur, a lost capture or
+  a layer cancel. No rubber band (a turn is a view-transition snapshot): the grabbing cursor and the lit chevron of the
+  zone the release turns to are the feedback. A drag never reveals the page rail; after the release the rail reveals
+  only once the pointer moves again.
 - Follow-along turns unless the user navigated in the last 4 s; otherwise the follow chip offers the way back (WP8e 6).
 - Selection: `select` pins the side pane; a cursor off screen starts from the visible pages; history ≤ 50 jumps;
   range jumps (`goToAyah(…, { selectTo })`) flash, focus and announce the first ayah (WP8e 8, INT fix 2 mushaf).

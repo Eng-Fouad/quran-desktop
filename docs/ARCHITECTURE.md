@@ -3960,8 +3960,9 @@ html[data-turn="prev"] { --qd-out: qd-out-left;  --qd-in: qd-in-right; }
 - **`PageTurnZones`** (WP8f): two zones, 56 px wide and full canvas height, in the canvas space outside the paper (narrowed to
   the free space when less, never covering the text block). The **left** zone means next page and the **right** zone previous,
   in physical book order, never mirrored. Each shows a 40 px circular chevron (`--surface-raised`, `shadow-1`) at opacity 0,
-  60 % while the pointer is over the canvas and 100 % over the zone. They carry `aria-label` "Next page"/"Previous page",
-  come after the pages in tab order, and stay hidden in zen mode until the pointer moves.
+  60 % while the pointer is over the canvas and 100 % over the zone, or (v1.2) while a drag on the page would turn to it on
+  release (§8.13). They carry `aria-label` "Next page"/"Previous page", come after the pages in tab order, and stay hidden
+  in zen mode until the pointer moves.
 - **First-run hint** (WP8f `HintChip`): once (`settings.hintsSeen` gets `"page_turn"`), "Scroll, swipe or press ← → to turn
   pages".
 
@@ -3975,7 +3976,7 @@ html[data-turn="prev"] { --qd-out: qd-out-left;  --qd-in: qd-in-right; }
 - **Division arrival** (WP8f `DivisionChip`): when reading or follow-along first enters a new juz (or hizb), show
   `بداية الجزء الخامس عشر · Juz 15` for 2.5 s and announce it politely.
 
-### 8.13 Zoom and wheel (WP8e, `src/lib/mushaf/wheel.ts`)
+### 8.13 Zoom, wheel and drag (WP8e, `src/lib/mushaf/wheel.ts`, `src/lib/mushaf/pan.ts`)
 - `Mod+wheel` and touchpad pinch (which arrives as Ctrl+wheel) call `reader.zoomAt(±10, clientX, clientY)` (step 10 %, 50–300 %).
 - Anchor: after `qfs` changes, set `scroll = (scroll + pointer) × qfs'/qfs − pointer` on both axes, so the point under the cursor
   stays put.
@@ -3987,6 +3988,23 @@ html[data-turn="prev"] { --qd-out: qd-out-left;  --qd-in: qd-in-right; }
   - `deltaY > 0` (scroll down) means next page; thresholds per gesture: 120 px vertical, 80 px horizontal; swiping right
     (`deltaX < 0`) means next page (RTL book). A 400 ms floor between turns remains.
 - When zoomed past fit, or when the canvas scrolls because `qfs` hit `QFS_MIN`, the wheel scrolls.
+- **Drag (v1.2, `pan.ts`).** A left-button press of the mouse or a pen on the book or its margins (inside the scroll
+  viewport; the turn zones, the rail, the chips and the scrollbars are outside it) is a click until it travels past the
+  slop, then a drag. Touch stays native; another button, a non-primary pointer, macOS Ctrl+click and a press while a
+  layer is open never arm one. The mode is fixed at the press from the zoom:
+  - **≤ 100 % (the fit or below): swipe.** A horizontal-dominant drag turns one page **on release** with ≥ 80 px of
+    travel (the wheel's horizontal threshold) or a flick of ≥ 30 px within 250 ms; dragging right is the next page (RTL
+    book, never mirrored by the UI language), through `reader.next()` / `reader.prev()` (animated like a turn-zone
+    click). Dragging back before the release cancels; one drag turns at most one page. While the canvas still scrolls
+    at the fit (`QFS_MIN`), a drag that sets off vertical-dominant pans vertically instead. Slop 8 px, so a shaky click
+    on a word still selects its ayah. No rubber band: the cursor (`grabbing`) and the lit chevron of the zone the
+    release turns to (§8.11) are the feedback.
+  - **> 100 %: pan.** The canvas follows the pointer on both axes (`scrollBy`, physical, one per frame, no inertia).
+    Slop 4 px. Cursor `grab` over the zoomed book, `grabbing` while dragging.
+  - Pointer capture is taken only past the slop. The click (and dblclick) dispatched with a drag's release is swallowed
+    at `window` for that task, so no word, header, marker, mark or blank-canvas clear takes it. Escape (consumed, so the
+    reader keeps its selection), a context menu, a pointercancel, a lost capture, the window's blur or a layer opening
+    cancel a drag without a turn.
 
 ### 8.14 Copy and native selection (WP8e copy, WP8d pointer handling)
 - **Handler.** A `copy` listener on `MushafView`. If the selection intersects `.mp-glyphs`:
@@ -3996,8 +4014,12 @@ html[data-turn="prev"] { --qd-out: qd-out-left;  --qd-in: qd-in-right; }
   3. Call `e.clipboardData.setData('text/plain', text)` and `e.preventDefault()`.
 - **Result.** PUA glyph codes never reach the clipboard (BRIEF). `Mod+C` with no DOM selection copies the selected ayahs via
   `quranCopyText`.
-- **Selection.** Glyph spans keep `user-select: text` so native drag-selection works, styled with
-  `.mp-glyphs ::selection { background: color-mix(in srgb, var(--accent) 28%, transparent); color: inherit; }`.
+- **Selection (v1.2).** No native text selection starts on the page: the canvas's scroll viewport and `.mp-glyphs` are
+  `user-select: none` (with `-webkit-user-select` for WKWebView), because a left drag pans or turns the page (§8.13).
+  Copy goes through the ayah selection (click, Shift+click, then `C`, `Mod+C`, the action bar's Copy or the context
+  menu's Copy ▸); partial-ayah copy by drag-selection is gone. The handler above still serves a DOM selection that
+  reaches the glyphs another way (programmatic, assistive technology). A press on the page collapses a DOM selection
+  made elsewhere (`user-select: none` would not), so it never shadows `Mod+C`.
 - A `mousedown` with `detail ≥ 2` inside `.mp-glyphs` calls `preventDefault()` and clears the DOM selection, so a double-click
   never flashes a native word selection over the PUA glyphs.
 
@@ -4062,8 +4084,11 @@ html[data-turn="prev"] { --qd-out: qd-out-left;  --qd-in: qd-in-right; }
 | Mod+click (Ctrl on Windows/Linux, ⌘ on macOS) | play from this ayah (`player.playFrom({ayahId})`); Alt+click is an alias on Windows and macOS only (Linux window managers take Alt+drag) |
 | right-click | `AyahContextMenu` (§10.3) for the ayah (or the selection if it contains it) |
 | click the end-of-ayah marker | select the ayah and open the side pane (Tafsir tab) |
+| drag, zoom ≤ 100 % | past 8 px it is no click; on release, ≥ 80 px horizontal (or a 30 px flick) turns one page, right = next (§8.13) |
+| drag, zoom > 100 % | past 4 px it is no click; the canvas follows the pointer (§8.13) |
 
-- **Cursor:** default over glyphs; `pointer` only over end markers, header lines and margin markers/marks.
+- **Cursor:** default over glyphs at the fit; `grab` over the zoomed book and `grabbing` during a drag; `pointer` only over end
+  markers, header lines and margin markers/marks.
 - **`WordTooltip`:** translation in UI font 14 px, transliteration italic 12 px muted, the word's `WbwEntry.text` in `qd-hafs`
   22 px (`.quran-text`), placed above the word pill (flips below near the top).
 - **`AyahActionBar.svelte`** (D26; `settings.ayahActionBar`):
@@ -4649,6 +4674,8 @@ every row above into the frozen `shortcuts.ts` dictionaries (en + ar, §11.1).
 | wheel (zoomed or below QFS_MIN) | Mushaf canvas | scroll |
 | `Mod`+wheel / pinch | Mushaf canvas | zoom anchored at pointer (§8.13) |
 | horizontal swipe (touchpad) | Mushaf canvas | ≥ 80 px per gesture: right → next page, left → previous |
+| drag (zoom ≤ 100 %) | Mushaf page and margins | on release, ≥ 80 px horizontal or a 30 px flick: right → next page, left → previous (§8.13); vertical pans at `QFS_MIN` |
+| drag (zoom > 100 %) | Mushaf page and margins | pan the canvas (§8.13) |
 | click a page-turn zone chevron | Mushaf canvas edges | left zone = next page, right zone = previous (§8.11) |
 | hover the bottom 24 px of the canvas | Mushaf canvas | reveal the page rail; drag previews, release turns (§8.11) |
 | hover / click / Shift+click / double-click / Mod+click / right-click | ayah words | §8.17 (click also shows the action bar) |

@@ -2,7 +2,8 @@
  * MushafView in a real browser (§8.10–§8.14, §12.5; WP8e acceptance), mounted in the real `App` on the browser mock:
  * the single-page paper shift (the text block keeps its x on 261/262), the spread (page order, one shadow, spine, fold
  * and corners), the page-turn view transition, CLS 0 across turns, the copy handler, wheel turns and pointer-anchored
- * zoom, the dock reserves, the "Return to recitation" chip and the canvas overlay slot.
+ * zoom, drags (a swipe turns the page at the fit, a pan moves the zoomed canvas, never a native text selection), the
+ * dock reserves, the "Return to recitation" chip and the canvas overlay slot.
  */
 import { flushSync } from 'svelte'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -13,11 +14,13 @@ import { idleSnapshot } from '$lib/ipc/mock/state'
 import { buildCopyText } from '$lib/mushaf/copy'
 import type { PageData } from '$lib/ipc/bindings'
 import { a11yItemId } from '$lib/mushaf/a11y'
-import { ACTION_BAR_EVENT } from '$lib/mushaf/interactions'
+import { ACTION_BAR_DELAY_MS, ACTION_BAR_EVENT } from '$lib/mushaf/interactions'
 import { UNICODE_FIT, unicodeScale } from '$lib/mushaf/unicodeFit'
 import { glyphKey, renditionFontFamily, shapeWarmer, warmPageOf } from '$lib/mushaf/warmup'
 import { fonts, memo, pages, player, quran, reader, settings, ui } from '$lib/stores'
 import { A11Y_TAB_STOP } from '$lib/stores/reader.svelte'
+import { CLOSE_GRACE_MS, railState, REVEAL_INTENT_MS } from './PageRail.svelte'
+import { surahInfo } from './SurahInfoPopover.svelte'
 
 const $ = <T extends Element = HTMLElement>(selector: string) => document.querySelector<T>(selector)
 const rect = (selector: string) => $(selector)?.getBoundingClientRect() ?? new DOMRect()
@@ -444,8 +447,356 @@ describe('wheel and zoom (§8.13)', () => {
   })
 })
 
+describe('drag (§8.13)', () => {
+  const BAR = '[role="toolbar"].ab'
+  const RAIL = '[data-qd-page-rail]'
+  const view = () => $('.mushaf-view') as HTMLElement
+  const viewport = () => view().querySelector<HTMLElement>('[data-scroll-area-viewport]') as HTMLElement
+  const centre = (el: Element) => {
+    const r = el.getBoundingClientRect()
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 }
+  }
+
+  /** The word spans (end markers excluded) of a page's shown rendition. */
+  function words(page: number): HTMLElement[] {
+    const layers = document.querySelectorAll<HTMLElement>(`section.mp[data-page="${page}"] .mp-glyphs`)
+    return [...(layers[layers.length - 1]?.querySelectorAll<HTMLElement>('.w:not(.e)') ?? [])]
+  }
+
+  function word(page: number, nth: number): HTMLElement {
+    const w = words(page)[nth]
+    if (!w) throw new Error(`no word ${nth} on page ${page}`)
+    return w
+  }
+
+  /** A synthetic mouse event of the drag's pointer at client (x, y), dispatched on `target`. */
+  function pointer(type: string, target: Element, x: number, y: number): void {
+    target.dispatchEvent(
+      new PointerEvent(type, {
+        bubbles: true,
+        cancelable: true,
+        composed: true,
+        clientX: x,
+        clientY: y,
+        button: 0,
+        buttons: type === 'pointerup' ? 0 : 1,
+        isPrimary: true,
+        pointerId: 7,
+        pointerType: 'mouse',
+      }),
+    )
+  }
+
+  /** The click a browser dispatches with a release, in the same task as the pointerup. */
+  function click(target: Element, x: number, y: number): MouseEvent {
+    const e = new MouseEvent('click', {
+      bubbles: true,
+      cancelable: true,
+      clientX: x,
+      clientY: y,
+      button: 0,
+      detail: 1,
+    })
+    target.dispatchEvent(e)
+    flushSync()
+    return e
+  }
+
+  /**
+   * A synthetic drag from the centre of `from` by (`dx`, `dy`): press, four moves (spread over `ms`; a drag that must
+   * not count as a flick takes more than 250 ms), `during()`, release, and the release's click. Returns that click.
+   */
+  async function drag(
+    from: Element,
+    dx: number,
+    dy: number,
+    options: { ms?: number; during?: () => void } = {},
+  ): Promise<MouseEvent> {
+    const { x, y } = centre(from)
+    pointer('pointerdown', from, x, y)
+    for (let i = 1; i <= 4; i++) {
+      if (options.ms) await new Promise((resolve) => setTimeout(resolve, (options.ms ?? 0) / 4))
+      pointer('pointermove', from, x + (dx * i) / 4, y + (dy * i) / 4)
+    }
+    flushSync()
+    options.during?.()
+    pointer('pointerup', from, x + dx, y + dy)
+    return click(from, x + dx, y + dy)
+  }
+
+  async function spreadAt(page: number, settings: Parameters<typeof bootApp>[0] = {}): Promise<void> {
+    await bootApp({
+      ...settings,
+      settings: { pageMode: 'spread', mushafStyle: 'hafs', pageTurnAnimation: false, ...settings.settings },
+    })
+    await goTo(page)
+  }
+
+  const turned = (pages: number[]) => () => reader.visiblePages.join() === pages.join() && !reader.turning
+
+  it.each(['en', 'ar'] as const)(
+    'turns one page on release while the page fits: right is the next page, left the previous one (%s UI)',
+    async (uiLanguage) => {
+      await spreadAt(50, { settings: { uiLanguage } })
+      // At the fit the words keep the default cursor.
+      expect(getComputedStyle(word(50, 10)).cursor).toBe('default')
+      let during: string | undefined
+      const swallowed = await drag(word(50, 10), 120, 6, { during: () => (during = view().dataset.drag) })
+      expect(during).toBe('swipe')
+      expect(view().dataset.drag).toBeUndefined()
+      // The release's click reaches nothing: the word under the press is not selected.
+      expect(swallowed.defaultPrevented).toBe(true)
+      expect(reader.selection).toBeNull()
+      await until(turned([51, 52]), 2_000, 'the next spread')
+      await shown(51)
+      await drag(word(51, 10), -120, 0)
+      await until(turned([49, 50]), 2_000, 'back to 49–50')
+    },
+  )
+
+  it('turns nothing for a short, a vertical or a slow drag; a click still selects, extends and opens the menu', async () => {
+    await spreadAt(50)
+    for (const [dx, dy, ms] of [
+      [20, 0, 0],
+      [0, 150, 0],
+      [60, 0, 400],
+    ] as const) {
+      const swallowed = await drag(word(50, 10), dx, dy, { ms })
+      expect(swallowed.defaultPrevented).toBe(true)
+      await settle(120)
+      expect(reader.visiblePages).toEqual([49, 50])
+      expect(reader.selection).toBeNull()
+    }
+    // The click trap is gone with the release's task: a click selects the ayah, with the action bar.
+    const first = word(50, 10)
+    const ayah = Number(first.dataset.a)
+    await userEvent.click(first)
+    expect(reader.selection).toEqual({ fromAyahId: ayah, toAyahId: ayah, anchorAyahId: ayah })
+    await until(() => $(BAR) !== null, 2_000, 'the action bar')
+    const later = words(50).find((w) => Number(w.dataset.a) > ayah + 1) as HTMLElement
+    const to = Number(later.dataset.a)
+    await userEvent.click(later, { modifiers: ['Shift'] })
+    expect(reader.selection).toEqual({ fromAyahId: ayah, toAyahId: to, anchorAyahId: ayah })
+    await userEvent.click(later, { button: 'right' })
+    expect(ui.contextMenu?.ayahId).toBe(to)
+    ui.contextMenu = null
+  })
+
+  it('keeps a shaky click a click: 6 px of jitter selects the ayah, 9 px is a drag that selects nothing', async () => {
+    await spreadAt(50)
+    const w = words(50).reduce((a, b) =>
+      b.getBoundingClientRect().width > a.getBoundingClientRect().width ? b : a,
+    )
+    const box = w.getBoundingClientRect()
+    expect(box.width).toBeGreaterThan(20)
+    const from = { x: box.width / 2 - 4.5, y: box.height / 2 }
+    await userEvent.dragAndDrop(w, w, { sourcePosition: from, targetPosition: { x: from.x + 9, y: from.y } })
+    await settle(ACTION_BAR_DELAY_MS + 60)
+    expect(reader.selection).toBeNull()
+    expect(reader.visiblePages).toEqual([49, 50])
+    await userEvent.dragAndDrop(w, w, {
+      sourcePosition: from,
+      targetPosition: { x: from.x + 6, y: from.y + 1 },
+    })
+    const ayah = Number(w.dataset.a)
+    expect(reader.selection).toEqual({ fromAyahId: ayah, toAyahId: ayah, anchorAyahId: ayah })
+    await until(() => $(BAR) !== null, 2_000, 'the action bar')
+  })
+
+  it('never starts a native text selection: across the words, or from the margin onto them', async () => {
+    await spreadAt(50)
+    const all = words(50)
+    const a = all[2] as HTMLElement
+    const lastLine = (all.at(-1) as HTMLElement).closest('.ln')
+    const ax = centre(a).x
+    const b = all
+      .filter((w) => w.closest('.ln') === lastLine)
+      .reduce((p, q) => (Math.abs(centre(q).x - ax) < Math.abs(centre(p).x - ax) ? q : p))
+    // Down the page (vertical-dominant: the page fits and does not scroll, so this neither turns nor pans).
+    await userEvent.dragAndDrop(a, b)
+    expect(window.getSelection()?.toString() ?? '').toBe('')
+    expect(window.getSelection()?.isCollapsed ?? true).toBe(true)
+    expect(reader.selection).toBeNull()
+    // From the stage margin above the book onto a word.
+    const stage = $('.mv-stage') as HTMLElement
+    const s = stage.getBoundingClientRect()
+    const book = rect('[data-qd-stage]')
+    expect(book.top - s.top).toBeGreaterThan(10)
+    await userEvent.dragAndDrop(stage, a, { sourcePosition: { x: ax - s.left, y: book.top - s.top - 8 } })
+    expect(window.getSelection()?.toString() ?? '').toBe('')
+    expect(window.getSelection()?.isCollapsed ?? true).toBe(true)
+    expect(reader.visiblePages).toEqual([49, 50])
+  })
+
+  it('takes no click from a drag that starts on a margin marker or a surah header', async () => {
+    await spreadAt(262)
+    const section = $('section.mp[data-page="262"]') as HTMLElement
+    const marker = section.querySelector<HTMLElement>('.mp-markers .mk')
+    const header = [...section.querySelectorAll<HTMLElement>('.mp-glyphs [data-qd-header]')].at(-1)
+    if (!marker || !header) throw new Error('page 262: the juz 14 marker and the al-Hijr header')
+    const v = view().getBoundingClientRect()
+    for (const from of [marker, header]) {
+      const c = centre(from)
+      await userEvent.dragAndDrop(from, view(), { targetPosition: { x: c.x - v.left, y: c.y - v.top + 60 } })
+      await settle(ACTION_BAR_DELAY_MS + 60)
+      expect(reader.selection).toBeNull()
+      expect(surahInfo.open).toBe(false)
+    }
+    expect(reader.visiblePages).toEqual([261, 262])
+    // A click on each still acts.
+    await userEvent.click(header)
+    expect(surahInfo.open).toBe(true)
+    surahInfo.reset()
+  })
+
+  it.each(['en', 'ar'] as const)(
+    'moves the zoomed canvas with the pointer and never turns (%s UI)',
+    async (uiLanguage) => {
+      await spreadAt(50, { settings: { zoomPct: 200, uiLanguage } })
+      expect(reader.scrolls).toBe(true)
+      const vp = viewport()
+      const v = vp.getBoundingClientRect()
+      // A word on screen, well inside the viewport.
+      const w = [...words(49), ...words(50)].find((el) => {
+        const c = centre(el)
+        return c.x > v.left + 150 && c.x < v.right - 150 && c.y > v.top + 100 && c.y < v.bottom - 150
+      })
+      if (!w) throw new Error('no word on screen')
+      expect(getComputedStyle(vp).cursor).toBe('grab')
+      expect(getComputedStyle(w).cursor).toBe('grab')
+      const left = vp.scrollLeft
+      const top = vp.scrollTop
+      let cursor = ''
+      await drag(w, 120, -80, { during: () => (cursor = getComputedStyle(w).cursor) })
+      expect(cursor).toBe('grabbing')
+      // scrollBy is physical: the book moved 120 px right and 80 px up with the pointer, in either UI direction.
+      expect(Math.abs(vp.scrollLeft - left + 120)).toBeLessThanOrEqual(1)
+      expect(Math.abs(vp.scrollTop - top - 80)).toBeLessThanOrEqual(1)
+      await settle(120)
+      expect(reader.visiblePages).toEqual([49, 50])
+      expect(reader.selection).toBeNull()
+      expect(getComputedStyle(vp).cursor).toBe('grab')
+    },
+  )
+
+  it('turns with a horizontal drag and scrolls with a vertical one on a canvas held at QFS_MIN (1024×700)', async () => {
+    await bootApp({ size: [1024, 700], settings: { mushafStyle: 'hafs', pageTurnAnimation: false } })
+    await goTo(50)
+    expect(reader.zoomPct).toBe(100)
+    expect(reader.scrolls).toBe(true)
+    const vp = viewport()
+    const room = vp.scrollHeight - vp.clientHeight
+    expect(room).toBeGreaterThan(0)
+    let during: string | undefined
+    await drag(word(50, 10), 3, -40, { during: () => (during = view().dataset.drag) })
+    expect(during).toBe('pan')
+    expect(vp.scrollTop).toBeCloseTo(Math.min(40, room), 0)
+    await settle(120)
+    expect(reader.visiblePages).toEqual([50])
+    await drag(word(50, 10), 120, 0)
+    await until(turned([51]), 2_000, 'the next page')
+  })
+
+  it('never starts on a turn zone or the rail; a zone click turns exactly once', async () => {
+    await spreadAt(50)
+    await until(() => $('[data-qd-turn-zone="next"]') !== null, 2_000, 'the zone')
+    const zone = $('[data-qd-turn-zone="next"]') as HTMLElement
+    const z = centre(zone)
+    pointer('pointerdown', zone, z.x, z.y)
+    pointer('pointermove', zone, z.x + 60, z.y)
+    expect(view().dataset.drag).toBeUndefined()
+    pointer('pointerup', zone, z.x + 60, z.y)
+    const next = vi.spyOn(reader, 'next')
+    await userEvent.click(zone)
+    await until(turned([51, 52]), 2_000, 'the next spread')
+    await settle(100)
+    expect(next).toHaveBeenCalledTimes(1)
+    expect(reader.visiblePages).toEqual([51, 52])
+    await userEvent.keyboard('p')
+    await until(() => $(RAIL) !== null, 2_000, 'the rail')
+    const rail = $(RAIL) as HTMLElement
+    const r = centre(rail)
+    pointer('pointerdown', rail, r.x, r.y)
+    pointer('pointermove', rail, r.x + 40, r.y)
+    expect(view().dataset.drag).toBeUndefined()
+    pointer('pointerup', rail, r.x + 40, r.y)
+  })
+
+  it('turns from the strip under the page without leaving the page rail open', async () => {
+    await bootApp({ size: [1600, 1000], settings: { mushafStyle: 'hafs', pageTurnAnimation: false } })
+    await goTo(50)
+    const h = view().getBoundingClientRect().height
+    await userEvent.dragAndDrop(view(), view(), {
+      sourcePosition: { x: 90, y: h - 6 },
+      targetPosition: { x: 210, y: h - 6 },
+    })
+    await until(turned([51, 52]), 2_000, 'the next spread')
+    await settle(REVEAL_INTENT_MS + CLOSE_GRACE_MS + 150)
+    expect(railState.open).toBe(false)
+    expect($(RAIL)).toBeNull()
+  })
+
+  it('collapses a text selection made elsewhere when a word is clicked, and selects its ayah', async () => {
+    await spreadAt(50)
+    const p = document.createElement('p')
+    p.textContent = 'Selected elsewhere'
+    document.body.append(p)
+    try {
+      const range = document.createRange()
+      range.selectNodeContents(p)
+      window.getSelection()?.removeAllRanges()
+      window.getSelection()?.addRange(range)
+      expect(window.getSelection()?.toString()).toBe('Selected elsewhere')
+      const w = word(50, 10)
+      await userEvent.click(w)
+      expect(reader.selection?.fromAyahId).toBe(Number(w.dataset.a))
+      expect(window.getSelection()?.isCollapsed ?? true).toBe(true)
+    } finally {
+      p.remove()
+    }
+  })
+
+  it('cancels on Escape: no turn, no click, and the ayah selection stays', async () => {
+    await spreadAt(50)
+    const w = word(50, 10)
+    const ayah = Number(w.dataset.a)
+    reader.select(ayah)
+    const { x, y } = centre(w)
+    pointer('pointerdown', w, x, y)
+    pointer('pointermove', w, x + 60, y)
+    pointer('pointermove', w, x + 120, y)
+    expect(view().dataset.drag).toBe('swipe')
+    expect(view().dataset.swipe).toBe('next')
+    await userEvent.keyboard('{Escape}')
+    expect(view().dataset.drag).toBeUndefined()
+    expect(view().dataset.swipe).toBeUndefined()
+    pointer('pointerup', w, x + 120, y)
+    expect(click(w, x + 120, y).defaultPrevented).toBe(true)
+    await settle(150)
+    expect(reader.visiblePages).toEqual([49, 50])
+    expect(reader.selection?.fromAyahId).toBe(ayah)
+  })
+
+  it('ends a drag whose release never came with the next press, and that press still clicks', async () => {
+    await spreadAt(50)
+    const w = word(50, 10)
+    const { x, y } = centre(w)
+    pointer('pointerdown', w, x, y)
+    pointer('pointermove', w, x + 120, y)
+    expect(view().dataset.drag).toBe('swipe')
+    // The release was lost (outside the window); the next press of the same pointer starts afresh.
+    pointer('pointerdown', w, x, y)
+    expect(view().dataset.drag).toBeUndefined()
+    pointer('pointerup', w, x, y)
+    expect(click(w, x, y).defaultPrevented).toBe(false)
+    expect(reader.selection?.fromAyahId).toBe(Number(w.dataset.a))
+    await settle(150)
+    expect(reader.visiblePages).toEqual([49, 50])
+  })
+})
+
 describe('copy (§8.14)', () => {
-  it('puts the selected words’ Unicode text and the reference on the clipboard, never PUA codes', async () => {
+  it('a selection that reaches the glyphs (Select All, programmatic) copies Unicode, never PUA', async () => {
     await bootApp({ settings: { pageMode: 'spread', mushafStyle: 'hafs' } })
     const section = await shown(1)
     const spans = [...section.querySelectorAll<HTMLElement>('.mp-glyphs .w')]

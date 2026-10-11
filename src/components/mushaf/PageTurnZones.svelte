@@ -10,7 +10,9 @@
     A zone that would cover it, or has no page to turn to, is not drawn.
   - **Look.** A 40 px circular chevron (`--surface-raised`, `shadow-1`) at the height of the book's centre: invisible,
     60 % while the pointer is over the canvas, 100 % over the zone or with keyboard focus. In zen they stay hidden
-    until the pointer moves, and again when it rests (`ui.pointerIdle`).
+    until the pointer moves, and again when it rests (`ui.pointerIdle`). While a drag on the page would turn on
+    release (pan.ts, `data-swipe` on the canvas), the chevron of the zone it turns to is lit at 100 %; a zone that is
+    not drawn gives no such feedback (the grabbing cursor remains).
   - **Behaviour.** A click turns with the animation (`reader.next()` / `reader.prev()`). A pointer never takes focus,
     so ← → keep turning pages; the zones come after the pages in tab order and carry "Next page" / "Previous page".
     The wheel over a zone scrolls the canvas when it scrolls (zoomed), as over the pages.
@@ -373,6 +375,13 @@
 
   .zone:active .chev {
     scale: 0.94;
+  }
+
+  /* A drag on the page that would turn on release (pan.ts) lights the chevron of the zone it turns to. */
+  :global(.mushaf-view[data-swipe='next']) [data-qd-turn-zone='next'] .chev,
+  :global(.mushaf-view[data-swipe='prev']) [data-qd-turn-zone='prev'] .chev {
+    opacity: 1;
+    color: var(--text);
   }
 
   /* Zen: hidden until the pointer moves, and again while it rests. */

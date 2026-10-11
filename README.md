@@ -44,8 +44,8 @@ port: no code is copied from it.
   in words: ربع، نصف، ثلاثة أرباع الحزب), and the sajda marks. The running heads and the hizb labels are written in the
   print's own calligraphy, from a font that ships with the app.
 - **A book on a large screen.** Two-page spreads (odd page on the right) or a single page, chosen by the window size;
-  fit to the window with zoom on top; a page rail to scrub through the 604 pages; held arrow keys flip through pages at
-  the pace of a thumb.
+  fit to the window with zoom on top; drag a page aside to turn it, or drag a zoomed page around; a page rail to scrub
+  through the 604 pages; held arrow keys flip through pages at the pace of a thumb.
 - **Nothing jumps.** Fonts, decorations and data arrive without a single layout shift, and page turns animate only into
   pages that are ready to paint.
 - **Hover, select, act.** Hover an ayah to tint it, click to select it, right-click for its menu; a small action bar
