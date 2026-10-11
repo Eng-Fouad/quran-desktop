@@ -319,8 +319,8 @@ pnpm shots:app --only smoke,S26                  # the real app (Windows, WebVie
 The repository holds no screenshots: Mushaf images are never committed (§12.6), and pages drawn from a development
 (qdc) core.db show QF-derived data. To see the app, generate the pictures on your machine with the scenarios and keep
 them there: `pnpm core:qdc && pnpm fixtures && pnpm dev-packs`, then
-`pnpm shots:web --only S03,S04,S09,S21,S26` (or `pnpm shots:app` in the real app). The README's "Screenshots" section
-lists which scenario shows what.
+`pnpm shots:web --only S03,S04,S09,S21,S26` (or `pnpm shots:app` in the real app). `pnpm shots:web --list` lists which
+scenario shows what.
 
 ## 9. Preview builds (private)
 
