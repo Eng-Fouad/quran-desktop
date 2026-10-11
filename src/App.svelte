@@ -17,7 +17,8 @@
     (or briefly on an audio key); the cursor hides after 2.5 s still. A hint names the key that leaves it.
   - A failed bootstrap shows `FatalScreen` instead (§9.8). In test mode the QA hooks are installed after mounting
     (`window.__QD_TEST__`, WP13a), in their own chunk.
-  - First run (§9.7): the welcome flow opens once the shell is up, until it is finished or skipped (`onboardingDone`).
+  - First run (§9.7): the welcome flow opens once the shell is up, until it is finished (`onboardingDone`; a first run
+    has no Skip).
     Never in test mode, so QA scenarios start on the reader (S01/S02 open it themselves).
   - The app accepts no drop (`dropGuard.ts`): a file or an outside link dropped on the window never navigates it.
 -->

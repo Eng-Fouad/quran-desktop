@@ -87,3 +87,28 @@ copy, recitation, settings, themes, zen, the close-to-tray question, the Dock's 
 - Dragging the title bar: the pass's synthetic clicks in the drag region resized the window from its top-left corner
   (`performWindowDragWithEvent:` with a synthetic event); a real mouse should move it.
 - The rest of the macOS checklist rows: the universal dmg on Intel, macOS 13.3, VoiceOver, the drop guard.
+
+## The owner's Mushaf requests (2026-10-11), checked on the Mac
+
+Drag to turn or pan, the right-clicked ayah selected, the on-canvas zoom control, the page rail from under the frame,
+the whole footer rosette tinted, hizb quarters in words, "Western/Eastern Arabic numbers", the mandatory first-run
+onboarding with its Mushaf preview, and the print's running heads and hizb labels (LEAD 25). On the combined branch:
+
+| Command | Result |
+|---|---|
+| `pnpm check`, `pnpm lint`, `pnpm format:check`, `pnpm lint:css`, `cargo fmt --check`, `cargo lint` | ok |
+| `pnpm test` | 2,507 passed |
+| `cargo test --workspace` (`QD_AUDIO_SINK=null`) | ok |
+| `pnpm bindings:check`, `pnpm check:tooling`, `pnpm check:ci`, the `node --test` tooling suites | ok |
+| `pnpm build`, `pnpm check:dist` | ok, 4.31 MiB of 6 |
+| `QD_BROWSERS=chromium pnpm test:browser` | 646 passed; `MushafPage.swap` fails from a path with a space (above) |
+| `QD_BROWSERS=webkit pnpm test:browser` | 630 passed, 16 failed, all known: the focus model and tolerances above, plus three that fail the same way before these changes (the note editor's tag picker, the Arabic `Segmented` fit at 4.58 px, the rail's right-to-left check in the Arabic UI) |
+
+- A Vite cache that has not seen a new import yet (here `@lucide/svelte/icons/ban`, the onboarding preview's) reloads
+  the browser test page mid-run, and every file still loading fails to import. Run again; the cache keeps it.
+- Headless WebKit screenshots of the browser mock: the onboarding's five steps (no Skip on a first run, Skip on a tour
+  reopened from Settings), page 262 with the zoom control and the rail under the frame, the print heads and margin
+  labels at several sizes, the Arabic UI's head quarter and zoom readout, and Settings › Language.
+- Not tried in the real app (the screen was locked): dragging with a real mouse or trackpad, the zoom control's
+  opacity steps, and the rail's 90 ms rest with a real pointer.
+
