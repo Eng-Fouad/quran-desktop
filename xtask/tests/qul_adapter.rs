@@ -15,14 +15,13 @@
     clippy::indexing_slicing
 )]
 
+// The modules' directory: a `#[path]` on each would resolve through `tests/build/`, which does not exist (only
+// Windows normalises `..` before opening the file).
+#[path = "../src/build"]
 mod build {
-    #[path = "../../src/build/derive.rs"]
     pub mod derive;
-    #[path = "../../src/build/model.rs"]
     pub mod model;
-    #[path = "../../src/build/qul.rs"]
     pub mod qul;
-    #[path = "../../src/build/tanzil.rs"]
     pub mod tanzil;
 }
 

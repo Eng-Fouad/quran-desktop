@@ -433,7 +433,9 @@ fn check_relative_file(file: &str) -> Result<(), &'static str> {
     if file.contains('\\') {
         return Err("contains `\\`: separate directories with `/`");
     }
+    // `:` too: only Windows parses `C:/x.db` as a drive, and the manifest is checked on every OS.
     if file.split('/').any(str::is_empty)
+        || file.contains(':')
         || !Path::new(file)
             .components()
             .all(|c| matches!(c, Component::Normal(_)))
