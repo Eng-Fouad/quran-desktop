@@ -1,7 +1,8 @@
 /**
- * The onboarding (§9.7) in a real browser against the IPC mock: the four steps, the live language and theme switch,
- * the exact starter set of §2.5.4 (and its total) for each choice, Work offline disabling every download, "Download
- * now" and "Start reading", and how the dialog ends (Finish, Skip, Escape).
+ * The onboarding (§9.7) in a real browser against the IPC mock: the five steps, the live language and theme switch,
+ * the Mushaf step (the 1421 AH print and the ornate surah headers preselected, its live preview and what that preview
+ * fetches), the exact starter set of §2.5.4 (and its total) for each choice, Work offline disabling every download,
+ * "Download now" and "Start reading", and how the dialog ends: Finish only on a first run, Skip or Escape on a re-run.
  */
 import { flushSync } from 'svelte'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -13,8 +14,8 @@ import { api, call, initIpc } from '$lib/ipc'
 import type { Settings } from '$lib/ipc/bindings'
 import { packsMock } from '$lib/ipc/mock/handlers/packs'
 import { state } from '$lib/ipc/mock/state'
-import { initStores, packs, player, quran, resetStores, settings, ui } from '$lib/stores'
-import { flow } from './flow.svelte'
+import { app, fonts, initStores, packs, player, quran, resetStores, settings, ui } from '$lib/stores'
+import { flow, STEPS } from './flow.svelte'
 import OnboardingDialog from './OnboardingDialog.svelte'
 
 const DIALOG = '[role="dialog"].qd-onboarding'
@@ -39,7 +40,12 @@ async function until(done: () => boolean, timeoutMs = 5_000): Promise<void> {
   }
 }
 
-async function mount(options: { settings?: Partial<Settings> } = {}): Promise<void> {
+/**
+ * Opens the dialog over a fresh mock. `firstRun` (default true) is the first-run tour, which must be finished; false is
+ * a tour reopened from Settings › System. `ensureDecor` is stubbed (the preview's ornaments request), so the totals do
+ * not depend on whether `data/dev-packs` is served.
+ */
+async function mount(options: { settings?: Partial<Settings>; firstRun?: boolean } = {}): Promise<void> {
   await page.viewport(1400, 900)
   history.replaceState(null, '', '/')
   localStorage.clear()
@@ -51,6 +57,8 @@ async function mount(options: { settings?: Partial<Settings> } = {}): Promise<vo
   state.settings.set({ ...defaultSettings(), ...options.settings })
   await initStores(await call(api.appBootstrap()))
   await until(() => packs.list.length > 0)
+  app.firstRun = options.firstRun ?? true
+  vi.spyOn(fonts, 'ensureDecor').mockResolvedValue(undefined)
   flow.reset()
   ui.open('onboarding', {})
   render(OnboardingDialog)
@@ -63,12 +71,22 @@ async function next(): Promise<void> {
   await settle(80)
 }
 
+async function back(): Promise<void> {
+  await userEvent.click(action('back') as HTMLElement)
+  await settle(80)
+}
+
 /** Moves to the starter-set step (from step 1). */
 async function toSummary(): Promise<void> {
   await next()
   await next()
+  await next()
   await until(() => flow.stepId === 'summary')
 }
+
+/** The live preview of the Mushaf step. */
+const preview = () => $(`${DIALOG} [data-ob-preview]`)
+const checked = (option: string) => $<HTMLInputElement>(`${DIALOG} [data-option="${option}"]`)?.checked
 
 afterEach(() => {
   flow.reset()
@@ -90,7 +108,9 @@ describe('onboarding dialog', () => {
     // No second banner (or a contentinfo) landmark inside the dialog (HTML-AAM: header/footer outside sections).
     expect(dialog.querySelectorAll('header, footer')).toHaveLength(0)
     expect(heading()).toBe('Welcome to Quran for Desktop')
-    expect($(`${DIALOG} .step-label`)?.textContent?.trim()).toBe('Step 1 of 4')
+    expect($(`${DIALOG} .step-label`)?.textContent?.trim()).toBe('Step 1 of 5')
+    // A first run must be finished: no Skip.
+    expect(action('skip')).toBeNull()
     expect($$(`${DIALOG} [data-theme-choice]`).map((c) => c.dataset.themeChoice)).toEqual([
       'system',
       'paper',
@@ -111,7 +131,7 @@ describe('onboarding dialog', () => {
       document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr'
       await document.fonts.ready
       const overflow: string[] = []
-      for (let step = 0; step < 4; step++) {
+      for (let step = 0; step < STEPS.length; step++) {
         flow.go(step)
         await settle(400)
         const body = $(`${DIALOG} > .body`) as HTMLElement
@@ -175,13 +195,145 @@ describe('onboarding dialog', () => {
   })
 })
 
+describe('the Mushaf step (owner 2026-10-11)', () => {
+  afterEach(() => {
+    fonts.status.delete('qd-surah-header')
+    fonts.status.delete('qd-quran-common')
+    fonts.v4Supported = null
+  })
+
+  it('preselects the Madani 1421 AH print with ornate surah headers, for every style', async () => {
+    await mount()
+    await next()
+    expect(heading()).toBe('Choose your Mushaf')
+    expect($(`${DIALOG} .step-label`)?.textContent?.trim()).toBe('Step 2 of 5')
+    expect($(`${DIALOG} [data-style-choice="qcf_v2"]`)?.getAttribute('aria-checked')).toBe('true')
+    expect(checked('ornaments')).toBe(true)
+    expect(checked('all-pages')).toBe(false)
+    // Every card offers the ornaments; only a QCF card offers every page.
+    await userEvent.click($(`${DIALOG} [data-style-choice="hafs"]`) as HTMLElement)
+    expect(checked('ornaments')).toBe(true)
+    expect($(`${DIALOG} [data-option="all-pages"]`)).toBeNull()
+    await userEvent.click($(`${DIALOG} [data-style-choice="qcf_v4"]`) as HTMLElement)
+    expect(checked('ornaments')).toBe(true)
+    expect(checked('all-pages')).toBe(false)
+  })
+
+  it('previews the chosen style and headers live, without touching the settings', async () => {
+    await mount()
+    await next()
+    await until(() => preview()?.querySelector('section.mp[data-page="1"][data-style="qcf_v2"]') != null)
+    expect(preview()?.querySelector('[data-preview]')?.getAttribute('aria-label')).toBe(
+      'Preview of the first page',
+    )
+    expect(preview()?.textContent).toContain('Madani print, 1421 AH · Ornate headers')
+    await userEvent.click($(`${DIALOG} [data-style-choice="hafs"]`) as HTMLElement)
+    await until(() => preview()?.querySelector('section.mp[data-style="hafs"]') != null)
+    expect(preview()?.dataset.style).toBe('hafs')
+    // The header calligraphy once its face is loaded; unticking draws the plain cartouche at once, re-ticking brings
+    // it back.
+    const header = () => preview()?.querySelector<HTMLElement>('.sh-line')
+    expect(header()?.hasAttribute('data-decor')).toBe(false)
+    fonts.status.set('qd-surah-header', 'ready')
+    await until(() => header()?.hasAttribute('data-decor') === true)
+    await userEvent.click($(`${DIALOG} [data-option="ornaments"]`) as HTMLElement)
+    await settle(30)
+    expect(preview()?.dataset.ornaments).toBe('off')
+    expect(header()?.hasAttribute('data-decor')).toBe(false)
+    expect(header()?.querySelector('.sc')).not.toBeNull()
+    expect(preview()?.textContent).toContain('Hafs · Plain headers')
+    await userEvent.click($(`${DIALOG} [data-option="ornaments"]`) as HTMLElement)
+    await settle(30)
+    expect(header()?.hasAttribute('data-decor')).toBe(true)
+    // Nothing is saved before the starter set is decided.
+    expect(settings.value.mushafStyle).toBe('hafs')
+    expect(settings.value.ornateHeaders).toBe(true)
+  })
+
+  it('fetches the ornaments and the page for the preview once, online and ticked', async () => {
+    await mount()
+    const pageFonts = vi.spyOn(api, 'mushafEnsurePageFonts')
+    expect(fonts.ensureDecor).not.toHaveBeenCalled()
+    await next()
+    await until(() => vi.mocked(fonts.ensureDecor).mock.calls.length === 1)
+    // The chosen print's page 1, on the interactive lane, as the reader would.
+    await until(() => pageFonts.mock.calls.some(([style, pages]) => style === 'qcf_v2' && pages.includes(1)))
+    await next()
+    await back()
+    await settle(80)
+    expect(fonts.ensureDecor).toHaveBeenCalledTimes(1)
+  })
+
+  it('fetches no ornaments while they are unticked', async () => {
+    await mount()
+    flow.setOrnaments(false)
+    await next()
+    await settle(200)
+    expect(fonts.ensureDecor).not.toHaveBeenCalled()
+    expect(preview()?.dataset.ornaments).toBe('off')
+  })
+
+  it('fetches nothing for the preview with network use off: it shows Hafs', async () => {
+    await mount({ settings: { networkAllowed: false } })
+    const pageFonts = vi.spyOn(api, 'mushafEnsurePageFonts')
+    const decor = vi.spyOn(api, 'decorEnsure')
+    const install = vi.spyOn(packs, 'install')
+    await next()
+    await until(() => preview()?.querySelector('section.mp[data-page="1"][data-style="hafs"]') != null)
+    await settle(200)
+    expect(flow.style).toBe('qcf_v2')
+    expect(preview()?.dataset.style).toBe('hafs')
+    expect(fonts.ensureDecor).not.toHaveBeenCalled()
+    expect(decor).not.toHaveBeenCalled()
+    expect(pageFonts).not.toHaveBeenCalled()
+    expect(install).not.toHaveBeenCalled()
+    expect(preview()?.querySelector('[role="status"]')?.textContent).toBe(
+      'The ornaments show once they download.',
+    )
+  })
+
+  it('a re-run starts from the settings: the style as it is', async () => {
+    await mount({ firstRun: false, settings: { mushafStyle: 'qcf_v4' } })
+    expect(action('skip')).not.toBeNull()
+    await next()
+    expect($(`${DIALOG} [data-style-choice="qcf_v4"]`)?.getAttribute('aria-checked')).toBe('true')
+    expect(checked('ornaments')).toBe(true)
+  })
+
+  it('a re-run starts from the settings: Hafs stays Hafs, the ornate headers stay off', async () => {
+    await mount({ firstRun: false, settings: { ornateHeaders: false } })
+    await next()
+    expect($(`${DIALOG} [data-style-choice="hafs"]`)?.getAttribute('aria-checked')).toBe('true')
+    expect(checked('ornaments')).toBe(false)
+    expect(preview()?.dataset.ornaments).toBe('off')
+  })
+
+  it('locks the Tajweed card where this web view cannot draw it (§8.6)', async () => {
+    await mount({ firstRun: false, settings: { mushafStyle: 'qcf_v4' } })
+    expect(flow.effectiveStyle).toBe('qcf_v4')
+    fonts.v4Supported = false
+    await next()
+    // A Tajweed choice falls back to the 1421 AH print, as the reader would switch it.
+    expect(flow.effectiveStyle).toBe('qcf_v2')
+    const v4 = $(`${DIALOG} [data-style-choice="qcf_v4"]`) as HTMLElement
+    expect(v4.getAttribute('aria-disabled')).toBe('true')
+    expect(v4.getAttribute('aria-checked')).toBe('false')
+    expect(v4.textContent).toContain('Not supported on this system')
+    v4.click()
+    flow.setStyle('qcf_v4')
+    await settle(30)
+    expect(flow.effectiveStyle).toBe('qcf_v2')
+  })
+})
+
 describe('starter set (§2.5.4)', () => {
-  it('English, Hafs: ornaments and Saheeh now, WBW on demand, timings on first play; 832 kB', async () => {
+  it('English, the 1421 AH print: ornaments and Saheeh now, pages and WBW on demand, timings on first play; 832 kB', async () => {
     await mount()
     await toSummary()
     expect(rows()).toEqual([
       'decor:now',
       'tr.en.saheeh:now',
+      'mushaf.v2:on_demand',
       'wbw.en:on_demand',
       'audio.qdc.7:timings_on_first_play',
     ])
@@ -191,11 +343,27 @@ describe('starter set (§2.5.4)', () => {
     expect(flow.starterSet.nowKib).toBe(832)
   })
 
+  it('English, Hafs: the same set without the page fonts; 832 kB', async () => {
+    await mount()
+    await next()
+    await userEvent.click($(`${DIALOG} [data-style-choice="hafs"]`) as HTMLElement)
+    await next()
+    await next()
+    expect(rows()).toEqual([
+      'decor:now',
+      'tr.en.saheeh:now',
+      'wbw.en:on_demand',
+      'audio.qdc.7:timings_on_first_play',
+    ])
+    expect(totalKib()).toBe(832)
+  })
+
   it('QCF V2: the page fonts on demand, or all of them now with the checkbox', async () => {
     await mount()
     await next()
-    await userEvent.click($(`${DIALOG} [data-style-choice="qcf_v2"]`) as HTMLElement)
-    expect($<HTMLInputElement>(`${DIALOG} [data-option="all-pages"]`)?.checked).toBe(false)
+    expect($(`${DIALOG} [data-style-choice="qcf_v2"]`)?.getAttribute('aria-checked')).toBe('true')
+    expect(checked('all-pages')).toBe(false)
+    await next()
     await next()
     expect(rows()).toEqual([
       'decor:now',
@@ -206,9 +374,10 @@ describe('starter set (§2.5.4)', () => {
     ])
     expect(totalKib()).toBe(832)
 
-    await userEvent.click(action('back') as HTMLElement)
-    await settle(80)
+    await back()
+    await back()
     await userEvent.click($(`${DIALOG} [data-option="all-pages"]`) as HTMLElement)
+    await next()
     await next()
     expect(rows()).toContain('mushaf.v2:now')
     expect(totalKib()).toBe(832 + (packs.pack('mushaf.v2')?.sizeKib ?? NaN))
@@ -217,17 +386,43 @@ describe('starter set (§2.5.4)', () => {
   it('Hafs without the ornate headers leaves the ornaments out', async () => {
     await mount()
     await next()
-    expect($<HTMLInputElement>(`${DIALOG} [data-option="ornaments"]`)?.checked).toBe(true)
+    await userEvent.click($(`${DIALOG} [data-style-choice="hafs"]`) as HTMLElement)
+    expect(checked('ornaments')).toBe(true)
     await userEvent.click($(`${DIALOG} [data-option="ornaments"]`) as HTMLElement)
+    await next()
     await next()
     expect(rows()).toEqual(['tr.en.saheeh:now', 'wbw.en:on_demand', 'audio.qdc.7:timings_on_first_play'])
     expect(totalKib()).toBe(507)
   })
 
+  it('the 1421 AH print without the ornate headers: no ornaments in the set, and both choices applied', async () => {
+    await mount()
+    await next()
+    await userEvent.click($(`${DIALOG} [data-option="ornaments"]`) as HTMLElement)
+    expect(flow.ornaments).toBe(false)
+    await next()
+    await next()
+    expect(rows()).toEqual([
+      'tr.en.saheeh:now',
+      'mushaf.v2:on_demand',
+      'wbw.en:on_demand',
+      'audio.qdc.7:timings_on_first_play',
+    ])
+    expect(totalKib()).toBe(507)
+    await userEvent.click(action('start-reading') as HTMLElement)
+    await until(() => flow.stepId === 'keys')
+    await until(() => settings.value.mushafStyle === 'qcf_v2' && settings.value.ornateHeaders === false)
+  })
+
   it('Arabic UI: Al-Muyassar instead of a translation and no word by word; 1,119 kB', async () => {
     await mount({ settings: { uiLanguage: 'ar' } })
     await toSummary()
-    expect(rows()).toEqual(['decor:now', 'tafsir.ar.muyassar:now', 'audio.qdc.7:timings_on_first_play'])
+    expect(rows()).toEqual([
+      'decor:now',
+      'tafsir.ar.muyassar:now',
+      'mushaf.v2:on_demand',
+      'audio.qdc.7:timings_on_first_play',
+    ])
     // WP5a pins 1,144,830 B (332,556 + 812,274): 325 + 794 KiB.
     expect(totalKib()).toBe(1119)
     expect($(`${DIALOG} .total-size`)?.textContent?.trim()).toBe('١٬١١٩ ك.ب')
@@ -236,28 +431,34 @@ describe('starter set (§2.5.4)', () => {
   it('follows the chosen translation and reciter; "No translation" drops it', async () => {
     await mount()
     await next()
+    await next()
+    expect(flow.stepId).toBe('reading')
     flow.translation = 'tr.fr.rashid'
     flow.setReciter(2)
     await next()
     expect(rows()).toEqual([
       'decor:now',
       'tr.fr.rashid:now',
+      'mushaf.v2:on_demand',
       'wbw.en:on_demand',
       'audio.qdc.2:timings_on_first_play',
     ])
     await userEvent.click(action('back') as HTMLElement)
     flow.translation = null
     await next()
-    expect(rows()).toEqual(['decor:now', 'wbw.en:on_demand', 'audio.qdc.2:timings_on_first_play'])
+    expect(rows()).toEqual([
+      'decor:now',
+      'mushaf.v2:on_demand',
+      'wbw.en:on_demand',
+      'audio.qdc.2:timings_on_first_play',
+    ])
   })
 })
 
 describe('work offline', () => {
   it('disables every download and keeps the style on Hafs', async () => {
     await mount()
-    await next()
-    await userEvent.click($(`${DIALOG} [data-style-choice="qcf_v2"]`) as HTMLElement)
-    await next()
+    await toSummary()
     expect(action('download-now')?.disabled).toBe(false)
 
     await userEvent.click($(`${DIALOG} [role="switch"]`) as HTMLElement)
@@ -269,8 +470,10 @@ describe('work offline', () => {
     expect(rows()).not.toContain('mushaf.v2:on_demand')
     expect($$(`${DIALOG} [data-pack].disabled`).map((r) => r.dataset.pack)).toEqual(['decor', 'tr.en.saheeh'])
 
-    await userEvent.click(action('back') as HTMLElement)
-    await settle(80)
+    // The reciter preview needs the network too.
+    await back()
+    expect($<HTMLButtonElement>(`${DIALOG} [data-action="preview"]`)?.disabled).toBe(true)
+    await back()
     expect($(`${DIALOG} [data-style-choice="qcf_v2"]`)?.getAttribute('aria-disabled')).toBe('true')
     expect($(`${DIALOG} [data-style-choice="qcf_v4"]`)?.getAttribute('aria-disabled')).toBe('true')
     expect($(`${DIALOG} [data-style-choice="hafs"]`)?.getAttribute('aria-checked')).toBe('true')
@@ -282,10 +485,12 @@ describe('work offline', () => {
     await settle(30)
     expect(flow.style).toBe('qcf_v2')
     expect(flow.effectiveStyle).toBe('hafs')
-    expect($<HTMLButtonElement>(`${DIALOG} [data-action="preview"]`)?.disabled).toBe(true)
+    // The preview shows Hafs; without the network it fetches nothing (see 'fetches nothing for the preview offline').
+    await until(() => preview()?.querySelector('section.mp[data-style="hafs"]') != null)
 
     // "Start reading" applies Hafs and downloads nothing.
     const install = vi.spyOn(packs, 'install')
+    await next()
     await next()
     await userEvent.click(action('start-reading') as HTMLElement)
     await until(() => flow.stepId === 'keys')
@@ -297,7 +502,7 @@ describe('work offline', () => {
   it('the choice comes back once network use is allowed again', async () => {
     await mount()
     await next()
-    await userEvent.click($(`${DIALOG} [data-style-choice="qcf_v2"]`) as HTMLElement)
+    expect(flow.effectiveStyle).toBe('qcf_v2')
     await settings.update({ networkAllowed: false })
     await settle(80)
     expect(flow.effectiveStyle).toBe('hafs')
@@ -310,13 +515,12 @@ describe('work offline', () => {
 describe('starting', () => {
   it('"Download now" installs the starter set, applies the choices and follows the download', async () => {
     await mount()
-    await next()
-    await userEvent.click($(`${DIALOG} [data-style-choice="qcf_v2"]`) as HTMLElement)
-    await next()
+    await toSummary()
     await userEvent.click(action('download-now') as HTMLElement)
     await until(() => flow.stepId === 'keys')
     expect(flow.started).toEqual(['decor', 'tr.en.saheeh'])
     expect(settings.value.mushafStyle).toBe('qcf_v2')
+    expect(settings.value.ornateHeaders).toBe(true)
     await until(() => $(`${DIALOG} [data-starter="done"]`) !== null, 10_000)
     expect(packs.pack('decor')?.state.type).toBe('installed')
     expect(packs.pack('tr.en.saheeh')?.state.type).toBe('installed')
@@ -335,6 +539,7 @@ describe('starting', () => {
     await next()
     await userEvent.click($(`${DIALOG} [data-style-choice="qcf_v4"]`) as HTMLElement)
     flow.setReciter(4)
+    await next()
     await next()
     const install = vi.spyOn(packs, 'install')
     await userEvent.click(action('start-reading') as HTMLElement)
@@ -369,7 +574,7 @@ describe('starting', () => {
 
   it('teaches Ctrl+K, Space and ? with keycaps', async () => {
     await mount()
-    flow.go(3)
+    flow.go(STEPS.indexOf('keys'))
     await settle(80)
     const caps = $$(`${DIALOG} [data-key]`).map((k) =>
       [...k.querySelectorAll('.cap')].map((c) => c.textContent?.trim()).join('+'),
@@ -383,6 +588,7 @@ describe('starting', () => {
 describe('reciter preview', () => {
   it('plays Al-Fatihah 1:1 with the chosen reciter, and stops', async () => {
     await mount()
+    await next()
     await next()
     flow.setReciter(3)
     await settle(30)
@@ -413,6 +619,7 @@ describe('reciter preview', () => {
   it('leaves no resume point: Space afterwards recites the page being read, not Al-Fatihah 1:2', async () => {
     await mount()
     await next()
+    await next()
     expect(player.resumeCandidate).toBeNull()
     await userEvent.click($(`${DIALOG} [data-action="preview"]`) as HTMLElement)
     await until(() => player.status === 'playing' && player.currentAyahId === 1, 5_000)
@@ -430,7 +637,8 @@ describe('reciter preview', () => {
 
 describe('ending', () => {
   it('Escape in an open listbox closes the listbox, not the dialog', async () => {
-    await mount()
+    await mount({ firstRun: false })
+    await next()
     await next()
     await userEvent.click($(`${DIALOG} .ob-translation`) as HTMLElement)
     await until(() => document.querySelector('.qd-listbox') !== null)
@@ -441,27 +649,65 @@ describe('ending', () => {
     expect(settings.value.onboardingDone).toBe(false)
   })
 
-  it('Finish sets onboardingDone and closes', async () => {
+  it('Finish sets onboardingDone, closes, and ends the first run', async () => {
     await mount()
-    flow.go(3)
+    flow.go(STEPS.indexOf('keys'))
     await settle(80)
     await userEvent.click(action('finish') as HTMLElement)
     await until(() => settings.value.onboardingDone)
     expect(ui.isOpen('onboarding')).toBe(false)
+    expect(app.firstRun).toBe(false)
   })
 
-  it('Skip sets onboardingDone from any step', async () => {
+  it('a first run offers no way out but Finish: no Skip on any step, and complete() waits for the last', async () => {
     await mount()
+    expect(flow.mandatory).toBe(true)
+    for (let step = 0; step < STEPS.length - 1; step++) {
+      flow.go(step)
+      await settle(80)
+      expect(action('skip'), STEPS[step]).toBeNull()
+      flow.complete()
+      await settle(30)
+      expect(ui.isOpen('onboarding')).toBe(true)
+      expect(settings.value.onboardingDone).toBe(false)
+    }
+    // Back stays.
+    expect(action('back')).not.toBeNull()
+  })
+
+  it('a first run ignores Escape and a click on the backdrop, on every step', async () => {
+    await mount()
+    for (let step = 0; step < STEPS.length; step++) {
+      flow.go(step)
+      await settle(120)
+      await userEvent.click($('.backdrop') as HTMLElement, { position: { x: 8, y: 8 } })
+      await settle(30)
+      // Focus on the step's title, then on nothing at all.
+      $(`${DIALOG} [data-step-heading]`)?.focus()
+      await userEvent.keyboard('{Escape}')
+      await settle(30)
+      ;(document.activeElement as HTMLElement | null)?.blur()
+      await userEvent.keyboard('{Escape}')
+      await settle(60)
+      expect(ui.isOpen('onboarding'), STEPS[step]).toBe(true)
+      expect(flow.step).toBe(step)
+      expect(settings.value.onboardingDone).toBe(false)
+    }
+  })
+
+  it('a re-run (Settings › System) can be skipped from any step; Skip keeps the settings', async () => {
+    await mount({ firstRun: false })
+    expect(flow.mandatory).toBe(false)
     await next()
     await userEvent.click(action('skip') as HTMLElement)
     await until(() => settings.value.onboardingDone)
     expect(ui.isOpen('onboarding')).toBe(false)
-    // Skip keeps the defaults: the reading choices were never applied.
+    // Skip keeps the settings: the reading choices were never applied.
     expect(settings.value.mushafStyle).toBe('hafs')
   })
 
-  it('Escape skips; a click on the backdrop does nothing', async () => {
-    await mount()
+  it('on a re-run, Escape skips; a click on the backdrop does nothing', async () => {
+    await mount({ firstRun: false })
     await userEvent.click($('.backdrop') as HTMLElement, { position: { x: 8, y: 8 } })
     await settle(80)
     expect(ui.isOpen('onboarding')).toBe(true)
@@ -476,7 +722,7 @@ describe('ending', () => {
     await next()
     ui.open('palette', {})
     await settle(80)
-    expect(flow.stepId).toBe('reading')
+    expect(flow.stepId).toBe('mushaf')
     expect(settings.value.onboardingDone).toBe(false)
   })
 })

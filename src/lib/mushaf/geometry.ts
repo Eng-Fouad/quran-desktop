@@ -376,6 +376,8 @@ export interface PageContext {
   readonly side: PageSide
   /** Pointer interactions and roving a11y items (`MushafPageProps.interactive`). */
   readonly interactive: boolean
+  /** Draw the decor ornaments once loaded (`MushafPageProps.ornaments`, else the `ornateHeaders` setting). */
+  readonly ornaments: boolean
 }
 
 const PAGE_CONTEXT = Symbol('qd.mushaf.page')

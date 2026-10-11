@@ -172,6 +172,21 @@ pub struct CopySettings {
     pub translation_pack_id: Option<String>,
 }
 
+/// A `bool` setting added after the freeze (docs/contract-changes.md) that reads as `true` when a `Settings` leaves it
+/// out (an older frontend's `settings_set`). `#[serde(default)]` would do the same, but specta-serde exports a
+/// defaulted field as optional (`ornateHeaders?: boolean`); with this type and `#[specta(type = bool)]` on the field,
+/// `bindings.ts` keeps it a required `boolean` like every other setting. A missing field reaches `deserialize_option`
+/// (serde's missing-field path) and reads as `None`, as `null` does; both mean `true`. On the wire it is a plain bool.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+#[serde(transparent)]
+pub struct OnByDefault(pub bool);
+
+impl<'de> Deserialize<'de> for OnByDefault {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        Option::<bool>::deserialize(deserializer).map(|on| Self(on.unwrap_or(true)))
+    }
+}
+
 /// All user preferences. `Settings::default()` holds the defaults below; `Settings::validated()` clamps every range,
 /// rounds stepped values, and dedupes/truncates the lists. The ranges live in [`limits`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Type)]
@@ -199,7 +214,7 @@ pub struct Settings {
     /// Default `auto`.
     pub chrome_effect: ChromeEffect,
     // ---- mushaf
-    /// Default `hafs` (onboarding offers `qcf_v2`).
+    /// Default `hafs` (a first-run onboarding preselects `qcf_v2`; offline, or never finished, it stays `hafs`).
     pub mushaf_style: MushafStyle,
     /// Default `auto`.
     pub page_mode: PageMode,
@@ -207,6 +222,11 @@ pub struct Settings {
     pub zoom_pct: u32,
     /// Default true (qcf_v4: palettes 0–2 vs 3–5).
     pub tajweed_colors: bool,
+    /// Default true: the surah headers, the basmala and the juz and hizb signs are drawn in the `decor` calligraphy once
+    /// it is installed, in every style; off draws the plain cartouche, and a QCF style no longer fetches `decor` by
+    /// itself (§8.5, §8.8). Added after the freeze: absent in an older frontend's `settings_set` ⇒ true ([`OnByDefault`]).
+    #[specta(type = bool)]
+    pub ornate_headers: OnByDefault,
     pub show_page_frame: bool,
     pub show_running_heads: bool,
     pub show_margin_markers: bool,
@@ -289,6 +309,7 @@ impl Default for Settings {
             page_mode: PageMode::Auto,
             zoom_pct: 100,
             tajweed_colors: true,
+            ornate_headers: OnByDefault(true),
             show_page_frame: true,
             show_running_heads: true,
             show_margin_markers: true,

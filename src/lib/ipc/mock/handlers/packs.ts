@@ -1016,6 +1016,21 @@ export function recordCachedItem(packId: string, item: number): void {
   packsChanged([packId])
 }
 
+/**
+ * Records a whole pack installed outside a Downloads job: `decor` installed by `decor_ensure` (the fonts mock), as
+ * Rust's `sync_decor_row` records it. Emits `packs-changed` when it was not installed yet.
+ */
+export function recordWholeInstalled(packId: string): void {
+  ensureRestored()
+  const p = findPack(packId)
+  if (!p || itemized(p) || installedVersion(p) !== null) return
+  p.state = { type: 'installed', data: { version: p.version } }
+  p.installedKib = p.sizeKib
+  syncState(p)
+  persist()
+  packsChanged([packId])
+}
+
 /** A recitation streamed and cached by the audio mock (`audio.qdc.{reciterId}`, surah 1–114). */
 export function recordStreamCached(reciterId: number, surah: number): void {
   recordCachedItem(`audio.qdc.${reciterId}`, surah)

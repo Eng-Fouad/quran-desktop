@@ -1,8 +1,8 @@
 <!--
   MarginMarkers (§8.9). Owner: WP8c. The division and sajda markers in the page's outer margin (M_OUT), in --marker-ink:
 
-  - a rub start (`flags & 1`, the mushaf-source rub, D6): ۞ in qd-hafs, or, while labels are drawn and decor is loaded,
-    the quran-common ornament (U+FC23 for a hizb start, U+FC22 for the other quarters). Glyphs are sized by their
+  - a rub start (`flags & 1`, the mushaf-source rub, D6): ۞ in qd-hafs, or, while labels are drawn and decor is loaded
+    (and the page's ornaments are on: `MushafPageProps.ornaments`, else `ornateHeaders`), the quran-common ornament (U+FC23 for a hizb start, U+FC22 for the other quarters). Glyphs are sized by their
     measured ink, not their em (۞ has only 0.45 em of ink): 0.75·qfs tall (≥ 13 px), the decor ornaments 1.45·qfs
     (U+FC22) and a line, 1.75·qfs (the slender U+FC23; `markerGlyphBox`). An ornament's hairlines are thickened
     (`-webkit-text-stroke`, `decorStroke`) so it reads at 3:1 like the solid ۞, and its empty frame holds the
@@ -49,8 +49,10 @@
   const page = getPageContext()
   const interactive = $derived(page?.interactive ?? false)
   const labels = $derived(marginLabelsVisible(qfs))
-  /** The quran-common face is loaded; its ornaments are drawn while labels are (`markerInk`). */
-  const decor = $derived(fonts.status.get('qd-quran-common') === 'ready')
+  /** The page's ornaments are on and the quran-common face is loaded; they are drawn while labels are (`markerInk`). */
+  const decor = $derived(
+    (page?.ornaments ?? settings.value.ornateHeaders) && fonts.status.get('qd-quran-common') === 'ready',
+  )
   const ornaments = $derived(decor && labels)
   const placed = $derived(
     settings.value.showMarginMarkers ? placeMarkers(pageMarkers(data), qfs, labels, decor).placed : [],

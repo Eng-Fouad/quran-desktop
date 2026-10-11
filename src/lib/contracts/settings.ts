@@ -21,6 +21,7 @@ export function defaultSettings(): Settings {
     pageMode: 'auto',
     zoomPct: 100,
     tajweedColors: true,
+    ornateHeaders: true,
     showPageFrame: true,
     showRunningHeads: true,
     showMarginMarkers: true,

@@ -1145,7 +1145,7 @@ impl From<PackError> for quran_types::AppError { /* §5.2 */ }
 | kind | id pattern | items | storage | install mode |
 |---|---|---|---|---|
 | `mushaf_fonts` | `mushaf.v2`, `mushaf.v1`, `mushaf.v4` | pages 1..604 | `packs/mushaf/{v1\|v2\|v4}/p{N}.woff2` | `on_demand`, plus "download all" |
-| `decor` | `decor` (required by every `mushaf.*`, and **offered on its own**: starter set and the Hafs style card, §9.7) | 3 files | `packs/decor/{qcf-surah-header.woff2, quran-common.ttf, sura-names.woff2}` | `whole` |
+| `decor` | `decor` (required by every `mushaf.*`, and **offered on its own**: starter set and, v1.2, the onboarding's "Ornate surah headers" for every style, §9.7) | 3 files | `packs/decor/{qcf-surah-header.woff2, quran-common.ttf, sura-names.woff2}` | `whole` |
 | `translation` | `tr.{lang}.{name}`, e.g. `tr.en.saheeh` | 1 zip | `packs/translation/{id}/{version}/pack.db` | `whole` |
 | `tafsir` | `tafsir.{lang}.{name}`, e.g. `tafsir.ar.muyassar`, `tafsir.en.ibn_kathir` | 1 zip (QuranEnc) or 114 chapters (Quran.com) | pack DB, or `content.db` (D20) | `whole` / `on_demand` |
 | `recitation` | `audio.qdc.{reciterId}`, e.g. `audio.qdc.7` | surahs 1..114 | `packs/audio/{reciterId}/{sss}.mp3`; timings in content.db | `on_demand` (stream), plus download all/selected |
@@ -1153,7 +1153,10 @@ impl From<PackError> for quran_types::AppError { /* §5.2 */ }
 
 Decorative fonts stay **optional at runtime**. Without them the renderer uses its own SVG cartouche and Unicode text
 (FACT §4.2). Because the default style is `hafs`, which never pulls decor in as a requirement, decor is offered explicitly
-(BRIEF forbids silent network use).
+(BRIEF forbids silent network use). **(v1.2, owner 2026-10-11)** The `ornateHeaders` setting (default on, §5.11) gates both
+the fetching and the drawing of decor, in every style: off, no style fetches it by itself and the page draws the plain look
+even with decor installed (the surah-name calligraphy of lists, from the same pack, stays whenever it is installed); turning
+it on fetches decor while online, in any style. The onboarding's Mushaf preview fetches it while its option is ticked.
 
 **Item ids.** `InstallScope::Items { items: Vec<u32> }`, `PackItemState.item` and `packs_remove_items` use numbers that map to
 `pack_item.item` strings as: mushaf fonts `N` ↔ `p{N}` (page), recitation `N` ↔ `{N:03}` (surah), wbw/Quran.com tafsir
@@ -2808,10 +2811,11 @@ pub struct Settings {
     pub ink_brightness_pct: u32,            // 88 (65..=100; night/black only; §8.6 opaque precomposite)
     pub chrome_effect: ChromeEffect,        // auto
     // mushaf
-    pub mushaf_style: MushafStyle,          // hafs (onboarding offers qcf_v2)
+    pub mushaf_style: MushafStyle,          // hafs (a first-run onboarding preselects qcf_v2, v1.2)
     pub page_mode: PageMode,                // auto
     pub zoom_pct: u32,                      // 100 (50..=300, step 10; 100 = fit to height)
     pub tajweed_colors: bool,               // true (qcf_v4: palettes 0–2 vs 3–5)
+    pub ornate_headers: OnByDefault,        // true (v1.2): decor ornaments fetched and drawn, every style; absent ⇒ true
     pub show_page_frame: bool,              // true
     pub show_running_heads: bool,           // true
     pub show_margin_markers: bool,          // true
@@ -3535,7 +3539,8 @@ export type OverlayProps = {
 - Every view, panel, dock and pane component (`MushafView`, `TranslationView`, `SidePane`, `PlayerDock`, `SideDockCard`, all
   sidebar panels, `DownloadsView`, `SettingsView`, `AboutView`) takes **no props** and reads stores.
 - `MushafPage` props (WP8a): `{ data: PageData; qfs: number; side: 'right' | 'left'; interactive?: boolean;
-  furniture?: boolean }`. Onboarding thumbnails and the Settings › Appearance preview (WP12b/12c) render it with
+  furniture?: boolean; ornaments?: boolean }` (`ornaments`, v1.2: draw the decor ornaments; default the `ornateHeaders`
+  setting). Onboarding thumbnails and the Settings › Appearance preview (WP12b/12c) render it with
   `interactive={false}`.
 - WP7c exports `ShortcutTable.svelte` (props `{ groups?: ShortcutGroup[] }`), embedded by Settings › Keyboard.
 - `MushafView` renders `<MemoToolbar/>` and `<SelfTestBar/>` (WP9b, no props) and the chips in its overlay slot (§7.5).
@@ -3807,21 +3812,25 @@ export function wordPill(box: WordBox, qfs: number, lh: number): Rect;
 
 ### 8.8 Surah header and basmala lines (WP8c)
 - **`surah_name` line.**
-  - Decor installed and `header_cp` present: `<span class="sh" style="font-family:qd-surah-header">` with
+  - Decor installed, `ornateHeaders` on (**v1.2**: the setting, or the page's `ornaments` prop, gates every decor
+    ornament on the page: header, basmala, juz calligraphy, margin ornaments) and `header_cp` present:
+    `<span class="sh" style="font-family:qd-surah-header">` with
     `String.fromCodePoint(header_cp)`. Font size `calc(var(--qfs) * var(--sh-scale))` (tunable, start at 1.55), colour
     `--surah-header-ink`, centred.
-  - Fallback (the first-run look, because the default style is hafs and decor is optional): **one reviewed SVG**,
+  - Fallback (the plain look: decor not installed, or `ornateHeaders` off; an offline first run reads hafs without
+    decor): **one reviewed SVG**,
     `SurahCartouche.svelte` (original artwork, `src/lib/mushaf/ornaments.ts`), 16.5 × 1.55 qfs (`viewBox="0 0 1650 155"`):
     an ogee-ended body with three nested strokes (0.06 / 0.02 / 0.02·qfs) in `--frame-gold`, fill `--cartouche-fill`; end
     medallions of 1.1·qfs carrying the 8-point star (two squares at 45°) in `--frame-green` with a 20 % gold fill; centred
     `سُورَةُ {name_ar}` in `qd-hafs` at 0.85·qfs, `--ink`.
 - **`basmallah` line.**
-  - Decor installed: `qd-quran-common` U+FDFD at `--basmala-scale` (tunable ≈ 1.25).
+  - Decor installed and `ornateHeaders` on: `qd-quran-common` U+FDFD at `--basmala-scale` (tunable ≈ 1.25).
   - Fallback: the Unicode `بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ` in `qd-hafs` at 0.95 qfs, centred.
 - Header lines are part of the line grid. **Clicking a surah header opens `SurahInfoPopover`**: revelation place and order,
   ayah count, page range, "Play surah" and "Download recitation". Hover on a header uses the neutral hover tint for ayah 1.
   The audio basmala segment highlights the basmala line with `--hl-audio`.
-- WP8c acceptance includes **lead sign-off on S03** (the hafs, no-decor spread: the first-run look).
+- WP8c acceptance includes **lead sign-off on S03** (the hafs, no-decor spread: the first-run look when it was signed off;
+  v1.2: the plain look, since an online first run preselects the 1421 AH print with its ornaments).
 
 ### 8.9 Page frame, running heads, footer, margin markers and marks (WP8c)
 - **`PageFrame.svelte`** draws an SVG sized in px (`pw = PW·qfs`, `ph = PH·qfs`), regenerated on `qfs` change (memoised):
@@ -4441,23 +4450,33 @@ the current surah marked by an accent bar; a small dot when the current reciter'
   (`packs_remove_items`) that surah; the first download of any surah also pins surah 1 (basmala, §2.5.6), shown in the grid.
   Bulk actions: "Download all (1.7 GB)" and "Remove all". Mushaf font packs show a page count instead of a grid.
 
-**Onboarding (WP12c).** Dialog lg 720×540 over the **real page 1–2 spread** (backdrop rgb(0 0 0 / .18)), 4 steps with progress
-dots. Never shown again after Finish or Skip.
+**Onboarding (WP12c).** Dialog lg 720×540 over the **real page 1–2 spread** (backdrop rgb(0 0 0 / .18)), **(v1.2)** 5 steps
+with progress dots. Never shown again after Finish (or Skip). **(v1.2, owner 2026-10-11)** A first run must be finished: no
+Skip, Escape and a click outside do nothing, Back stays, and Finish on the last step is the only way out (`ui.dismissLayer`
+never closes the onboarding). A tour reopened from Settings › System ("Show the welcome tour") keeps Skip, and Escape is Skip
+there.
 1. Welcome: headline, three feature bullets, language `Segmented` (English | العربية, live switch), and theme cards
    (**Match system** — selected by default — Paper, Sepia, Night, Black), each a mini Mushaf thumbnail rendering page 1 from
    core.db via `mushafGetPages` in the hafs style (`MushafPage interactive={false}`).
-2. Reading setup:
-   - Mushaf style cards: Hafs (offline, included; "Ornate surah headers · 0.3 MB" option = `decor`), QCF V2 (authentic 1421H
-     print, pages download as you read; "Download all pages in the background (93.2 MB)" checkbox, off), Tajweed V4
-     (colour-coded, ≈ 48.5 MB on demand). With "Work offline" on, the QCF/Tajweed cards show "Needs download — available when
-     you're online", the style stays hafs and download rows are disabled.
+2. **(v1.2)** Mushaf, with a live preview:
+   - Style cards, stacked: Hafs (offline, included), QCF V2 (authentic 1421H print, pages download as you read; **preselected
+     on a first run**), Tajweed V4 (colour-coded, ≈ 48.5 MB on demand; locked with "Not supported on this system" where the
+     §8.6 probe failed). With "Work offline" on, the QCF/Tajweed cards show "Needs download — available when you're
+     online", the style stays hafs and download rows are disabled.
+   - Under the cards, for every style: "Ornate surah headers · 325 kB" (`decor`, the `ornateHeaders` setting, ticked), and for
+     a QCF style "Download all pages in the background (93.2 MB)" (off).
+   - Beside them, the live preview: the Settings preview card (a faded slice of page 1 at qfs 14) in the chosen style, with or
+     without the ornaments, before anything is saved. Online it fetches page 1's font of the chosen print and, while ticked,
+     `decor` (once); offline it shows Hafs and fetches nothing.
+3. Translation and recitation:
    - Translation select, preselected from the locale (en → Saheeh International).
    - Reciter select (default Mishary Alafasy) with a ▶ preview of 1:1 (online only); "Recitation streams as you listen and is
      cached".
-3. Summary: the exact starter set (§2.5.4) with sizes and the **exact total** above the button, a "Work offline" switch
-   (`networkAllowed`), and buttons "Download now" (installs the starter set) and "Start reading". Onboarding never bulk-downloads
-   audio.
-4. Keys: teaches `Ctrl+K`/`⌘K`, `Space` and `?` with `Kbd`. Finish sets `onboardingDone = true`.
+4. Summary: the exact starter set (§2.5.4) with sizes and the **exact total** above the button, a "Work offline" switch
+   (`networkAllowed`), and buttons "Download now" (installs the starter set) and "Start reading", both of which apply the style,
+   `ornateHeaders` and the reciter. Onboarding never bulk-downloads audio. The lede says that apart from the Mushaf preview's
+   first page nothing is fetched without asking.
+5. Keys: teaches `Ctrl+K`/`⌘K`, `Space` and `?` with `Kbd`. Finish sets `onboardingDone = true`.
 
 **Settings (WP12b).**
 - Layout: 200 px section nav, content max-width 720, rows of 56 px (label text-md 500, description text-sm muted, control on the end
@@ -4849,9 +4868,9 @@ evidence.
 
 | id | Scenario | Owner |
 |---|---|---|
-| S01 | Onboarding step 1 over the real page 1–2 spread, paper, English | WP12c |
-| S02 | Onboarding step 2, Arabic UI | WP12c |
-| S03 | Pages 1–2 spread, hafs, paper, **no decor** (the first-run look; lead sign-off) | WP8c |
+| S01 | Onboarding step 1 over the real page 1–2 spread, paper, English (v1.2: step 1 of 5, no Skip on a first run) | WP12c |
+| S02 | Onboarding steps 2–3, Arabic UI (v1.2: the Mushaf step with the 1421 AH print, ornate headers and the live preview; then translation and recitation; offline lock) | WP12c |
+| S03 | Pages 1–2 spread, hafs, paper, **no decor** (the plain look, signed off as the first-run look; lead sign-off) | WP8c |
 | S04 | Pages 1–2 spread, qcf_v2, paper (opening medallion) | WP8c |
 | S05 | Pages 3–4 spread, qcf_v2, sepia | WP8b |
 | S06 | Pages 261–262 spread (15:1 header + basmala), qcf_v2, night | WP8c |
@@ -5666,7 +5685,7 @@ errors (lead visual review is a separate merge gate). Every package also meets �
 - Owns: `src/components/{onboarding, about}/**`, `src/lib/about/attributions.ts`, `src/lib/i18n/{en,ar}/{onboarding, about}.ts`,
   `tests/e2e/scenarios/{S01, S02, S25}.mjs`.
 - Depends on: WP12a, WP8a, WP-Brand
-- Deliverables: §9.7 onboarding (4 steps, exact starter set and total, Match system, offline behaviour, preview) and About.
+- Deliverables: §9.7 onboarding (4 steps, v1.2: 5; exact starter set and total, Match system, offline behaviour, preview) and About.
 - Acceptance: `pnpm exec vitest run --project browser src/components/onboarding` (starter set equals §2.5.4; Work offline
   disables downloads); `pnpm shots:web --only S01,S02,S25`.
 

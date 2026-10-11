@@ -347,7 +347,11 @@ class UiStore implements Store {
     return this.topOverlay?.kind === kind
   }
 
-  /** Closes the top-most layer this store owns (the context menu, else the top overlay). `false` if none was open. */
+  /**
+   * Closes the top-most layer this store owns (the context menu, else the top overlay). `false` if none was open. The
+   * onboarding is never closed this way: it ends through its own Finish (and, on a re-run, Skip or Escape), which also
+   * record `onboardingDone` (§9.7); Escape is consumed meanwhile.
+   */
   dismissLayer(): boolean {
     if (this.contextMenu !== null) {
       this.contextMenu = null
@@ -355,7 +359,7 @@ class UiStore implements Store {
     }
     const top = this.topOverlay
     if (top === null) return false
-    this.close(top.kind)
+    if (top.kind !== 'onboarding') this.close(top.kind)
     return true
   }
 

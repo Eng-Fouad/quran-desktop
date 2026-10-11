@@ -28,7 +28,7 @@ is the lead's fold-in of every accepted deviation (`docs/deviations/WP*.md`), ev
 | LEAD 9 | Nothing ever plays through the real output device in tests or checks: `QD_AUDIO_SINK=null` or `wav:<path>`. |
 | LEAD 10, 11 | One short `CARGO_TARGET_DIR` per worktree or agent (MAX_PATH, lock contention). |
 | LEAD 12 | No agent commits or stages. |
-| LEAD 13 | The first-run look (S03: pages 1–2, hafs, paper, own cartouche and medallion, Unicode basmala) is signed off. |
+| LEAD 13 | The first-run look (S03: pages 1–2, hafs, paper, own cartouche and medallion, Unicode basmala) is signed off. Since the owner's 2026-10-11 onboarding request it is the plain look (offline first run, or ornate headers off): online, a first run preselects the 1421 AH print with its ornaments. |
 | LEAD 14, 17 | `cargo test` takes one TESTNAME: an acceptance line with several filters runs as `cargo test -p X --lib -- f1 f2` (§14.3 corrected in place). |
 | LEAD 16, 18 | The app adopts the github.com/quran (Quran.com) identity, pending the organisation's approval: product **Quran**, full name **Quran for Desktop** (قرآن / قرآن لسطح المكتب), identifier and AUMID `com.quran.labs.desktop`, licence **GPL-3.0-or-later**, User-Agent `QuranForDesktop/<version>`, the قرآن mark of quran_android as the icon. Repository, crates and binary keep `quran-desktop`. |
 | LEAD 17 | Data rulings: cross-page surah headers are authentic print geometry (FACT C15 was wrong); the inline ۞ stays verbatim in the text; the Imla'i search seed is QDC `text_imlaei` (QUL 54). |
@@ -63,7 +63,11 @@ is the lead's fold-in of every accepted deviation (`docs/deviations/WP*.md`), ev
 - **Bindings** are rewritten only when the content changes; `bindings_cover_the_contract` pins the command count, the
   events, no `font_bytes` and no `bigint` (WP0A 11).
 - **Settings snapshot.** `crates/quran-types/tests/data/settings_default.json` pins every IPC name and default;
-  `QD_UPDATE_SNAPSHOTS=1` accepts an intentional (contract) change.
+  `QD_UPDATE_SNAPSHOTS=1` accepts an intentional (contract) change (it rewrites the file in sorted key order; the
+  committed file keeps declaration order, so a new key can be added by hand instead).
+- **A setting added after the freeze** (`ornateHeaders`, owner 2026-10-11) is an `OnByDefault` (a `bool` that reads as
+  true when absent): `#[serde(default)]` would make specta-serde export it as optional (`ornateHeaders?: boolean`), while
+  every other setting is a required field (contract-changes.md).
 
 ## 2. Workspace and crates (§2.1, §2.6)
 
@@ -529,7 +533,8 @@ is the lead's fold-in of every accepted deviation (`docs/deviations/WP*.md`), ev
   draws the plain palette (WP8b 4–5 were override tables; INT fix 1 mushaf).
 - A style left behind is unloaded once nothing draws it (budget 0); renditions hold their face through a cross-fade
   (INT fix 1 mushaf). Decor is requested automatically for QCF styles once per session while online, never for hafs
-  (WP8b 8). The font-status dot sits in the footer band, drawn by `RenditionStack`, and retries a failed page (WP8b 7).
+  (WP8b 8), and only while `ornateHeaders` is on; turning `ornateHeaders` on requests it in any style (owner 2026-10-11).
+  The faces load whenever decor is installed: the setting gates the drawing, not the loading. The font-status dot sits in the footer band, drawn by `RenditionStack`, and retries a failed page (WP8b 7).
 - **Shaping warm-up** (`warmup.ts`): the next and previous spreads are laid out off screen in idle time (3 lines per
   slice); a cold page on screen is warmed urgently inside the 120 ms font wait; a turn animates only into warm pages.
   **While flipping** a page shows its QCF rendition only if it was painted in that font before, else the Hafs fallback
@@ -557,6 +562,12 @@ is the lead's fold-in of every accepted deviation (`docs/deviations/WP*.md`), ev
 
 - Decor glyphs are sized by their measured metrics (`--sh-scale` 4.4, `--basmala-scale` 1.4); markers by ink height
   (0.75·qfs, ≥ 13 px). The juz calligraphy is `U+E001 + (juz − 1)` (the `juz001` ligatures), not U+E900 (WP8c 1).
+- **Ornate surah headers** (`ornateHeaders`, default on, every style; owner 2026-10-11): off, a page draws the plain
+  look even with decor loaded: the cartouche, the Unicode basmala, the juz in words in the running head, and the solid ۞
+  without a frame in the margin (a quarter keeps its words in the label). `MushafPageProps.ornaments` overrides the
+  setting for one page (the onboarding's preview); the header, basmala, running head, margin markers and margin marks
+  read it from the page context, so marker stacking follows the same decor flag (CLS 0). The surah-name calligraphy of
+  lists (Index, the surah popover, the palette) is UI chrome from the same pack and stays whenever decor is installed.
 - **Quarter markers with an inline ۞** (199 of 240) draw the label alone, centred on the line, and nothing below qfs 28;
   never a second ۞. Ornaments appear only with their labels (qfs ≥ 28), stroked (`max(0.5px, 0.018em)`), with the hizb
   number inside the frame; below 28 the solid ۞ is drawn; marker ink ≥ 4.5:1 in every theme (LEAD 17,
@@ -701,9 +712,16 @@ is the lead's fold-in of every accepted deviation (`docs/deviations/WP*.md`), ev
   against the tokens; choosing close-to-tray also marks the first-close question answered; the Mica switch is disabled on
   Linux and where `window_set_chrome` is unsupported; Settings › Storage has "Library backup" (Back up…, Restore…)
   (WP12b 1–4, INT web).
-- **Onboarding and About (WP12c):** the flow state outlives the dialog; both step-3 buttons lead to the Keys step; Escape is
-  Skip, outside clicks do nothing; offline locks the QCF cards; unticking "Ornate surah headers" on the Hafs card drops
-  `decor` from the set; totals under 10 MB are exact kB (en 832 kB, ar 1,119 kB). About opens with a "This app" group (the GPL notice and
+- **Onboarding and About (WP12c):** the flow state outlives the dialog; five steps (owner 2026-10-11): Welcome, Mushaf
+  (the style cards with "Ornate surah headers" for every style beside a live preview of page 1, which fetches page 1's
+  font and, while ticked, `decor` when online, and nothing offline), Translation and recitation, Starter set, Keys; both
+  starter-set buttons apply the style, `ornateHeaders` and the reciter and lead to the Keys step. A first run must be
+  finished: no Skip, Escape and outside clicks do nothing, Back stays, Finish is the only way out (`ui.dismissLayer`
+  never closes the onboarding); a tour reopened from Settings › System keeps Skip, and Escape is Skip there (a re-run left
+  unfinished by quitting reopens at the next launch as a first run: `first_run()` is true again). A first run preselects
+  the 1421 AH print (`qcf_v2`) with ornate headers; the `mushafStyle` default stays `hafs`. Offline locks the QCF cards;
+  a Tajweed card this webview cannot draw is locked; unticking "Ornate surah headers" drops `decor` from the set (unless
+  "Download all pages" requires it); totals under 10 MB are exact kB (en 832 kB, ar 1,119 kB). About opens with a "This app" group (the GPL notice and
   "Show the licence", the source-code link, the icon credit); core-data credit follows the build (QUL for qul, the
   Quran.com API for qdc); QUL's licence line says "QUL publishes no licence for this data" until the permission is
   recorded (`QUL_PERMISSION`) (INT identity, INT fix 1 ui).

@@ -1,6 +1,7 @@
 <!--
-  SurahCartouche (§8.8). Owner: WP8c. The original SVG surah cartouche: the fallback surah header of the Mushaf (the
-  first-run look: hafs without the decor fonts), also used by the translation-mode `SurahCard` (WP11a) at a smaller qfs.
+  SurahCartouche (§8.8). Owner: WP8c. The original SVG surah cartouche: the plain surah header of the Mushaf (without
+  the decor fonts, or with "Ornate surah headers" off; S03's look), also used by the translation-mode `SurahCard` (WP11a)
+  at a smaller qfs.
 
     an ogee-ended body (--cartouche-fill) with three nested strokes (0.06 / 0.02 / 0.02·qfs) in --frame-gold,
     end medallions of 1.1·qfs, each with a khatam in --frame-green over a 20 % gold fill,

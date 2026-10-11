@@ -160,7 +160,7 @@ beforeEach(() => {
 afterEach(() => {
   fonts.reset()
   app.info = { ...app.info, fontTransport: 'url' }
-  settings.value = { ...settings.value, mushafStyle: 'hafs', networkAllowed: true }
+  settings.value = { ...settings.value, mushafStyle: 'hafs', networkAllowed: true, ornateHeaders: true }
   vi.unstubAllGlobals()
   vi.restoreAllMocks()
   Reflect.deleteProperty(document, 'fonts')
@@ -461,6 +461,48 @@ describe('decor (§8.5)', () => {
     expect(api.decorEnsure).toHaveBeenCalledTimes(1)
     expect(fonts.decor.installed).toBe(true)
     expect(fonts.decorReady).toBe(true)
+  })
+
+  it('does not ask for decor for a QCF style while ornateHeaders is off, and still loads an installed one', async () => {
+    const { api } = await import('$lib/ipc')
+    settings.value = { ...settings.value, mushafStyle: 'qcf_v2', ornateHeaders: false }
+    fonts.init(bootstrap())
+    await settle()
+    expect(api.decorEnsure).not.toHaveBeenCalled()
+    // The faces load whatever the setting: it gates the drawing (the onboarding's preview may show them).
+    fonts.reset()
+    fonts.init(bootstrap(installed))
+    await settle()
+    expect(fonts.decorReady).toBe(true)
+    expect(api.decorEnsure).not.toHaveBeenCalled()
+  })
+
+  it('asks once when ornateHeaders is turned on while online, for hafs too; once more after coming online', async () => {
+    const { api } = await import('$lib/ipc')
+    settings.value = { ...settings.value, mushafStyle: 'hafs', ornateHeaders: false }
+    fonts.init(bootstrap())
+    await settle()
+    expect(api.decorEnsure).not.toHaveBeenCalled()
+    // Turned on offline: nothing yet; the ask waits for the connection.
+    settings.value = { ...settings.value, networkAllowed: false }
+    flushSync()
+    settings.value = { ...settings.value, ornateHeaders: true }
+    flushSync()
+    await settle()
+    expect(api.decorEnsure).not.toHaveBeenCalled()
+    ipc.decor = { ...installed }
+    settings.value = { ...settings.value, networkAllowed: true }
+    flushSync()
+    await settle()
+    expect(api.decorEnsure).toHaveBeenCalledTimes(1)
+    expect(fonts.decorReady).toBe(true)
+    // Installed now: turning it off and on again asks for nothing more.
+    settings.value = { ...settings.value, ornateHeaders: false }
+    flushSync()
+    settings.value = { ...settings.value, ornateHeaders: true }
+    flushSync()
+    await settle()
+    expect(api.decorEnsure).toHaveBeenCalledTimes(1)
   })
 
   it('unloads decor when PacksChanged reports it removed', async () => {

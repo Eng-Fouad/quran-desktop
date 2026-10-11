@@ -1,7 +1,8 @@
 <!--
   BasmalaLine (§8.8). Owner: WP8c. A `basmallah` line of the 15-line grid, rendered by `GlyphLayer` inside its `.ln`:
 
-  - decor installed (the `qd-quran-common` face loaded): its basmala calligraphy, U+FDFD, at `--basmala-scale`·qfs;
+  - the page's ornaments on (`MushafPageProps.ornaments`, else the `ornateHeaders` setting) and decor installed (the
+    `qd-quran-common` face loaded): its basmala calligraphy, U+FDFD, at `--basmala-scale`·qfs;
   - otherwise the Unicode basmala in qd-hafs at 0.95·qfs, centred.
 
   While the recitation plays the basmala segment before this surah (`player.currentRef` = {surah, ayah: 0}), the line
@@ -10,12 +11,16 @@
 -->
 <script lang="ts">
   import type { HeaderLineProps } from '$lib/contracts/components'
+  import { getPageContext } from '$lib/mushaf/geometry'
   import { BASMALA_TEXT, DECOR_BASMALA } from '$lib/mushaf/ornaments'
-  import { fonts, player } from '$lib/stores'
+  import { fonts, player, settings } from '$lib/stores'
 
   let { line, layout }: HeaderLineProps = $props()
 
-  const decor = $derived(fonts.status.get('qd-quran-common') === 'ready')
+  const page = getPageContext()
+  const decor = $derived(
+    (page?.ornaments ?? settings.value.ornateHeaders) && fonts.status.get('qd-quran-common') === 'ready',
+  )
   const playing = $derived(
     line.surah !== null && player.currentRef?.surah === line.surah && player.currentRef.ayah === 0,
   )

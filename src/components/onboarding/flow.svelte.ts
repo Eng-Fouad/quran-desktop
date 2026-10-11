@@ -3,37 +3,50 @@
  * unmounted while another overlay sits on top of it (`OverlayHost` renders only the top overlay: Mod+K during the
  * Keys step opens the palette, and closing it brings the dialog back on the same step).
  *
+ * - **Steps** (owner 2026-10-11): Welcome, Mushaf (the style cards and "Ornate surah headers" beside a live preview of
+ *   page 1), Reading (translation and reciter), the starter set, Keys.
+ * - **A first run must be finished** (`mandatory`: `app.firstRun` when the flow is seeded): no Skip, Escape and outside
+ *   clicks do nothing, Back stays, and Finish on the last step is the only way out. A tour reopened from Settings ›
+ *   System ("Show the welcome tour") can be skipped (Skip, or Escape) from any step.
+ * - **First-run choices**: the Madani 1421 AH print (`qcf_v2`) with its ornate surah headers. The `mushafStyle` default
+ *   stays `hafs` (an offline first run, or one that never finishes, reads Hafs); a re-run starts from the settings.
  * - **Applied live** (step 1, §9.7 "live switch"): the UI language and the theme, through `settings.update`. The
- *   "Work offline" switch (step 3) is live too: it is the `networkAllowed` setting itself.
- * - **Applied when the starter set is decided** (step 3, "Download now" or "Start reading"): the Mushaf style, the
- *   reciter, and the reading packs the set puts to use: a translation or tafsir already on disk or fetched as you read,
- *   and the UI language's word-by-word pack ("Downloads as you read", §2.5.4 item 4) unless one is chosen already. A
- *   pack "Download now" fetches is put to use by the packs store when it lands. Choosing them does not touch the page
- *   behind the dialog or start any download, so Skip leaves the defaults in place.
+ *   "Work offline" switch (step 4) is live too: it is the `networkAllowed` setting itself.
+ * - **Applied when the starter set is decided** (step 4, "Download now" or "Start reading"): the Mushaf style, the
+ *   ornate headers (`ornateHeaders`), the reciter, and the reading packs the set puts to use: a translation or tafsir
+ *   already on disk or fetched as you read, and the UI language's word-by-word pack ("Downloads as you read", §2.5.4
+ *   item 4) unless one is chosen already. A pack "Download now" fetches is put to use by the packs store when it lands.
+ *   Choosing them does not touch the page behind the dialog, so Skip leaves the settings as they were.
+ * - **The Mushaf preview** fetches while online, as the reader would: the chosen print's page-1 font (RenditionStack,
+ *   interactive lane) and, while "Ornate surah headers" is ticked, the ornaments (`decor`, once: `requestOrnaments`).
+ *   The starter set then lists them as already downloaded. Offline it shows Hafs and fetches nothing.
  * - **Offline behaviour.** Without network use (Work offline, or no connection) nothing can be downloaded: the QCF
  *   and Tajweed cards are disabled, the effective style is Hafs (the chosen card comes back once online), the
  *   "Download all pages" option is ignored, the reciter preview is unavailable and "Download now" is disabled.
  * - **Reciter preview** (▶, 1:1) plays through `player.preview`: it is no part of the user's listening, so it leaves no
  *   resume point behind (Space after the onboarding recites the page being read, as the Keys step says).
  * - **Starter set** (§2.5.4, exact): `packs.starterSetFor` with these choices (WP12a, mirroring `Catalog::starter_set`,
- *   WP5a), minus the ornament fonts when the Hafs card's "Ornate surah headers" option is off (the QCF styles require
- *   them, so it is offered on the Hafs card only).
- * - **Done.** Finish and Skip set `onboardingDone` and close the dialog; it never shows again (§9.7).
+ *   WP5a), minus the ornament fonts when "Ornate surah headers" is unticked, in every style (unless "Download all
+ *   pages" fetches a Mushaf pack that requires them: they are then downloaded, not drawn).
+ * - **Done.** Finish (and Skip on a re-run) set `onboardingDone` and close the dialog; it never shows again (§9.7).
  */
 import type { AudioSnapshot, MushafStyle, Settings, ThemeMode } from '$lib/ipc/bindings'
 import { events } from '$lib/ipc'
 import { defaultSettings, SETTING_LIMITS } from '$lib/contracts/settings'
-import { app, packs, player, settings, ui } from '$lib/stores'
+import { app, fonts, packs, player, settings, ui } from '$lib/stores'
 import { listenEvent } from '$lib/stores/app.svelte'
 import { isActivePhase, isInstalled, type StarterSet } from '$lib/stores/packs.svelte'
 
-/** The four steps, in order (§9.7). */
-export const STEPS = ['welcome', 'reading', 'summary', 'keys'] as const
+/** The five steps, in order (§9.7; the Mushaf step since the owner's 2026-10-11 request). */
+export const STEPS = ['welcome', 'mushaf', 'reading', 'summary', 'keys'] as const
 export type StepId = (typeof STEPS)[number]
 
 /** The Mushaf style cards of step 2 (§9.7). `qcf_v1` stays a Settings choice. */
 export const STYLE_CHOICES = ['hafs', 'qcf_v2', 'qcf_v4'] as const satisfies readonly MushafStyle[]
 export type StyleChoice = (typeof STYLE_CHOICES)[number]
+
+/** The card a first run preselects: the Madani print of 1421 AH (owner 2026-10-11). */
+export const FIRST_RUN_STYLE: StyleChoice = 'qcf_v2'
 
 /** The theme cards of step 1 (§9.7): Match system first (the default), then the four reading themes. */
 export const THEME_CHOICES = [
@@ -59,15 +72,24 @@ function isStyleChoice(style: MushafStyle): style is StyleChoice {
   return (STYLE_CHOICES as readonly MushafStyle[]).includes(style)
 }
 
+/** Tajweed (V4) cannot be drawn by this webview (the §8.6 COLR probe failed): its card is locked. */
+export function styleUnsupported(style: StyleChoice): boolean {
+  return style === 'qcf_v4' && fonts.v4Supported === false
+}
+
 class OnboardingFlow {
   /** The current step (index into `STEPS`). */
   step = $state(0)
   /** +1 after moving forward, −1 after moving back: the side the new step slides in from. */
   direction = $state<1 | -1>(1)
+  /** A first run: Finish is the only way out (no Skip, no Escape). Set when the flow is seeded. */
+  mandatory = $state(false)
   /** The chosen Mushaf style card (the effective style is Hafs while nothing can download). */
-  style = $state<StyleChoice>('hafs')
-  /** Hafs card: "Ornate surah headers" (the `decor` pack; on by default, §2.5.4 item 1). */
+  style = $state<StyleChoice>(FIRST_RUN_STYLE)
+  /** "Ornate surah headers", for every style (`ornateHeaders`; the `decor` pack, on by default, §2.5.4 item 1). */
   ornaments = $state(true)
+  /** The preview's ornaments request (`requestOrnaments`): asked once per run of the flow. */
+  ornamentsRequest = $state<'idle' | 'loading' | 'done'>('idle')
   /** QCF cards: "Download all pages in the background" (off by default, §2.5.4 item 3). */
   allPages = $state(false)
   /** The translation (or tafsir) pack: `undefined` follows the UI language's default, `null` is "No translation". */
@@ -89,8 +111,13 @@ class OnboardingFlow {
   readonly stepId: StepId = $derived(STEPS[this.step] ?? 'welcome')
   /** Downloads can start: network use is allowed and the app is online (as the Downloads manager decides). */
   readonly canDownload = $derived(settings.value.networkAllowed && app.online)
-  /** The style that is applied: the chosen one, or Hafs while nothing can download (§9.7 "the style stays hafs"). */
-  readonly effectiveStyle: StyleChoice = $derived(this.canDownload ? this.style : 'hafs')
+  /**
+   * The style that is applied: the chosen one, or Hafs while nothing can download (§9.7 "the style stays hafs"), and the
+   * 1421 AH print instead of a Tajweed card this webview cannot draw (as the fonts store would switch it, §8.6).
+   */
+  readonly effectiveStyle: StyleChoice = $derived(
+    !this.canDownload ? 'hafs' : styleUnsupported(this.style) ? 'qcf_v2' : this.style,
+  )
   /** The translation pack the starter set includes (the UI language's default until one is picked). */
   readonly translationId: string | null = $derived(
     this.translation === undefined
@@ -107,7 +134,10 @@ class OnboardingFlow {
       downloadAllPages: style !== 'hafs' && this.allPages,
       reciterId: this.reciterId,
     })
-    if (style !== 'hafs' || this.ornaments) return set
+    if (this.ornaments) return set
+    // Unticked, the ornaments are left out, unless a pack fetched now requires them ("Download all pages": every
+    // `mushaf.*` pack does); they are then downloaded but not drawn.
+    if (set.items.some((i) => i.fetch === 'now' && i.pack.requires.includes('decor'))) return set
     const items = set.items.filter((i) => i.pack.id !== 'decor')
     return { items, nowKib: items.reduce((sum, i) => sum + i.kib, 0) }
   })
@@ -153,12 +183,22 @@ class OnboardingFlow {
   #seeded = false
   #unlistenAudio: (() => void) | null = null
 
-  /** Takes the current settings as the starting choices, once per run of the flow. */
+  /**
+   * Takes the current settings as the starting choices, once per run of the flow. A first run must be finished, and
+   * preselects the 1421 AH print unless a style was chosen already; a re-run (Settings › System) mirrors the settings.
+   */
   seed(): void {
     if (this.#seeded) return
     this.#seeded = true
     const s = settings.value
-    this.style = isStyleChoice(s.mushafStyle) ? s.mushafStyle : 'hafs'
+    this.mandatory = app.firstRun
+    this.style =
+      this.mandatory && s.mushafStyle === defaultSettings().mushafStyle
+        ? FIRST_RUN_STYLE
+        : isStyleChoice(s.mushafStyle)
+          ? s.mushafStyle
+          : 'hafs'
+    this.ornaments = s.ornateHeaders
     this.reciterId = s.reciterId
     const reading = s.translations[0] ?? s.tafsirPackId
     this.translation = reading ?? undefined
@@ -193,13 +233,33 @@ class OnboardingFlow {
   }
 
   setStyle(style: StyleChoice): void {
-    if (style !== 'hafs' && !this.canDownload) return
+    if ((style !== 'hafs' && !this.canDownload) || styleUnsupported(style)) return
     this.style = style
+  }
+
+  /** "Ornate surah headers" (every style): the preview follows at once, the setting when the set is decided. */
+  setOrnaments(on: boolean): void {
+    this.ornaments = on
+  }
+
+  /**
+   * The Mushaf preview's ornaments: installs `decor` once while online and ticked (`decor_ensure`, as a QCF style does
+   * in the reader), so the preview shows them and the starter set lists them as already downloaded. Never rejects.
+   */
+  async requestOrnaments(): Promise<void> {
+    if (this.ornamentsRequest !== 'idle' || !this.ornaments || !this.canDownload || fonts.decor.installed)
+      return
+    this.ornamentsRequest = 'loading'
+    try {
+      await fonts.ensureDecor()
+    } finally {
+      this.ornamentsRequest = 'done'
+    }
   }
 
   /** "Download all pages" belongs to a QCF card: ticking it also picks that card. */
   setAllPages(style: StyleChoice, on: boolean): void {
-    if (style === 'hafs' || !this.canDownload) return
+    if (style === 'hafs' || !this.canDownload || styleUnsupported(style)) return
     this.style = style
     this.allPages = on
   }
@@ -220,8 +280,8 @@ class OnboardingFlow {
   // --- the starter set -----------------------------------------------------------------------------------------------
 
   /**
-   * Step 3: applies the style and reciter, puts an already installed translation to use, and with `download`
-   * installs the starter set ("Download now"; never audio). Then moves to the Keys step.
+   * Step 4: applies the style, the ornate headers and the reciter, puts an already installed translation to use, and
+   * with `download` installs the starter set ("Download now"; never audio). Then moves to the Keys step.
    */
   async start(download: boolean): Promise<void> {
     if (this.committing) return
@@ -257,6 +317,7 @@ class OnboardingFlow {
     const s = settings.value
     const patch: Partial<Settings> = {}
     if (s.mushafStyle !== this.effectiveStyle) patch.mushafStyle = this.effectiveStyle
+    if (s.ornateHeaders !== this.ornaments) patch.ornateHeaders = this.ornaments
     if (s.reciterId !== this.reciterId) patch.reciterId = this.reciterId
     // Reading packs of the set that work now are put to use now: those on disk, and those fetched as you read ("Later",
     // §2.5.4 item 4: the word-by-word pack, an on-demand tafsir). A "Download now" pack is added by the packs store once
@@ -330,12 +391,21 @@ class OnboardingFlow {
 
   // --- the end -----------------------------------------------------------------------------------------------------
 
-  /** Finish (step 4) and Skip: never show the onboarding again (§9.7) and close it. */
+  /** Skip and Escape may end the flow early: on a re-run, never on a first run (§9.7, owner 2026-10-11). */
+  get skippable(): boolean {
+    return !this.mandatory
+  }
+
+  /**
+   * Finish (the last step) and Skip: never show the onboarding again (§9.7) and close it. On a first run only the last
+   * step can end it. The first run ends with it, as Rust's `first_run()` does once `onboarding_done` is stored.
+   */
   complete(): void {
-    if (this.done) return
+    if (this.done || (this.mandatory && this.step !== STEPS.length - 1)) return
     this.done = true
     void this.stopPreview()
     if (!settings.value.onboardingDone) void settings.update({ onboardingDone: true })
+    app.firstRun = false
     ui.close('onboarding')
   }
 
@@ -346,8 +416,10 @@ class OnboardingFlow {
     this.#seeded = false
     this.step = 0
     this.direction = 1
-    this.style = 'hafs'
+    this.mandatory = false
+    this.style = FIRST_RUN_STYLE
     this.ornaments = true
+    this.ornamentsRequest = 'idle'
     this.allPages = false
     this.translation = undefined
     this.reciterId = defaultSettings().reciterId

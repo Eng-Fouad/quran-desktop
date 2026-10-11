@@ -130,6 +130,17 @@ describe('ui store: overlays and layers (§7.4)', () => {
     expect(ui.dismissLayer()).toBe(false)
   })
 
+  it('never closes the onboarding as a layer: it ends through Finish (or Skip on a re-run, §9.7)', () => {
+    ui.open('onboarding', {})
+    expect(ui.dismissLayer()).toBe(true)
+    expect(ui.isOpen('onboarding')).toBe(true)
+    // An overlay on top of it is dismissed as usual, the onboarding stays.
+    ui.open('palette', {})
+    expect(ui.dismissLayer()).toBe(true)
+    expect(ui.isOpen('palette')).toBe(false)
+    expect(ui.isTop('onboarding')).toBe(true)
+  })
+
   it('resolves confirm() from the dialog, and "no" for every other way it closes', async () => {
     const options = {
       title: 'Delete note?',

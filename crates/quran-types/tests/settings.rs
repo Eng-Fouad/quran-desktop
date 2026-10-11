@@ -5,7 +5,7 @@ use std::path::PathBuf;
 
 use quran_types::limits::{self, Bounds};
 use quran_types::{
-    CopySettings, GapSetting, Settings, SidePaneSettings, SidebarSettings, UiLanguage,
+    CopySettings, GapSetting, OnByDefault, Settings, SidePaneSettings, SidebarSettings, UiLanguage,
 };
 use serde_json::Value;
 
@@ -38,6 +38,32 @@ fn snapshot_deserializes_to_default() {
     let text = std::fs::read_to_string(snapshot_path()).unwrap();
     let parsed: Settings = serde_json::from_str(&text).unwrap();
     assert_eq!(parsed, Settings::default());
+}
+
+/// `ornateHeaders` came after the freeze (docs/contract-changes.md): an older frontend's `settings_set` sends a whole
+/// `Settings` without it, which still deserialises, with the ornaments on.
+#[test]
+fn settings_without_ornate_headers_deserialize_with_them_on() {
+    let mut json = serde_json::to_value(Settings {
+        ornate_headers: OnByDefault(false),
+        ..Settings::default()
+    })
+    .unwrap();
+    json.as_object_mut()
+        .unwrap()
+        .remove("ornateHeaders")
+        .unwrap();
+    let parsed: Settings = serde_json::from_value(json.clone()).unwrap();
+    assert_eq!(parsed.ornate_headers, OnByDefault(true));
+    assert_eq!(parsed, Settings::default());
+    // On the wire it is a plain boolean, both ways.
+    json["ornateHeaders"] = Value::Bool(false);
+    let off: Settings = serde_json::from_value(json).unwrap();
+    assert_eq!(off.ornate_headers, OnByDefault(false));
+    assert_eq!(
+        serde_json::to_value(&off).unwrap()["ornateHeaders"],
+        Value::Bool(false)
+    );
 }
 
 #[test]

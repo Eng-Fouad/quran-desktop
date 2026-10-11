@@ -1,6 +1,7 @@
 // @ts-check
-// S03 (§12.6; WP8c): the first-run look. Pages 1–2 as a spread in the hafs style on paper, without the decor fonts:
-// the original frame (rules, interlace band, khatam corners), the ogee-arched opening medallion with its 12 rosettes,
+// S03 (§12.6; WP8c): the plain look, signed off as the first-run look (LEAD 13). Pages 1–2 as a spread in the hafs style
+// on paper, without the decor fonts, as an offline first run or "Ornate surah headers" off shows them (online, a first
+// run now preselects the 1421 AH print with its ornaments, owner 2026-10-11): the original frame (rules, interlace band, khatam corners), the ogee-arched opening medallion with its 12 rosettes,
 // the SVG surah cartouches (Al-Fātiḥah, Al-Baqarah), the Unicode basmala of Al-Baqarah, no running heads and no margin
 // markers on the opening pages (as in print), and the page numbers ١ and ٢ in their footer medallions.
 // Lead sign-off gate (§14.3).
@@ -65,7 +66,7 @@ export default async function s03(ctx) {
   equal(p2.basmalas.length, 1, 'page 2: one basmala line')
   equal(p2.basmalas[0]?.decor, false, 'page 2: the Unicode basmala (no decor)')
   equal(p2.basmalas[0]?.text, 'بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ', 'page 2: the basmala text')
-  check(!(await decorLoaded(ctx, 'qd-surah-header')), 'the first-run look loads no decor font')
+  check(!(await decorLoaded(ctx, 'qd-surah-header')), 'the plain look loads no decor font')
 
   await ctx.shot()
   await ctx.shot('spread', { selector: '.mushaf-view .stage, .spread' })

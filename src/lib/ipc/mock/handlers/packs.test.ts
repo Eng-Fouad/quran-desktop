@@ -14,6 +14,7 @@ import {
   packsHandlers as h,
   packsMock,
   recordStreamCached,
+  recordWholeInstalled,
   VERIFY_MS,
 } from './packs'
 
@@ -203,6 +204,23 @@ describe('packs mock: URL switches, restart and caches', () => {
     expect(seen.some((e) => e.type === 'progress' && e.data.packId === 'mushaf.v2')).toBe(true)
     const items = data(await h.packsItems('mushaf.v2'))
     expect(items.filter((i) => i.pinned).length).toBeGreaterThanOrEqual(before)
+  })
+
+  it('records decor installed by decor_ensure as an installed whole pack, once (Rust: sync_decor_row)', async () => {
+    const changed: string[][] = []
+    const stop = await events.packsChanged.listen((e) => changed.push(e.payload.packIds))
+    recordWholeInstalled('decor')
+    recordWholeInstalled('decor') // already installed: no second event
+    recordWholeInstalled('mushaf.v2') // per-item packs are recorded item by item, never whole
+    recordWholeInstalled('nope')
+    await vi.advanceTimersByTimeAsync(0)
+    stop()
+    expect(changed).toEqual([['decor']])
+    const list = data(await h.packsList())
+    const decor = list.find((p) => p.id === 'decor')
+    expect(decor?.state.type).toBe('installed')
+    expect(decor?.installedKib).toBe(decor?.sizeKib)
+    expect(list.find((p) => p.id === 'mushaf.v2')?.state.type).toBe('not_installed')
   })
 
   it('records stream-cached audio for the audio mock, and clears it (and only it)', async () => {

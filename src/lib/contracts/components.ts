@@ -21,6 +21,12 @@ export interface MushafPageProps {
   interactive?: boolean
   /** Frame, running head, footer and margin furniture (default true). */
   furniture?: boolean
+  /**
+   * Draw the decor ornaments (surah-header and basmala calligraphy, the juz calligraphy, the margin ornaments) once
+   * their fonts are loaded; default: the `ornateHeaders` setting. The onboarding's preview shows the choice before it
+   * is saved.
+   */
+  ornaments?: boolean
 }
 
 /** `ShortcutTable.svelte` (WP7c), embedded by Settings › Keyboard (WP12b) and the shortcut sheet. */

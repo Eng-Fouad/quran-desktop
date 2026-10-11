@@ -6,7 +6,8 @@
 // theme; Match system (the default) is selected and shows paper and night split on a diagonal. Checks: the dialog is
 // 720 × 540 and centred, the backdrop is rgb(0 0 0 / .18), both pages are on screen behind it, the thumbnails render
 // page 1 from the hafs style, each card's paper colour is its theme's `--surface-page`, and the step fits the dialog:
-// its body does not scroll and the theme cards end above the footer.
+// its body does not scroll and the theme cards end above the footer. A first run must be finished: no Skip (owner
+// 2026-10-11).
 // Shots: S01.png (the window), S01-dialog (the dialog), S01-night (the night theme, chosen on a card; the dialog
 // follows the theme at once).
 import { check, equal, waitUntil } from '../lib/index.mjs'
@@ -50,7 +51,8 @@ export default async function s01(ctx) {
   equal(report.checked, 'system', 'Match system is selected by default')
   equal(report.cards.join(','), 'system,paper,sepia,night,black', 'theme cards')
   equal(report.language, 'English', 'language switch')
-  equal(report.step, 'Step 1 of 4', 'progress')
+  equal(report.step, 'Step 1 of 5', 'progress')
+  equal(report.skip, false, 'a first run offers no Skip')
   // Each thumbnail's paper is its theme's page colour (§9.2); Match system shows paper and night.
   equal(report.paper.paper, 'rgb(253, 248, 236)', 'paper card')
   equal(report.paper.sepia, 'rgb(246, 234, 210)', 'sepia card')
@@ -120,6 +122,7 @@ function inspect(selector) {
       .replace(/\s+/g, ' ')
       .split(' ')[0],
     step: dialog.querySelector('.step-label')?.textContent?.trim() ?? '',
+    skip: dialog.querySelector('[data-action="skip"]') !== null,
     paper,
     // A step fits the 720 × 540 dialog: its body does not scroll.
     body: {

@@ -14,7 +14,7 @@ import { api, call, initIpc } from '$lib/ipc'
 import type { PackInfo, Settings } from '$lib/ipc/bindings'
 import { packsMock } from '$lib/ipc/mock/handlers/packs'
 import { state } from '$lib/ipc/mock/state'
-import { initStores, packs, resetStores, settings, ui } from '$lib/stores'
+import { fonts, i18n, initStores, packs, resetStores, settings, ui } from '$lib/stores'
 import { ROW_IDS, SETTINGS_SECTIONS } from './meta'
 import SettingsView from './SettingsView.svelte'
 import { settingsView } from './view.svelte'
@@ -293,6 +293,37 @@ describe('settings view', () => {
     await settle(80)
     expect($('nav button[aria-current="page"]')?.dataset.section).toBe('translations')
     await until(() => row('translations')?.classList.contains('flash') === true)
+  })
+
+  it('turns the ornate surah headers off and on, saying what turning them on downloads', async () => {
+    // Hafs: nothing asks for the ornaments by itself, so the mock's decor stays as the bootstrap left it.
+    await mount()
+    const ensure = vi.spyOn(api, 'decorEnsure')
+    await open('mushaf')
+    const switchOf = () => $('[data-row="ornateHeaders"] [role="switch"]')
+    const note = () => $('[data-row="ornateHeaders"] .note')
+    expect($('[data-row="ornateHeaders"] label')?.textContent?.trim()).toBe('Ornate surah headers')
+    expect($('[data-row="ornateHeaders"] .description')?.textContent).toContain('surah names in lists')
+    expect(switchOf()?.getAttribute('aria-checked')).toBe('true')
+    expect(fonts.decor.installed).toBe(false)
+    const size = i18n.bytes(packs.pack('decor')?.sizeKib ?? NaN)
+    // Not on this computer: where to get them.
+    expect(note()?.textContent).toBe(`Not downloaded yet (${size}). Get them from Downloads.`)
+    expect(ensure).not.toHaveBeenCalled()
+    await userEvent.click(page.elementLocator($('[data-row="ornateHeaders"] label') as HTMLElement))
+    await saved((s) => !s.ornateHeaders)
+    expect(switchOf()?.getAttribute('aria-checked')).toBe('false')
+    // Off: what turning them on downloads, in the muted note colour (never the faint one).
+    expect(note()?.textContent).toBe(`Downloads ${size} when turned on.`)
+    const probe = document.createElement('span')
+    probe.style.color = 'var(--text-muted)'
+    document.body.append(probe)
+    expect(getComputedStyle(note() as HTMLElement).color).toBe(getComputedStyle(probe).color)
+    probe.remove()
+    // Turned on again: the ornaments are asked for (an explicit choice), even with Hafs.
+    await userEvent.click(page.elementLocator($('[data-row="ornateHeaders"] label') as HTMLElement))
+    await saved((s) => s.ornateHeaders)
+    await until(() => ensure.mock.calls.length === 1)
   })
 
   it('a declined confirmation changes nothing', async () => {

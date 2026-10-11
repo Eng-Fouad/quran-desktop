@@ -22,13 +22,15 @@
  * page-font lane records it, so Downloads counts the pages read (`recordCachedItem`, WP12a).
  *
  * `decor_ensure` installs the three decor fonts when they are in the dev packs and the network is allowed (or they are
- * already installed), and persists the `DecorStatus` in the `fonts` slice so the next bootstrap reports it.
+ * already installed), and persists the `DecorStatus` in the `fonts` slice so the next bootstrap reports it. Like Rust's
+ * `sync_decor_row`, it records the `decor` pack installed in the packs mock (`recordWholeInstalled`, `packs-changed`),
+ * so Downloads and the onboarding's starter set show it as downloaded.
  */
 import type { DecorStatus, FetchPriority, MushafStyle, PageFontStatus } from '../../bindings'
 import { fixtures } from '../fixtures'
 import { assertRange, delay, type Handlers, handle, jitter, MockError } from '../result'
 import { state } from '../state'
-import { recordCachedItem } from './packs'
+import { recordCachedItem, recordWholeInstalled } from './packs'
 
 /** Where the dev-packs plugin serves the files (§5.17). */
 export const PACKS_BASE = '/__packs/'
@@ -252,6 +254,7 @@ export const fontsHandlers: Handlers<'mushafEnsurePageFonts' | 'decorEnsure'> = 
       await delay(latencyMs() + bytes / BYTES_PER_MS)
     }
     state.fonts.set({ decor: available })
+    recordWholeInstalled('decor')
     return structuredClone(available)
   }),
 }

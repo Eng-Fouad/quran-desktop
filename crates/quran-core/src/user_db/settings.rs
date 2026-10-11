@@ -77,6 +77,7 @@ setting_fields![
     page_mode,
     zoom_pct,
     tajweed_colors,
+    ornate_headers,
     show_page_frame,
     show_running_heads,
     show_margin_markers,
@@ -276,7 +277,7 @@ mod tests {
 
     use quran_types::{
         Accent, ChromeEffect, CopySettings, DarkVariant, DigitStyle, GapSetting, LightVariant,
-        MemoHideStyle, MotionPref, MushafStyle, PageMode, ReadingMode, ReferenceStyle,
+        MemoHideStyle, MotionPref, MushafStyle, OnByDefault, PageMode, ReadingMode, ReferenceStyle,
         SidePaneFollow, SidePaneSettings, SidePaneTab, SidebarSettings, SidebarTab, StopAt,
         ThemeMode, UiLanguage,
     };
@@ -322,6 +323,7 @@ mod tests {
             page_mode: PageMode::Spread,
             zoom_pct: 150,
             tajweed_colors: false,
+            ornate_headers: OnByDefault(false),
             show_page_frame: false,
             show_running_heads: false,
             show_margin_markers: false,

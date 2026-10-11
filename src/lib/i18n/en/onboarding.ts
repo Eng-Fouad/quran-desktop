@@ -8,7 +8,8 @@ export const onboarding = {
   stepOf: 'Step {step} of {total}',
   steps: {
     welcome: 'Welcome',
-    reading: 'Reading',
+    mushaf: 'Mushaf',
+    reading: 'Translation and recitation',
     summary: 'Starter set',
     keys: 'Keys',
   },
@@ -42,10 +43,11 @@ export const onboarding = {
     },
     systemHint: '{light} in light mode, {dark} in dark mode',
   },
-  reading: {
-    title: 'Choose how you read',
-    lede: 'Pick a Mushaf, a translation and a reciter. You can change them later in Settings.',
-    mushaf: 'Mushaf',
+  mushaf: {
+    title: 'Choose your Mushaf',
+    lede: 'See how the page will look. You can change this later in Settings.',
+    /** The style cards' accessible name (a radio group). */
+    label: 'Mushaf',
     styles: {
       hafs: {
         name: 'Hafs',
@@ -65,8 +67,28 @@ export const onboarding = {
     },
     included: 'Included',
     ornaments: 'Ornate surah headers · {size}',
+    /** The same option once the ornaments are on this computer (nothing left to download). */
+    ornamentsReady: 'Ornate surah headers',
     allPages: 'Download all pages in the background ({size})',
     needsDownload: "Needs download — available when you're online",
+    /** A Tajweed card this system's web view cannot draw (§8.6). */
+    unsupported: 'Not supported on this system',
+    preview: {
+      /** The live preview's accessible name. */
+      label: 'Preview of the first page',
+      /** Under the preview: "Madani print, 1421 AH · Ornate headers". */
+      caption: '{style} · {headers}',
+      ornate: 'Ornate headers',
+      plain: 'Plain headers',
+      loading: 'Downloading this page…',
+      fallback: 'Shown in Hafs until this page downloads.',
+      ornamentsLoading: 'Downloading the ornaments…',
+      ornamentsLater: 'The ornaments show once they download.',
+    },
+  },
+  reading: {
+    title: 'Translation and recitation',
+    lede: 'Pick a translation and a reciter. You can change them later in Settings.',
     translation: 'Translation',
     noTranslation: 'No translation',
     tafsir: 'Tafsir',
@@ -79,7 +101,8 @@ export const onboarding = {
   },
   summary: {
     title: 'Your starter set',
-    lede: 'Exactly what downloads, and when. Nothing else is fetched without asking.',
+    /** The Mushaf step's preview may have fetched page 1 of the chosen print (and the ticked ornaments, listed here). */
+    lede: "Exactly what downloads, and when. Apart from the Mushaf preview's first page, nothing is fetched without asking.",
     listLabel: 'Starter set',
     when: {
       now: 'Downloads now',

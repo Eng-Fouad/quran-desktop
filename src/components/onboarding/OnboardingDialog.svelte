@@ -1,12 +1,16 @@
 <!--
   OnboardingDialog (§9.7, §7.4). Owner: WP12c. The first-run setup: a 720 × 540 dialog over the real page 1–2 spread
-  (faint backdrop, rgb(0 0 0 / .18)) in four steps — Welcome, Reading setup, Starter set, Keys — with progress dots.
-  Takes no props: it reads stores (§7.9), and its state lives in `flow` (it survives another overlay on top).
+  (faint backdrop, rgb(0 0 0 / .18)) in five steps — Welcome, Mushaf (with a live preview), Translation and recitation,
+  Starter set, Keys — with progress dots. Takes no props: it reads stores (§7.9), and its state lives in `flow` (it
+  survives another overlay on top).
 
-  - Header: the progress dots (step n of 4) and Skip. Footer: Back, and the step's action (Next; "Start reading"
-    and "Download now" on the starter set; Finish on the keys).
-  - Finish and Skip set `onboardingDone` (never shown again) and close it. Escape is Skip; a click outside does
-    nothing (a stray click must not end the setup).
+  - Header: the progress dots (step n of 5), and Skip on a re-run. Footer: Back, and the step's action (Next; "Start
+    reading" and "Download now" on the starter set; Finish on the keys).
+  - A first run must be finished (owner 2026-10-11, `flow.mandatory`): Finish is the only way out; Escape and a click
+    outside do nothing (the dialog's escape layer swallows Escape, and `ui.dismissLayer` never closes the onboarding);
+    Back stays. A tour reopened from Settings › System keeps Skip, and Escape is Skip there; a click outside does
+    nothing either way (a stray click must not end the setup). Finish and Skip set `onboardingDone` (never shown again)
+    and close it.
   - Steps slide in from the side they come from (mirrored in RTL; instant under reduced motion), and focus moves to
     the new step's title so screen readers announce it.
   - Page 1 (hafs, `mushaf_get_pages`) is loaded once for the theme thumbnails.
@@ -23,6 +27,7 @@
   import { overlayOpen } from '../shell/overlay'
   import { flow, STEPS } from './flow.svelte'
   import Keys from './steps/Keys.svelte'
+  import MushafSetup from './steps/MushafSetup.svelte'
   import ReadingSetup from './steps/ReadingSetup.svelte'
   import Summary from './steps/Summary.svelte'
   import Welcome from './steps/Welcome.svelte'
@@ -78,13 +83,13 @@
   // --- closing ---------------------------------------------------------------------------------------------------------
 
   /**
-   * Escape skips the setup (§9.7 "Never shown again after … Skip"). The check runs in the capture phase, before any
-   * layer handles the key, so it sees whether a listbox of the step is open (Escape then closes only that) or focus is
-   * somewhere else entirely; the dialog's own escape layer ignores the key (`dismissible={false}`, so a stray click
-   * outside never ends the setup).
+   * On a re-run, Escape skips the setup (§9.7 "Never shown again after … Skip"); a first run ignores it. The check runs
+   * in the capture phase, before any layer handles the key, so it sees whether a listbox of the step is open (Escape
+   * then closes only that) or focus is somewhere else entirely; the dialog's own escape layer ignores the key
+   * (`dismissible={false}`, so a stray click outside never ends the setup).
    */
   function onkeydowncapture(e: KeyboardEvent): void {
-    if (e.key !== 'Escape' || !open || e.isComposing) return
+    if (e.key !== 'Escape' || !open || e.isComposing || !flow.skippable) return
     if (document.querySelector('.qd-listbox:not([data-ending-style])') !== null) return
     const active = document.activeElement
     if (active !== null && active !== document.body && active.closest('.qd-onboarding') === null) return
@@ -120,9 +125,11 @@
         </ol>
         <span class="step-label">{stepLabel}</span>
       </div>
-      <Button size="sm" variant="ghost" onclick={() => flow.complete()} data-action="skip">
-        {i18n.t('common.skip')}
-      </Button>
+      {#if flow.skippable}
+        <Button size="sm" variant="ghost" onclick={() => flow.complete()} data-action="skip">
+          {i18n.t('common.skip')}
+        </Button>
+      {/if}
     </div>
   {/snippet}
 
@@ -131,6 +138,8 @@
       <div class="step" in:slideIn>
         {#if flow.stepId === 'welcome'}
           <Welcome page={page1} />
+        {:else if flow.stepId === 'mushaf'}
+          <MushafSetup />
         {:else if flow.stepId === 'reading'}
           <ReadingSetup />
         {:else if flow.stepId === 'summary'}

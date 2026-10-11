@@ -137,6 +137,12 @@ export const settings = {
       description: 'Shows the tajweed rules in colour.',
       keywords: 'color rules',
     },
+    ornateHeaders: {
+      label: 'Ornate surah headers',
+      description:
+        'Surah headers, the basmala and the juz and hizb signs in the calligraphy of the print, in every style. The same download gives the surah names in lists their calligraphy. Off: plain headers.',
+      keywords: 'decor ornament ornaments calligraphy header banner basmala cartouche',
+    },
     showPageFrame: {
       label: 'Page frame',
       description: 'The gold border around the text.',
@@ -556,6 +562,9 @@ export const settings = {
       unsupported: 'Not supported on this system',
     },
     tajweedOnly: 'Only with the Tajweed style.',
+    /** Under "Ornate surah headers" while the ornaments are not on this computer. */
+    ornamentsDownload: 'Downloads {size} when turned on.',
+    ornamentsMissing: 'Not downloaded yet ({size}). Get them from Downloads.',
     wbwNone: 'None',
     wbwOnDemand: 'Fetched as you read',
     wbwDownloaded: 'Downloaded',

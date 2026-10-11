@@ -12,12 +12,13 @@
 
   `interactive={false}` (onboarding thumbnails, the Settings preview) renders an inert, decorative page: no pointer
   interactions, no highlight layer and no roving a11y items. `furniture={false}` leaves out the frame, heads, margins
-  and footer.
+  and footer. `ornaments` overrides the `ornateHeaders` setting for this page (the onboarding's Mushaf preview shows
+  the choice before it is saved): the header, basmala, running head and margin layers read it from the page context.
 -->
 <script lang="ts">
   import type { MushafPageProps, WordBox } from '$lib/contracts/components'
   import { isOpeningPage, isSyntheticPage, setPageContext } from '$lib/mushaf/geometry'
-  import { i18n, quran } from '$lib/stores'
+  import { i18n, quran, settings } from '$lib/stores'
   import A11yLayer from './A11yLayer.svelte'
   import HighlightLayer from './HighlightLayer.svelte'
   import MarginMarkers from './MarginMarkers.svelte'
@@ -27,7 +28,7 @@
   import RenditionStack from './RenditionStack.svelte'
   import RunningHead from './RunningHead.svelte'
 
-  let { data, qfs, side, interactive = true, furniture = true }: MushafPageProps = $props()
+  let { data, qfs, side, interactive = true, furniture = true, ornaments }: MushafPageProps = $props()
 
   setPageContext({
     get page() {
@@ -41,6 +42,9 @@
     },
     get interactive() {
       return interactive
+    },
+    get ornaments() {
+      return ornaments ?? settings.value.ornateHeaders
     },
   })
 

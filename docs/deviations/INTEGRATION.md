@@ -2622,3 +2622,27 @@ must be called "Western Arabic numbers" / "Eastern Arabic numbers", never "Indic
   that nothing clips in either language from 1400 px down to the 760 px minimum. The vocabulary rule is in IMPLEMENTATION_NOTES §13; README and the
   comments of the files touched follow it. The serialized value `arabic_indic` (`DigitStyle::ArabicIndic`) and
   identifiers such as `arabicNum` are unchanged: renaming the value would be a breaking settings and contract change.
+
+## Owner feedback 2026-10-11 (onboarding)
+
+The owner asked that the onboarding cannot be skipped, and that the Madani 1421 AH print and the ornate surah headers be
+selected by default, each un-selectable, with a live preview of what the Mushaf would look like. Lead decisions: a
+persistent setting for the ornaments in every style; the preview fetches while online; mandatory only on a first run.
+
+- **Mandatory first run.** No Skip, no Escape and no outside click; Back stays; Finish is the only way out
+  (`ui.dismissLayer` never closes the onboarding). A tour reopened from Settings › System stays skippable (WP12c 22).
+- **The Mushaf step.** A new step 2 with the style cards, "Ornate surah headers" for every style and a live preview of
+  page 1 (Settings' preview card at qfs 14). A first run preselects `qcf_v2` with the ornaments; the `mushafStyle`
+  default stays `hafs`. Online, the preview fetches page 1's font of the chosen print and, while ticked, `decor`; offline
+  it shows Hafs and fetches nothing. The Summary lede no longer promises that nothing is fetched without asking: it names
+  the preview's first page (WP12c 23–26).
+- **Contract (additive).** `Settings.ornateHeaders` (default true) gates fetching and drawing of the decor ornaments in
+  every style, with a switch in Settings › Mushaf; `MushafPageProps.ornaments` lets the preview show the choice before it
+  is saved. In Rust the field is an `OnByDefault`, not `#[serde(default)]`: specta-serde exports a defaulted field as
+  optional, and the bindings keep `ornateHeaders: boolean` (contract-changes.md). The list chrome's surah-name
+  calligraphy comes from the same pack: chosen to gate the fetch too (no network use for something turned off), and the
+  setting's description says that the same download styles the surah names in lists.
+- **Mock.** `decor_ensure` records the `decor` pack installed (`packs-changed`), as Rust's `sync_decor_row` does.
+- **Known gaps.** "Download all pages" still installs `decor` through Rust's `requires` with the ornaments off (installed,
+  not drawn; the starter set lists it then). A `packs-changed` for `decor` (after a removal in Downloads) still calls
+  `decor_ensure`, which re-installs it while online whatever the setting; this predates the setting.

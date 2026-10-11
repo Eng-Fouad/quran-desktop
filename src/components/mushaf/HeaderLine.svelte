@@ -1,9 +1,10 @@
 <!--
   HeaderLine (§8.8). Owner: WP8c. A `surah_name` line of the 15-line grid, rendered by `GlyphLayer` inside its `.ln`:
 
-  - decor installed (the `qd-surah-header` face loaded) and the surah has a `header_cp`: that one glyph (frame and name
-    in the QCF surah-header font) at `--sh-scale`·qfs in --surah-header-ink;
-  - otherwise the original `SurahCartouche` (the first-run look: the hafs style without decor).
+  - the page's ornaments on (`MushafPageProps.ornaments`, else the `ornateHeaders` setting), decor installed (the
+    `qd-surah-header` face loaded) and the surah has a `header_cp`: that one glyph (frame and name in the QCF
+    surah-header font) at `--sh-scale`·qfs in --surah-header-ink;
+  - otherwise the original `SurahCartouche` (the plain look: ornaments off, or decor not installed yet).
   - While the reader flips (§8.11), a header glyph not drawn before at this size shows the cartouche too: WebView2
     rasterises a QCF header (one colour glyph, 3.3 em wide) in ≈ 100 ms the first time at a size, which would stall the
     flip's frames (§8.18: none over 32 ms). The glyph replaces the cartouche once the flip has ended.
@@ -28,7 +29,7 @@
 <script lang="ts">
   import type { HeaderLineProps } from '$lib/contracts/components'
   import { getPageContext, isOpeningPage } from '$lib/mushaf/geometry'
-  import { fonts, quran, reader } from '$lib/stores'
+  import { fonts, quran, reader, settings } from '$lib/stores'
   import SurahCartouche from './SurahCartouche.svelte'
   import { surahInfo } from './SurahInfoPopover.svelte'
 
@@ -38,7 +39,9 @@
   const interactive = $derived(page?.interactive ?? false)
   const info = $derived(line.surah !== null ? quran.surah(line.surah) : undefined)
   const headerCp = $derived(info?.headerCp ?? null)
-  const decorReady = $derived(headerCp !== null && fonts.status.get('qd-surah-header') === 'ready')
+  /** The page draws the ornaments (its `ornaments` prop, else the `ornateHeaders` setting). */
+  const ornate = $derived(page?.ornaments ?? settings.value.ornateHeaders)
+  const decorReady = $derived(ornate && headerCp !== null && fonts.status.get('qd-surah-header') === 'ready')
   /** The glyph at this size; the opening pages draw it smaller (frame.css `--sh-scale`), hence their own key. */
   const glyphKey = $derived(`${headerCp}@${qfs}${page && isOpeningPage(page.page) ? 'o' : ''}`)
   const decor = $derived(decorReady && (!reader.flipping || painted.has(glyphKey)))

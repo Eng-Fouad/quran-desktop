@@ -1121,7 +1121,7 @@ export type Settings = {
 	inkBrightnessPct: number,
 	/**  Default `auto`. */
 	chromeEffect: ChromeEffect,
-	/**  Default `hafs` (onboarding offers `qcf_v2`). */
+	/**  Default `hafs` (a first-run onboarding preselects `qcf_v2`; offline, or never finished, it stays `hafs`). */
 	mushafStyle: MushafStyle,
 	/**  Default `auto`. */
 	pageMode: PageMode,
@@ -1129,6 +1129,12 @@ export type Settings = {
 	zoomPct: number,
 	/**  Default true (qcf_v4: palettes 0–2 vs 3–5). */
 	tajweedColors: boolean,
+	/**
+	 *  Default true: the surah headers, the basmala and the juz and hizb signs are drawn in the `decor` calligraphy once
+	 *  it is installed, in every style; off draws the plain cartouche, and a QCF style no longer fetches `decor` by
+	 *  itself (§8.5, §8.8). Added after the freeze: absent in an older frontend's `settings_set` ⇒ true ([`OnByDefault`]).
+	 */
+	ornateHeaders: boolean,
 	showPageFrame: boolean,
 	showRunningHeads: boolean,
 	showMarginMarkers: boolean,

@@ -137,6 +137,12 @@ export const settings = {
       description: 'يعرض أحكام التجويد بالألوان.',
       keywords: 'تجويد أحكام ألوان tajweed',
     },
+    ornateHeaders: {
+      label: 'زخارف عناوين السور',
+      description:
+        'عناوين السور والبسملة وعلامات الأجزاء والأحزاب بخط المصحف المطبوع، في كل الأنماط، ومع التنزيل نفسه تظهر أسماء السور في القوائم بخطها. وعند الإيقاف تظهر العناوين بسيطة.',
+      keywords: 'زخرفة زخارف عنوان عناوين بسملة خط decor ornament',
+    },
     showPageFrame: {
       label: 'إطار الصفحة',
       description: 'الإطار الذهبي حول النص.',
@@ -546,6 +552,8 @@ export const settings = {
       unsupported: 'غير مدعوم على هذا النظام',
     },
     tajweedOnly: 'في نمط التجويد فقط.',
+    ornamentsDownload: 'تُنزَّل الزخارف ({size}) عند تشغيل هذا الخيار.',
+    ornamentsMissing: 'لم تُنزَّل الزخارف بعد ({size})، ويمكنك تنزيلها من صفحة التنزيلات.',
     wbwNone: 'بلا',
     wbwOnDemand: 'يُجلب أثناء القراءة',
     wbwDownloaded: 'منزَّل',

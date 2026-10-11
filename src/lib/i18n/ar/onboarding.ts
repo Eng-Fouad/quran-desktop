@@ -6,7 +6,8 @@ export const onboarding = {
   stepOf: 'الخطوة {step} من {total}',
   steps: {
     welcome: 'الترحيب',
-    reading: 'القراءة',
+    mushaf: 'المصحف',
+    reading: 'الترجمة والتلاوة',
     summary: 'الحزمة الأولى',
     keys: 'المفاتيح',
   },
@@ -40,10 +41,10 @@ export const onboarding = {
     },
     systemHint: '{light} في الوضع الفاتح، و{dark} في الوضع الداكن',
   },
-  reading: {
-    title: 'اختر طريقة قراءتك',
-    lede: 'اختر المصحف والترجمة والقارئ، ويمكنك تغييرها لاحقًا من الإعدادات.',
-    mushaf: 'المصحف',
+  mushaf: {
+    title: 'اختر مصحفك',
+    lede: 'شاهد كيف ستبدو الصفحة، ويمكنك تغيير ذلك لاحقًا من الإعدادات.',
+    label: 'المصحف',
     styles: {
       hafs: {
         name: 'حفص',
@@ -63,8 +64,24 @@ export const onboarding = {
     },
     included: 'مضمَّن',
     ornaments: 'زخارف عناوين السور · {size}',
+    ornamentsReady: 'زخارف عناوين السور',
     allPages: 'تنزيل جميع الصفحات في الخلفية ({size})',
     needsDownload: 'يحتاج إلى تنزيل، ويتاح عند الاتصال بالإنترنت',
+    unsupported: 'لا يدعمه هذا النظام',
+    preview: {
+      label: 'معاينة الصفحة الأولى',
+      caption: '{style} · {headers}',
+      ornate: 'عناوين مزخرفة',
+      plain: 'عناوين بسيطة',
+      loading: 'جارٍ تنزيل هذه الصفحة…',
+      fallback: 'تظهر بخط حفص حتى تُنزَّل هذه الصفحة.',
+      ornamentsLoading: 'جارٍ تنزيل الزخارف…',
+      ornamentsLater: 'تظهر الزخارف بعد تنزيلها.',
+    },
+  },
+  reading: {
+    title: 'الترجمة والتلاوة',
+    lede: 'اختر الترجمة والقارئ، ويمكنك تغييرهما لاحقًا من الإعدادات.',
     translation: 'الترجمة',
     noTranslation: 'دون ترجمة',
     tafsir: 'تفسير',
@@ -77,7 +94,7 @@ export const onboarding = {
   },
   summary: {
     title: 'حزمتك الأولى',
-    lede: 'هذا بالضبط ما يُنزَّل ومتى، ولا يُنزَّل شيء آخر دون إذنك.',
+    lede: 'هذا بالضبط ما يُنزَّل ومتى، ولا يُنزَّل شيء آخر دون إذنك سوى الصفحة الأولى لمعاينة المصحف.',
     listLabel: 'الحزمة الأولى',
     when: {
       now: 'يُنزَّل الآن',

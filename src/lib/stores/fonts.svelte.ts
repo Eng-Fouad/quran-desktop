@@ -20,9 +20,11 @@
  *   no `override-colors` (two or more entries crash Chromium's renderer later): the theme ink is an SVG colour map on
  *   the V4 lines (palettes.ts). The first V4 page shown runs the COLR probe (`probeV4`); `false` switches the style to
  *   QCF V2 with a one-time toast, and the result is cached per webview version.
- * - Decor (`qd-surah-header`, `qd-quran-common`, `qd-sura-names`) loads when `DecorStatus.installed`. A QCF style asks for
- *   decor once per session while online (it ships with the Mushaf packs, FACT §4.2); `hafs` never does (no silent
- *   network use).
+ * - Decor (`qd-surah-header`, `qd-quran-common`, `qd-sura-names`) loads when `DecorStatus.installed`, whatever the
+ *   `ornateHeaders` setting says (the setting gates the fetching and the page's drawing, not the loading: the
+ *   onboarding's preview shows the ornaments before the choice is saved). While `ornateHeaders` is on, a QCF style asks for decor once per session while online (it ships
+ *   with the Mushaf packs, FACT §4.2); `hafs` never does by itself (no silent network use), but turning
+ *   `ornateHeaders` on asks for it in any style (an explicit choice). Off, nothing asks.
  * - Connectivity and packs: when the app comes online, `unavailable` fonts are forgotten and the displayed pages are
  *   ensured again; `PacksChanged` for `mushaf.v*` does the same for that style, and for `decor` refreshes the decor.
  * - `faceEpoch` is bumped whenever a face joins or leaves `document.fonts`: the shaping warm-up warms the neighbours
@@ -173,6 +175,10 @@ class FontsStore implements Store {
   #probe: Promise<boolean | null> | null = null
   /** A QCF style asked for decor this session (asked again after `PacksChanged` or coming online). */
   #decorAsked = false
+  /** The `ornateHeaders` setting as the decor effect last saw it (`null` before `init`). */
+  #ornateSeen: boolean | null = null
+  /** `ornateHeaders` was turned on this session: decor is asked for in any style, hafs included. */
+  #decorWanted = false
   /** A `url` face failed but loaded as bytes: the rest of the session loads every face as bytes (`#loadFrom`). */
   #bytesFallback = false
   #online = true
@@ -180,6 +186,7 @@ class FontsStore implements Store {
 
   init(b: Bootstrap): void {
     this.dispose()
+    this.#ornateSeen = null
     this.decor = b.decor
     this.v4Supported = readCachedSupport(b.app.webviewVersion)
     this.#online = b.online && b.settings.networkAllowed
@@ -207,11 +214,15 @@ class FontsStore implements Store {
           void this.contrastMore
           untrack(() => this.regeneratePalettes())
         })
-        // A QCF style brings the decor fonts along (once per session, only while online).
+        // While the ornaments are on, a QCF style brings the decor fonts along (once per session, only while online);
+        // turning them on asks for them in any style.
         $effect(() => {
+          const ornate = settings.value.ornateHeaders
           const qcf = settings.value.mushafStyle !== 'hafs'
           const online = app.online && settings.value.networkAllowed
-          if (qcf && online && !this.decor.installed) untrack(() => this.#requestDecor())
+          untrack(() => this.#ornateChanged(ornate))
+          if (ornate && (qcf || this.#decorWanted) && online && !this.decor.installed)
+            untrack(() => this.#requestDecor())
         })
         // Coming online: retry what was unavailable.
         $effect(() => {
@@ -421,6 +432,8 @@ class FontsStore implements Store {
     this.#evictQueued = false
     this.#probe = null
     this.#decorAsked = false
+    this.#ornateSeen = null
+    this.#decorWanted = false
     this.#bytesFallback = false
     this.#online = true
     clearFaces()
@@ -671,6 +684,15 @@ class FontsStore implements Store {
   }
 
   // --- decor -------------------------------------------------------------------------------------------------------
+
+  /** The decor effect saw `ornateHeaders`: turning it on (false → true) wants decor in any style, asked afresh. */
+  #ornateChanged(ornate: boolean): void {
+    if (ornate && this.#ornateSeen === false) {
+      this.#decorWanted = true
+      this.#decorAsked = false
+    }
+    this.#ornateSeen = ornate
+  }
 
   #requestDecor(): void {
     if (this.#decorAsked) return

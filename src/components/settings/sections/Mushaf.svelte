@@ -1,11 +1,12 @@
 <!--
-  Mushaf (§9.7): the page preview in the chosen style, then Style (the four styles, tajweed colours), Pages (page mode,
-  zoom), On the page (frame, running heads, margin markers, your marks), Interaction (hover, the ayah action bar,
+  Mushaf (§9.7): the page preview in the chosen style, then Style (the four styles, tajweed colours, the ornate surah
+  headers: the `decor` calligraphy, in every style, with its download size while it is not on this computer), Pages
+  (page mode, zoom), On the page (frame, running heads, margin markers, your marks), Interaction (hover, the ayah action bar,
   page-turn animation) and Word by word (meanings pack, tooltip, transliteration). Used only inside the Settings view.
 -->
 <script lang="ts">
   import type { SelectItem } from '$components/ui'
-  import { i18n, packs, settings } from '$lib/stores'
+  import { fonts, i18n, packs, settings } from '$lib/stores'
   import { hasContent, languageOf } from '$lib/stores/packs.svelte'
   import ChoiceRow from '../controls/ChoiceRow.svelte'
   import { settingsSearch } from '../controls/context'
@@ -23,6 +24,14 @@
   const NONE = '__none__'
 
   const tajweed = $derived(settings.value.mushafStyle === 'qcf_v4')
+  /** While the ornaments are not on this computer: what turning them on downloads, or where to get them. */
+  const ornamentsNote = $derived.by(() => {
+    if (fonts.decor.installed) return undefined
+    const size = i18n.bytes(packs.pack('decor')?.sizeKib ?? 0)
+    return settings.value.ornateHeaders
+      ? i18n.t('settings.mushaf.ornamentsMissing', { size })
+      : i18n.t('settings.mushaf.ornamentsDownload', { size })
+  })
 
   /** Word-by-word packs (fetched as you read), the UI language first. */
   const wbwItems: SelectItem[] = $derived([
@@ -55,6 +64,7 @@
     {/snippet}
   </SettingRow>
   <SwitchRow id="tajweedColors" note={tajweed ? undefined : i18n.t('settings.mushaf.tajweedOnly')} />
+  <SwitchRow id="ornateHeaders" note={ornamentsNote} />
 </SettingGroup>
 
 <SettingGroup id="pages">

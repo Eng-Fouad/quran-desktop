@@ -107,13 +107,14 @@ afterEach(() => {
 
 const page = (n: number): Promise<PageData> => fixtures.page('hafs', n)
 
-async function show(n: number, props: { qfs?: number; interactive?: boolean } = {}) {
+async function show(n: number, props: { qfs?: number; interactive?: boolean; ornaments?: boolean } = {}) {
   const data = await page(n)
   const screen = await render(MushafPage, {
     data,
     qfs: props.qfs ?? QFS,
     side: n % 2 === 1 ? 'right' : 'left',
     interactive: props.interactive ?? true,
+    ornaments: props.ornaments,
   })
   const section = screen.container.querySelector<HTMLElement>('section.mp')
   if (!section) throw new Error('no section.mp')
@@ -141,6 +142,76 @@ describe('CLS 0 (§8.1)', () => {
     expect(section.querySelector('.sh-line')?.hasAttribute('data-decor')).toBe(true)
     expect(section.querySelector('.bsm-decor')).not.toBeNull()
     expect(section.querySelector('.mp-head-juz-glyph')).not.toBeNull()
+    if (supported) expect(shifts.reduce((a, b) => a + b, 0)).toBe(0)
+  })
+})
+
+describe('Ornate surah headers off (§8.8, §8.9; owner 2026-10-11)', () => {
+  /**
+   * The decor faces are loaded, yet nothing ornate is drawn: the cartouche, the Unicode basmala, the juz in words, the
+   * solid ۞ without a frame (a quarter keeps its words in the label). Page 262 at qfs 30: 15:1's header and basmala,
+   * the juz 14 head and marker.
+   */
+  async function expectPlain(props: { ornaments?: boolean }, where: string): Promise<void> {
+    const { section, screen } = await show(262, { qfs: 30, ...props })
+    const sh = section.querySelector('.sh-line')
+    expect(sh?.hasAttribute('data-decor'), where).toBe(false)
+    expect(sh?.querySelector('.sc'), where).not.toBeNull()
+    expect(section.querySelector('.bsm-decor'), where).toBeNull()
+    expect(section.querySelector('.bsm-line')?.hasAttribute('data-decor'), where).toBe(false)
+    expect(section.querySelector('.mp-head-juz-glyph'), where).toBeNull()
+    expect(section.querySelector('.mp-head-juz')?.textContent?.trim(), where).toBe('الجزء ١٤')
+    const glyph = section.querySelector<HTMLElement>('.mp-markers .mk-glyph')
+    expect(glyph?.textContent, where).toBe('۞')
+    expect(glyph?.hasAttribute('data-ornament'), where).toBe(false)
+    expect(section.querySelector('.mp-markers .mk-inset'), where).toBeNull()
+    expect(section.querySelector('.mp-markers .mk-label')?.textContent, where).toBe('الجزء ١٤')
+    screen.unmount()
+    // A quarter: the solid ۞, its words in the label (9:1, the half of hizb 19, page 187).
+    const quarter = await show(187, { qfs: 30, ...props })
+    const mk = quarter.section.querySelector<HTMLElement>('.mp-markers .mk[data-rub="quarter"]')
+    expect(mk?.querySelector('.mk-glyph')?.textContent, where).toBe('۞')
+    expect(mk?.querySelector('.mk-inset'), where).toBeNull()
+    expect(mk?.querySelector('.mk-label')?.textContent, where).toBe('نصف\nالحزب ١٩')
+    quarter.screen.unmount()
+  }
+
+  beforeEach(() => {
+    fonts.status.set('qd-surah-header', 'ready')
+    fonts.status.set('qd-quran-common', 'ready')
+  })
+
+  it('draws the plain headers on a page whose ornaments are off, the decor faces loaded', async () => {
+    await expectPlain({ ornaments: false }, 'ornaments={false}')
+  })
+
+  it('follows the ornateHeaders setting by default, and a page’s ornaments prop overrides it', async () => {
+    settings.value = { ...settings.value, ornateHeaders: false }
+    await expectPlain({}, 'ornateHeaders off')
+    // The onboarding's preview shows the ornaments before the choice is saved.
+    const { section } = await show(262, { qfs: 30, ornaments: true })
+    expect(section.querySelector('.sh-line')?.hasAttribute('data-decor')).toBe(true)
+    expect(section.querySelector('.bsm-decor')).not.toBeNull()
+    expect(section.querySelector('.mp-head-juz-glyph')).not.toBeNull()
+    expect(section.querySelector('.mp-markers .mk-glyph')?.hasAttribute('data-ornament')).toBe(true)
+  })
+
+  it('switching the ornaments off and on moves nothing (CLS 0)', async () => {
+    const supported = PerformanceObserver.supportedEntryTypes.includes('layout-shift')
+    const { section } = await show(262)
+    await frames(3)
+    const shifts: number[] = []
+    const observer = new PerformanceObserver((list) => {
+      for (const e of list.getEntries()) shifts.push((e as unknown as { value: number }).value)
+    })
+    if (supported) observer.observe({ type: 'layout-shift' })
+    for (const ornateHeaders of [false, true]) {
+      settings.value = { ...settings.value, ornateHeaders }
+      flushSync()
+      await frames(3)
+      expect(section.querySelector('.sh-line')?.hasAttribute('data-decor')).toBe(ornateHeaders)
+    }
+    observer.disconnect()
     if (supported) expect(shifts.reduce((a, b) => a + b, 0)).toBe(0)
   })
 })

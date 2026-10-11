@@ -171,6 +171,7 @@ export const settingsMeta: SettingsMeta = {
   // mushaf
   mushafStyle: field('mushafStyle', 'mushaf', 'style', { options: options('mushafStyle') }),
   tajweedColors: field('tajweedColors', 'mushaf', 'style'),
+  ornateHeaders: field('ornateHeaders', 'mushaf', 'style'),
   pageMode: field('pageMode', 'mushaf', 'pages', { options: options('pageMode') }),
   zoomPct: field('zoomPct', 'mushaf', 'pages', {
     range: { min: L.zoomPct.min, max: L.zoomPct.max, step: L.zoomPct.step },

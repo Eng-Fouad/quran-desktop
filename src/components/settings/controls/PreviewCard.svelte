@@ -7,12 +7,17 @@
 
   The page is drawn at a fixed `qfs`, so changing the interface size or the theme never re-fits it; a style change
   swaps its glyphs in place (RenditionStack's cross-fade). Without a selected translation the card says how to add one.
+
+  The onboarding's Mushaf step reuses it (owner 2026-10-11) with a `style` and `ornaments` of its own (the choices
+  before they are saved), a smaller `qfs` and its own `label`. While a newly chosen style's page loads, the card keeps
+  the page it showed, so a style change cross-fades instead of flashing the skeleton.
 -->
 <script lang="ts">
   import { untrack } from 'svelte'
   import MushafPage from '$components/mushaf/MushafPage.svelte'
   import { Button, Skeleton } from '$components/ui'
   import SafeHtml from '$components/ui/SafeHtml.svelte'
+  import type { MushafStyle, PageData } from '$lib/ipc/bindings'
   import { BLOCK_TOP, LH, OPENING_TOP_LINES, PW } from '$lib/mushaf/geometry'
   import { i18n, pages, quran, settings, translations } from '$lib/stores'
   import { settingsView } from '../view.svelte'
@@ -20,24 +25,36 @@
   interface Props {
     /** Show the translation column (Appearance); the Mushaf section shows the page alone, wider. */
     translation?: boolean
+    /** The style to draw (default: the `mushafStyle` setting). */
+    style?: MushafStyle
+    /** Draw the decor ornaments (default: the `ornateHeaders` setting, `MushafPageProps.ornaments`). */
+    ornaments?: boolean
+    /** The page's font size (default 17: large enough to read the glyphs). */
+    qfs?: number
+    /** The figure's accessible name (default: "Preview"). */
+    label?: string
   }
 
-  let { translation = true }: Props = $props()
+  let { translation = true, style: styleProp, ornaments, qfs = 17, label }: Props = $props()
 
   /** Al-Fatihah: the opening page, and 1:2 for the translation line. */
   const PAGE = 1
   const AYAH = 2
-  /** The page's font size: large enough to read the glyphs. */
-  const QFS = 17
   /**
    * The window shows a slice of the page from just above its first line (the surah header of the opening page, §8.2)
    * through about six lines; the paper above and below fades out.
    */
-  const SLICE_TOP = (BLOCK_TOP + OPENING_TOP_LINES * LH - 1.4) * QFS
-  const SLICE_HEIGHT = (1.4 + 6.5 * LH) * QFS
+  const sliceTop = $derived((BLOCK_TOP + OPENING_TOP_LINES * LH - 1.4) * qfs)
+  const sliceHeight = $derived((1.4 + 6.5 * LH) * qfs)
 
-  const style = $derived(settings.value.mushafStyle)
-  const data = $derived(pages.get(style, PAGE))
+  const style = $derived(styleProp ?? settings.value.mushafStyle)
+  /** The page in the style, else (while a newly chosen style's page loads) the page shown last. */
+  let shown = $state.raw<PageData | undefined>(undefined)
+  const data = $derived(pages.get(style, PAGE) ?? shown)
+  $effect(() => {
+    const next = pages.get(style, PAGE)
+    if (next) shown = next
+  })
   let failed = $state(false)
 
   $effect(() => {
@@ -76,18 +93,18 @@
 
 <figure
   class={['preview', { solo: !translation }]}
-  aria-label={i18n.t('settings.preview.label')}
+  aria-label={label ?? i18n.t('settings.preview.label')}
   data-preview
 >
   <div
     class="page-window"
-    style:--_page-w="{PW * QFS}px"
-    style:--_slice-top="{SLICE_TOP}px"
-    style:--_slice-h="{SLICE_HEIGHT}px"
+    style:--_page-w="{PW * qfs}px"
+    style:--_slice-top="{sliceTop}px"
+    style:--_slice-h="{sliceHeight}px"
   >
     {#if data}
       <div class="page" aria-hidden="true">
-        <MushafPage {data} qfs={QFS} side="right" interactive={false} />
+        <MushafPage {data} {qfs} side="right" interactive={false} {ornaments} />
       </div>
     {:else if !failed}
       <div class="page-loading" aria-busy="true" aria-label={i18n.t('settings.preview.loading')}>

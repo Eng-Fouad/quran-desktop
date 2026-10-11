@@ -183,6 +183,16 @@ are re-created. A browser test switches decor on a painted page and asserts zero
 - The audio basmala highlight (§8.8) is a pill (the §8.7 ayah-pill geometry) behind the basmala text inside the
   rendition, shown while `player.currentRef` is `{ surah, ayah: 0 }`.
 
+### 6a. The ornaments can be turned off (owner 2026-10-11)
+
+The decor ornaments follow the new `ornateHeaders` setting (default on) in every style, or a page's
+`MushafPageProps.ornaments` (the onboarding's preview): `HeaderLine`, `BasmalaLine`, `RunningHead`, `MarginMarkers` and
+`MarginMarks` each combine it, read from the page context, with the face's readiness. Off, the page draws the plain look
+even with decor loaded: the cartouche, the Unicode basmala, الجزء ١٤ in the head, and the solid ۞ without a frame in
+the margin (a quarter keeps its words in the label, so the margin still names it). `MarginMarks` places its marks with
+the same decor flag as the markers, so nothing shifts when the setting flips (a CLS test covers it). S03 is now the
+plain look; online, a first run preselects the 1421 AH print with its ornaments.
+
 ### 7. i18n
 
 The `furniture` domain covers only the UI around the furniture (tooltips, the two popovers, the toast). The furniture

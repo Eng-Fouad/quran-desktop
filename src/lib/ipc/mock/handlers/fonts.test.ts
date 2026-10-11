@@ -5,9 +5,13 @@ const fixturePages = vi.hoisted(() => new Set<string>())
 vi.mock('../fixtures', () => ({
   fixtures: { hasPage: (style: string, page: number) => fixturePages.has(`${style}:${page}`) },
 }))
-/** Page fonts fetched on demand are recorded in the packs mock (the Downloads row counts them, WP12a). */
+/**
+ * Page fonts fetched on demand are recorded in the packs mock (the Downloads row counts them, WP12a), and so is decor
+ * installed by `decor_ensure` (Rust's `sync_decor_row`).
+ */
 const recordCachedItem = vi.hoisted(() => vi.fn<(packId: string, item: number) => void>())
-vi.mock('./packs', () => ({ recordCachedItem }))
+const recordWholeInstalled = vi.hoisted(() => vi.fn<(packId: string) => void>())
+vi.mock('./packs', () => ({ recordCachedItem, recordWholeInstalled }))
 
 const { fontsHandlers, parseIndex, resetFontsMock } = await import('./fonts')
 const { state } = await import('../state')
@@ -43,6 +47,7 @@ beforeEach(() => {
   served = INDEX
   fetchMock.mockClear()
   recordCachedItem.mockClear()
+  recordWholeInstalled.mockClear()
   vi.stubGlobal('fetch', fetchMock)
   resetFontsMock()
   state.resetAll()
@@ -168,6 +173,8 @@ describe('decor_ensure (mock)', () => {
       suraNamesUrl: '/__packs/decor/sura-names.woff2?v=33333333',
     })
     expect(state.fonts.value.decor).toEqual(decor)
+    // The packs mock lists the decor pack installed (Downloads, the onboarding's starter set).
+    expect(recordWholeInstalled.mock.calls).toEqual([['decor']])
   })
 
   it('does not install offline, but keeps an installed decor', async () => {
@@ -175,6 +182,7 @@ describe('decor_ensure (mock)', () => {
       s.networkAllowed = false
     })
     expect(ok(await fontsHandlers.decorEnsure()).installed).toBe(false)
+    expect(recordWholeInstalled).not.toHaveBeenCalled()
     state.settings.update((s) => {
       s.networkAllowed = true
     })

@@ -9,9 +9,9 @@ use std::path::{Path, PathBuf};
 use quran_core::{InstalledPackRow, InstalledStatus, PackItemRow, UserDb};
 use quran_types::{
     Accent, ChromeEffect, CopySettings, DarkVariant, DigitStyle, GapSetting, LightVariant,
-    LoopPresetInput, MemoHideStyle, MotionPref, MushafStyle, PackKind, PageMode, ReadingMode,
-    ReferenceStyle, Settings, SidePaneFollow, SidePaneSettings, SidePaneTab, SidebarSettings,
-    SidebarTab, StopAt, ThemeMode, UiLanguage,
+    LoopPresetInput, MemoHideStyle, MotionPref, MushafStyle, OnByDefault, PackKind, PageMode,
+    ReadingMode, ReferenceStyle, Settings, SidePaneFollow, SidePaneSettings, SidePaneTab,
+    SidebarSettings, SidebarTab, StopAt, ThemeMode, UiLanguage,
 };
 
 /// A fixed "now" for clock-pinned tests: 2025-10-09T08:53:20Z, in Unix milliseconds.
@@ -88,6 +88,7 @@ pub fn every_setting_changed() -> Settings {
         page_mode: PageMode::Single,
         zoom_pct: 200,
         tajweed_colors: false,
+        ornate_headers: OnByDefault(false),
         show_page_frame: false,
         show_running_heads: false,
         show_margin_markers: false,

@@ -5,7 +5,7 @@
 
     right: سورة {name_ar of info.headSurah}
     left:  the juz: the decor calligraphy "الجزء الرابع عشر" (quran-common U+E001 + juz − 1, `decorJuzGlyph`) when
-           installed, else الجزء {juz}; when the margin labels are not drawn (glyph-only below qfs 28, or markers off),
+           installed and the page's ornaments are on (`ornateHeaders`), else الجزء {juz}; when the margin labels are not drawn (glyph-only below qfs 28, or markers off),
            the quarter of the first rub starting on the page follows after a small gold khatam (not a middle dot, which
            reads as the digit zero ٠ beside Eastern Arabic numbers), in words on one line (`rubShortLabel`):
            الجزء ١٤ [khatam] ثلاثة أرباع الحزب ٢٧
@@ -16,7 +16,7 @@
 -->
 <script lang="ts">
   import type { PageFurnitureProps } from '$lib/contracts/components'
-  import { isOpeningPage } from '$lib/mushaf/geometry'
+  import { getPageContext, isOpeningPage } from '$lib/mushaf/geometry'
   import {
     arabicNum,
     decorJuzGlyph,
@@ -32,11 +32,17 @@
   /** Below this qfs the heads drop their سورة / الجزء prefixes (§8.9). */
   const COMPACT_BELOW = 20
 
+  const page = getPageContext()
   const show = $derived(settings.value.showRunningHeads && !isOpeningPage(data.page))
   const compact = $derived(qfs < COMPACT_BELOW)
   const nameAr = $derived(quran.surah(data.info.headSurah)?.nameAr ?? '')
   const juz = $derived(data.info.juz)
-  const decor = $derived(fonts.status.get('qd-quran-common') === 'ready' && juz >= 1 && juz <= 30)
+  const decor = $derived(
+    (page?.ornaments ?? settings.value.ornateHeaders) &&
+      fonts.status.get('qd-quran-common') === 'ready' &&
+      juz >= 1 &&
+      juz <= 30,
+  )
   const labelsDrawn = $derived(settings.value.showMarginMarkers && marginLabelsVisible(qfs))
   const quarter = $derived(labelsDrawn ? null : firstRubStart(data))
 </script>
