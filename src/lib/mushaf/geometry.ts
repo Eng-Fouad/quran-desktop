@@ -43,6 +43,12 @@ export const M_TB = 0.6
 export const PW = M_IN + FR + TB_W + FR + M_OUT
 /** Page height: M_TB + HEAD + FR + TB_H + FR + FOOT + M_TB = 31.95. */
 export const PH = M_TB + HEAD + FR + TB_H + FR + FOOT + M_TB
+/**
+ * The frame's bottom edge (its outer rule) from the top paper edge: M_TB + HEAD + FR + TB_H + FR = 29.95 =
+ * PH − FOOT − M_TB. The page-number band (`.mp-foot`) starts here; the page rail's reveal zone too (§8.11). TS only,
+ * like `SINGLE_W`: page.css has no `--mp-*` for it.
+ */
+export const FRAME_BOTTOM = M_TB + HEAD + FR + TB_H + FR
 /** Single-page paper offset that keeps the text block still across page turns (§8.10): (M_OUT − M_IN) / 2. */
 export const SHIFT = (M_OUT - M_IN) / 2
 /** Single-page footprint: PW + 2·SHIFT = 22.00. */

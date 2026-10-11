@@ -2,17 +2,20 @@
  * PageRail in a real browser (§8.11, §10.1, §11.3; WP8f acceptance), mounted in the real `App` on the browser mock:
  * `P` shows and focuses a labelled `role=slider`; its keys keep book semantics (← is the next page, Shift ×10, the juz
  * keys, Home/End), preview at once and turn once; Enter and Escape give focus back, and Escape closes the rail before
- * the reader's own Escape; the rail runs right to left with page 1 at the right end in both UI languages; the bottom
- * edge of the canvas reveals it above the dock; a drag previews in the FlipHUD and its release turns once, and a pointer
- * never takes focus.
+ * the reader's own Escape; the rail runs right to left with page 1 at the right end in both UI languages; the pointer
+ * under the pages' frame (the page-number strip and below, across the book) or at the bottom edge of the canvas
+ * reveals it above the dock (in zen too), never beside the book or over the dock, the memorisation bars or a toast, and
+ * the zone follows a zoomed book as it scrolls; a drag previews in the FlipHUD and its release turns once, and a
+ * pointer never takes focus.
  */
 import { flushSync } from 'svelte'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { page as browserPage, userEvent } from 'vitest/browser'
 import '../../app.css'
 import { bootApp, resetApp, settle } from '../shell/testing/boot'
-import { quran, reader, ui } from '$lib/stores'
-import { railState } from './PageRail.svelte'
+import { FRAME_BOTTOM, PH } from '$lib/mushaf/geometry'
+import { quran, reader, settings, ui } from '$lib/stores'
+import { HOT_ZONE_PX, railState } from './PageRail.svelte'
 
 const $ = <T extends Element = HTMLElement>(selector: string) => document.querySelector<T>(selector)
 const rect = (selector: string) => $(selector)?.getBoundingClientRect() ?? new DOMRect()
@@ -76,7 +79,26 @@ function xOf(page: number): number {
   return t.right - ((page - 1) / 603) * t.width
 }
 
+/** The bottom edge of the pages' frame on screen (client px): the page-number strip starts there. */
+function frameBottom(): number {
+  const s = rect('[data-qd-stage]')
+  return s.top + s.height * (FRAME_BOTTOM / PH)
+}
+
+/** The real mouse to client (x, y), aimed at the canvas (the page-number band takes no pointer events). */
+async function hoverAt(x: number, y: number): Promise<void> {
+  const view = $('.mushaf-view') as HTMLElement
+  const r = view.getBoundingClientRect()
+  await userEvent.hover(view, { position: { x: x - r.left, y: y - r.top } })
+}
+
+const centreX = (r: DOMRect) => r.left + r.width / 2
+
 afterEach(async () => {
+  // The mouse is shared by the tests: parked on the title bar, it leaves no rail open in the next app (the reveal zone
+  // reaches up to the page number) and no tooltip behind.
+  await userEvent.hover(document.querySelector('.titlebar, header') ?? document.body)
+  await settle(250)
   resetApp()
   vi.restoreAllMocks()
   await browserPage.viewport(1280, 800)
@@ -210,7 +232,7 @@ describe('book order, never mirrored (§11.3)', () => {
       const fill = rect(`${RAIL} .fill`)
       expect(Math.abs(fill.right - track.right)).toBeLessThan(1.5)
       expect(Math.abs(fill.left - xOf(262))).toBeLessThan(1.5)
-      // Arabic-Indic juz labels, ١ at the right end.
+      // Juz labels in Eastern Arabic numbers, ١ at the right end.
       const labels = [...document.querySelectorAll<HTMLElement>(`${RAIL} .tick-label`)]
       expect(labels[0]?.textContent).toBe('١')
       expect(labels.at(-1)?.textContent).toBe('٣٠')
@@ -233,7 +255,7 @@ describe('book order, never mirrored (§11.3)', () => {
 })
 
 describe('the pointer (§8.11, §10.2)', () => {
-  it('reveals the rail from the bottom edge of the canvas beside the dock, above the dock, and lets it go', async () => {
+  it('reveals the rail from the canvas-bottom band beside the dock, above the dock, and lets it go', async () => {
     await boot({ size: [1600, 1000] })
     await goTo(262)
     const view = $('.mushaf-view') as HTMLElement
@@ -259,6 +281,204 @@ describe('the pointer (§8.11, §10.2)', () => {
     expect($(`${RAIL} .tick-label`)?.getBoundingClientRect().width).toBeGreaterThan(0)
     await userEvent.hover(view, { position: { x: r.width / 2, y: 120 } })
     await until(() => $(RAIL) === null, 2_000, 'the rail gone')
+  })
+
+  it('reveals just under the page frame, over the page number, and not above it', async () => {
+    await boot({ size: [1600, 1000] })
+    await goTo(262)
+    const view = rect('.mushaf-view')
+    const right = $('section.mp[data-side="right"]') as HTMLElement
+    const x = centreX(right.getBoundingClientRect())
+    const edge = frameBottom()
+    // The zone starts where the page-number band does, well above the canvas-bottom band and the dock.
+    expect(Math.abs(edge - (right.querySelector('.mp-foot')?.getBoundingClientRect().top ?? 0))).toBeLessThan(
+      0.5,
+    )
+    expect(edge).toBeLessThan(view.bottom - HOT_ZONE_PX - 40)
+    // In the frame's band, just above its bottom edge: nothing.
+    await hoverAt(x, edge - 4)
+    await settle(300)
+    expect($(RAIL)).toBeNull()
+    // Just under it: the rail, above the dock, without taking focus.
+    await hoverAt(x, edge + 4)
+    await until(() => $(RAIL) !== null, 2_000, 'the rail')
+    await settle(250)
+    const rail = rect(RAIL)
+    expect(rail.bottom).toBeLessThanOrEqual(rect('[data-qd-dock-pill]').top - 4)
+    expect(document.activeElement?.matches(RAIL)).toBe(false)
+    expect(ui.floating).toBe(0)
+    // Over the page number it stays; up on the text it leaves after the grace.
+    const medallion = right.querySelector('.mp-foot-medallion')?.getBoundingClientRect() ?? new DOMRect()
+    expect(medallion.top).toBeGreaterThanOrEqual(edge - 0.5)
+    await hoverAt(centreX(medallion), medallion.top + medallion.height / 2)
+    await settle(600)
+    expect($(RAIL)).not.toBeNull()
+    await hoverAt(x, 300)
+    await until(() => $(RAIL) === null, 2_000, 'the rail gone')
+  })
+
+  it('waits for the pointer to rest: moving on through the zone never reveals it', async () => {
+    await boot({ size: [1600, 1000] })
+    await goTo(262)
+    const view = $('.mushaf-view') as HTMLElement
+    const x = centreX(rect('section.mp[data-side="right"]'))
+    const y = frameBottom() + 8
+    const move = (dy: number) =>
+      view.dispatchEvent(
+        new PointerEvent('pointermove', {
+          bubbles: true,
+          clientX: x,
+          clientY: y + dy,
+          isPrimary: true,
+          pointerType: 'mouse',
+        }),
+      )
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    try {
+      // On its way down to the dock: 6 px every 60 ms, 240 ms in the zone and never a 90 ms rest.
+      for (const dy of [0, 6, 12, 18]) {
+        move(dy)
+        vi.advanceTimersByTime(60)
+        flushSync()
+        expect(railState.open, `${dy} px under the frame`).toBe(false)
+      }
+      // A jitter of 2 px is still a rest: 90 ms after the last real move, the rail.
+      move(20)
+      vi.advanceTimersByTime(40)
+      flushSync()
+      expect(railState.open).toBe(true)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('never reveals over the floating sidebar or its scrim in a narrow window', async () => {
+    await boot({ size: [880, 800] })
+    await goTo(262)
+    ui.openSidebar()
+    await until(() => $('.sidebar.floating') !== null && $('.scrim') !== null, 2_000, 'the floating sidebar')
+    await settle(300)
+    const sidebar = $('.sidebar.floating') as HTMLElement
+    const sb = sidebar.getBoundingClientRect()
+    const stage = rect('[data-qd-stage]')
+    const y = frameBottom() + 10
+    // Points under the pages' frame, across the book: in the zone, were the sidebar and its scrim not over it.
+    const overSidebar = { x: sb.right - 10, y }
+    const overScrim = { x: Math.max(sb.right + 40, centreX(stage)), y }
+    expect(overSidebar.x).toBeGreaterThan(stage.left)
+    expect(overScrim.x).toBeLessThan(stage.right)
+    expect(y).toBeLessThan(Math.min(sb.bottom, rect('.mushaf-view').bottom - HOT_ZONE_PX))
+    await userEvent.hover(sidebar, { position: { x: overSidebar.x - sb.left, y: y - sb.top } })
+    await settle(400)
+    expect($(RAIL)).toBeNull()
+    const scrim = $('.scrim') as HTMLElement
+    expect(document.elementFromPoint(overScrim.x, y)).toBe(scrim)
+    const s = scrim.getBoundingClientRect()
+    await userEvent.hover(scrim, { position: { x: overScrim.x - s.left, y: y - s.top } })
+    await settle(400)
+    expect($(RAIL)).toBeNull()
+  })
+
+  it('does not reveal beside the book, only under it', async () => {
+    await boot({ settings: { pageMode: 'single' } })
+    await goTo(262)
+    const view = rect('.mushaf-view')
+    const stage = rect('[data-qd-stage]')
+    const y = frameBottom() + 10
+    expect(stage.left - 100).toBeGreaterThan(view.left)
+    expect(y).toBeLessThan(view.bottom - HOT_ZONE_PX)
+    await hoverAt(stage.left - 100, y)
+    await settle(300)
+    expect($(RAIL)).toBeNull()
+    await hoverAt(centreX(stage), y)
+    await until(() => $(RAIL) !== null, 2_000, 'the rail')
+  })
+
+  it('follows a zoomed book: the bottom band, then the strip under the frame once it scrolls into view', async () => {
+    await boot()
+    await goTo(262)
+    await settings.update({ zoomPct: 200 })
+    await until(() => reader.scrolls && reader.zoomPct === 200, 2_000, 'zoomed')
+    await settle(200)
+    const view = rect('.mushaf-view')
+    const scroller = $('.mushaf-view [data-scroll-area-viewport]') as HTMLElement
+    // Where the frame's bottom edge lands with the book scrolled to its end.
+    scroller.scrollTop = scroller.scrollHeight
+    await settle(100)
+    const y = frameBottom() + 12
+    expect(y).toBeLessThan(view.bottom - HOT_ZONE_PX - 8)
+    scroller.scrollTop = 0
+    await settle(100)
+    expect(frameBottom()).toBeGreaterThan(view.bottom)
+    // Above the bottom band, with the frame's bottom out of view: nothing.
+    await hoverAt(centreX(view), y)
+    await settle(300)
+    expect($(RAIL)).toBeNull()
+    // The book scrolls under the resting pointer until its page-number strip is there: the rail comes, no move needed.
+    scroller.scrollTop = scroller.scrollHeight
+    await until(() => $(RAIL) !== null, 2_000, 'the rail')
+    expect(frameBottom()).toBeLessThanOrEqual(y)
+  })
+
+  it('never reveals over the memorisation toolbar, and floats above it when revealed from the page number', async () => {
+    await boot({ settings: { pageMode: 'spread' } })
+    await goTo(50)
+    await userEvent.hover(document.querySelector('.titlebar, header') ?? document.body)
+    await userEvent.keyboard('e')
+    await until(() => $('[data-qd-memo-toolbar]') !== null, 2_000, 'the toolbar')
+    await settle(300)
+    const toolbar = $('[data-qd-memo-toolbar]') as HTMLElement
+    const bar = toolbar.getBoundingClientRect()
+    // The toolbar lies in the zone (under the frame), so only the slot's exception keeps the rail away.
+    expect(bar.top).toBeGreaterThan(frameBottom())
+    await hoverAt(bar.left + 6, bar.top + bar.height / 2)
+    await settle(400)
+    expect($(RAIL)).toBeNull()
+    const medallion = rect('section.mp[data-side="right"] .mp-foot-medallion')
+    await hoverAt(centreX(medallion), medallion.top + medallion.height / 2)
+    await until(() => $(RAIL) !== null, 2_000, 'the rail')
+    await settle(250)
+    expect(rect(RAIL).bottom).toBeLessThanOrEqual(toolbar.getBoundingClientRect().top - 4)
+  })
+
+  it('reveals under the frame in zen, 8 px off the bottom while the dock stays hidden', async () => {
+    await boot({ size: [1800, 1300] })
+    await goTo(262)
+    ui.setZen(true)
+    try {
+      await settle(300)
+      const view = rect('.mushaf-view')
+      const right = rect('section.mp[data-side="right"]')
+      const y = frameBottom() + 6
+      // Above the zen dock's reveal zone (the window's bottom 80 px).
+      expect(y).toBeLessThan(window.innerHeight - 80)
+      await hoverAt(centreX(right), y)
+      await until(() => $(RAIL) !== null, 2_000, 'the rail')
+      await settle(250)
+      expect(ui.zenDock).toBe(false)
+      expect(Math.abs(rect(RAIL).bottom - (view.bottom - 8))).toBeLessThan(1.5)
+    } finally {
+      ui.setZen(false)
+      await settle(100)
+    }
+  })
+
+  it('never reveals over a toast above the dock, in the zone', async () => {
+    await boot()
+    await goTo(262)
+    ui.toast({ message: 'Bookmarked 2:255', action: { label: 'Undo', run: () => {} } })
+    await settle(500)
+    const toast = $('[data-sonner-toast]') as HTMLElement
+    const box = toast.getBoundingClientRect()
+    const stage = rect('[data-qd-stage]')
+    // A point of the toast under the pages' frame, across the book: in the zone, so only the exception holds the rail.
+    const at = { x: box.width / 2, y: box.height - 6 }
+    expect(box.top + at.y).toBeGreaterThan(frameBottom())
+    expect(box.left + at.x).toBeGreaterThan(stage.left)
+    expect(box.left + at.x).toBeLessThan(stage.right)
+    await userEvent.hover(toast, { position: at })
+    await settle(400)
+    expect($(RAIL)).toBeNull()
   })
 
   it('does not reveal over the dock', async () => {

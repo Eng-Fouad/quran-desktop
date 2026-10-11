@@ -5,7 +5,21 @@
  */
 import { describe, expect, it } from 'vitest'
 import type { PageAyah, PageData, PageLine } from '$lib/ipc/bindings'
-import { BLOCK_TOP, FR, LH, M_IN, M_OUT, M_TB, HEAD, OPENING_TOP_LINES, PH, PW, TB_H, TB_W } from './geometry'
+import {
+  BLOCK_TOP,
+  FR,
+  FRAME_BOTTOM,
+  LH,
+  M_IN,
+  M_OUT,
+  M_TB,
+  HEAD,
+  OPENING_TOP_LINES,
+  PH,
+  PW,
+  TB_H,
+  TB_W,
+} from './geometry'
 import {
   arabicNum,
   BAND_TILE,
@@ -275,6 +289,11 @@ describe('frameGeometry (§8.9)', () => {
     expect(left.box.x).toBeCloseTo(M_OUT * q)
     // The frame band ends exactly FR outside the block: block top = M_TB + HEAD + FR.
     expect(right.box.y + FR * q).toBeCloseTo(BLOCK_TOP * q)
+    // Its outer bottom edge is FRAME_BOTTOM on both sides (the page rail's reveal zone starts there, §8.11).
+    for (const side of ['right', 'left'] as const) {
+      const box = frameBoxQ(side)
+      expect(box.y + box.h).toBeCloseTo(FRAME_BOTTOM, 12)
+    }
   })
 
   it('draws the outer rule at 0.09·qfs on its centre line and the inner rule at max(1px, 0.04·qfs)', () => {

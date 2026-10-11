@@ -9,6 +9,8 @@
   - **Follow-along:** with `followAlong` on, the recitation moving on to the first ayah of a new division (the basmala
     between surahs does not break the step).
   - **First:** each division once per session; a hizb that opens a juz is announced as the juz.
+  - **Rail:** while the page rail is open the chip steps aside without spending its 2.5 s, and an arrival waits to be
+    greeted until the rail goes (dropped if its page is no longer shown).
   - The Arabic heading uses the genitive ordinal in every UI language (`الحادي والعشرين`); the English UI adds the
     short label ("Juz 15").
 -->
@@ -115,13 +117,24 @@
   let timer: ReturnType<typeof setTimeout> | undefined
   let announceTimer: ReturnType<typeof setTimeout> | undefined
 
-  function arrive(division: DivisionStart): void {
-    const key = `${division.kind}:${division.n}`
-    if (greeted[key]) return
-    greeted[key] = true
+  /** A division the open page rail hides: greeted (or shown again) once the rail goes, if its page is still shown. */
+  let deferred: DivisionStart | null = null
+
+  function show(division: DivisionStart): void {
     current = division
     clearTimeout(timer)
     timer = setTimeout(() => (current = null), SHOW_MS)
+  }
+
+  function arrive(division: DivisionStart): void {
+    const key = `${division.kind}:${division.n}`
+    if (greeted[key]) return
+    if (railState.open) {
+      deferred = division
+      return
+    }
+    greeted[key] = true
+    show(division)
     const text = i18n.t(`pagenav.division.${division.kind}`, {
       n: division.n,
       ordinal: arabicOrdinal(division.n),
@@ -129,6 +142,30 @@
     clearTimeout(announceTimer)
     announceTimer = setTimeout(() => ui.announce(text), ANNOUNCE_AFTER_MS)
   }
+
+  // The open rail hides the chip: a chip on screen waits with its time unspent, an arrival waits to be greeted. When
+  // the rail goes, either shows for its full time if its page is still on screen, else it is dropped (an arrival not
+  // greeted is greeted on a later visit).
+  $effect(() => {
+    const open = railState.open
+    untrack(() => {
+      if (open) {
+        if (current) {
+          deferred = current
+          current = null
+          clearTimeout(timer)
+        }
+        return
+      }
+      const d = deferred
+      deferred = null
+      if (!d) return
+      const page = starts.find((s) => s.kind === d.kind && s.n === d.n)?.page
+      if (page === undefined || !reader.visiblePages.includes(page)) return
+      if (greeted[`${d.kind}:${d.n}`]) show(d)
+      else arrive(d)
+    })
+  })
 
   // Reading: a forward turn to the next page or spread brings a division's start onto the screen.
   let before = untrack(() => reader.visiblePages)

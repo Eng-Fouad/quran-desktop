@@ -654,9 +654,12 @@ is the lead's fold-in of every accepted deviation (`docs/deviations/WP*.md`), ev
 ### 10.6 Page navigation affordances (§8.11–8.12; WP8f)
 
 - The page label reads "Pages 261–262", bidi-isolated; the flip HUD in the English UI leads with the Arabic surah name.
-- The page rail floats above whatever is at the bottom; it reveals after 90 ms in the bottom 24 px, leaves 450 ms after the
-  pointer, previews key steps and turns 350 ms after the last one, never takes focus from a pointer, and counts one history
-  jump per visit.
+- The page rail floats above whatever is at the bottom; it reveals after the pointer rests 90 ms (within 4 px) under the
+  bottom edge of the page frame (the page-number strip and below, across the book; owner request) or in the bottom 24
+  px, never over the dock, the overlay slot's chips and bars or a toast. The zone is measured from `[data-qd-stage]`
+  (`FRAME_BOTTOM`) on every test, and a resting pointer is tested again when the book zooms, scrolls, turns or resizes
+  under it. It leaves 450 ms after the pointer, previews key steps and turns 350 ms after the last one, never takes
+  focus from a pointer, and counts one history jump per visit.
 - Turn zones hug the paper and never cover it; the first-run hint appears after the onboarding and is gone after 12 s, "Got
   it" or a turn (`hintsSeen: "page_turn"`); division arrivals greet juz and hizb once per session.
 

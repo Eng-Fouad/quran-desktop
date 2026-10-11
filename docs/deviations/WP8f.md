@@ -48,11 +48,12 @@ Tests (new files beside the components; nobody else owns them):
 
 - "surah · page · juz" names the surah and juz of the first ayah on the (first) page, as the running head does.
 - A spread reads "Pages 261–262" (`ص ٢٦١–٢٦٢`). The range is bidi-isolated like references (§11.3): RLI with
-  Arabic-Indic digits, LRI otherwise. Without the isolation, Arabic digits in the English UI showed "262–261".
+  Eastern Arabic numbers, LRI otherwise. Without the isolation, Arabic digits in the English UI showed "262–261".
 - **FlipHUD in the English UI:** the Arabic surah name in Naskh (20 px, `--surah-header-ink`) leads, then "Al-Hijr ·
   Page 262 · Juz 14" in the UI font.
   - In the Arabic UI the chip is §8.11's example exactly: `الحجر · ص ٢٦٢ · ج ١٤` in Naskh 18 px.
-  - §8.11 shows only the Arabic form; Arabic-Indic page numbers alone are unreadable to many English UI users.
+  - §8.11 shows only the Arabic form; page numbers in Eastern Arabic numbers alone are unreadable to many English UI
+    users.
 - The HUD is on `--glass-fill` (the overlay surface, or `--surface-raised` where translucency is off, §9.4) with
   `shadow-3`, centred in the page area above the bar dock's reserve. It is `aria-hidden`: the reader announces the
   page it settles on.
@@ -69,19 +70,39 @@ Tests (new files beside the components; nobody else owns them):
     In zen the dock hides as soon as the pointer moves up onto the rail.
   - Width: the page area minus 24 px each side, at most 1120 px, centred.
 - **Reveal and leave.**
-  - The reveal zone is the bottom 24 px of the page area, outside the dock.
-  - The pointer must rest there 90 ms, so leaving the window through the bottom edge does nothing.
-  - Nothing reveals the rail while a mouse button is held (a text selection), a menu or dialog is open, or the reader
-    flips.
-  - The rail stays while the pointer is on it or in the band between it and the canvas bottom, the dock excepted. It
-    leaves 450 ms after the pointer, which covers crossing the dock from the edge up to the rail.
+  - The reveal zone was the bottom 24 px of the page area, outside the dock. With the bar dock the book ends about
+    100 px above the canvas bottom, so the pointer had to go far below the page number.
+  - Owner request (v1.2): the zone is everything under the bottom edge of the pages' frame (`FRAME_BOTTOM`, where the
+    page-number band starts), across the book's width, down to the canvas bottom, plus the old 24 px band across the
+    page area (the only zone while a zoomed book's frame bottom is out of view). The gutters beside the book, where
+    the turn zones are, do not reveal it. Only the trigger moved: the strip still floats above the dock.
+  - The zone is read from `[data-qd-stage]` on every test (`inRevealZone`, unit-tested), so it holds through zoom,
+    scroll, spread or single page and the dock. A resting pointer is tested again a frame after the book zooms,
+    turns, resizes or scrolls under it: the engines differ on whether such a change sends a pointer move (in the
+    browser tests WebKit's scroll did, Chromium's did not).
+  - Over the dock, the overlay slot's chips and bars (the follow, division and hint chips, the memorisation bars), a
+    toast or the ayah action bar the pointer is using them: the rail does not reveal there, and an open one lets go
+    after the grace. Aiming at a slot chip no longer hides it under the rail, nor does the rail rise behind a toast
+    the pointer is on (both sit above the dock, in the zone).
+  - The pointer must rest there 90 ms (a move of 4 px or more starts the wait again), so reaching for the dock or
+    leaving the window through the bottom edge does nothing, however slowly. Only the Mushaf itself counts: the
+    floating sidebar and its scrim over the zone (a narrow window) never reveal the rail.
+  - The division and hint chips step aside while the rail is open without spending their time: the division chip is
+    greeted (or shown again for its full 2.5 s) once the rail goes if its page is still on screen, and the hint's 12 s
+    wait for the rail.
+  - Nothing reveals the rail while a mouse button is held (a text selection, a drag on the page, §8.13), a menu or
+    dialog is open, or the reader flips. A recheck keeps the buttons of the last move, so a drag that turns or
+    scrolls the book never reveals it either; after the release it comes once the pointer moves.
+  - The rail stays while the pointer is on it, in the band between it and the canvas bottom or in the zone, the dock
+    and the slot excepted. It leaves 450 ms after the pointer, which covers crossing the dock from the edge up to the
+    rail.
   - Touch pointers never reveal it, but a touch drag on an open rail works (`touch-action: none`).
 - **The live label** is a small label above the thumb. It names the page under the pointer while hovering, else the
   value. It stays inside the track at the ends. Its box keeps the track's right-to-left direction and its text the
   UI's.
   - Chromium resolves `inset-inline-*` with the element's own direction, so a `dir` on the box itself moved it.
-- **Juz labels** (Arabic-Indic, always) show while the rail is hovered, focused or dragged. They are thinned so they
-  stay ≥ 22 px apart: every juz at ≥ 660 px of track; else 1, 3, 5, … (step 2 or 3); else 1, 5, 10, …
+- **Juz labels** (Eastern Arabic numbers, always) show while the rail is hovered, focused or dragged. They are thinned
+  so they stay ≥ 22 px apart: every juz at ≥ 660 px of track; else 1, 3, 5, … (step 2 or 3); else 1, 5, 10, …
 - **The fill** runs from page 1 (the right end) to the value: progress through the book. A thin mark shows the
   hovered page.
 - **Keyboard** (beyond ← / → and Shift ×10):

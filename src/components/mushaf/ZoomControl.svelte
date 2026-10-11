@@ -12,8 +12,8 @@
   - **Buttons.** + zooms in, the level ("120%", in the UI's numbers) goes back to the fit, − zooms out, all around the
     canvas centre like `Mod+=` / `Mod+0` / `Mod+-`, whose keys their tooltips show (as the user bound them). The button
     that would do nothing (+ at 300 %, the level at the fit, − at 50 %) is `aria-disabled`, so it keeps focus. It is
-    also the zoom readout: any zoom (wheel, pinch, keys, palette, Settings) wakes it at full strength for 0.9 s and is
-    announced ("Zoom 120%").
+    also the zoom readout: any zoom in the reader (wheel, pinch, keys, palette) wakes it at full strength for 0.9 s and
+    is announced ("Zoom 120%").
   - **Look.** Always there while the Mushaf shows, and quiet so it never competes with the page: 40 % while the
     pointer is elsewhere, 60 % while it is over the canvas (as the turn-zone chevrons, §8.11), 100 % hovered, focused
     or woken. When the Quran text, a running head or a mark lies under it (a zoomed or scrolled book, a dog-ear in the

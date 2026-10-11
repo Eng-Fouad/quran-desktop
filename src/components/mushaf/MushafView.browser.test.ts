@@ -14,6 +14,7 @@ import { idleSnapshot } from '$lib/ipc/mock/state'
 import { buildCopyText } from '$lib/mushaf/copy'
 import type { PageData } from '$lib/ipc/bindings'
 import { a11yItemId } from '$lib/mushaf/a11y'
+import { FRAME_BOTTOM, PH } from '$lib/mushaf/geometry'
 import { ACTION_BAR_DELAY_MS, ACTION_BAR_EVENT } from '$lib/mushaf/interactions'
 import { UNICODE_FIT, unicodeScale } from '$lib/mushaf/unicodeFit'
 import { glyphKey, renditionFontFamily, shapeWarmer, warmPageOf } from '$lib/mushaf/warmup'
@@ -743,19 +744,36 @@ describe('drag (§8.13)', () => {
     pointer('pointerup', rail, r.x + 40, r.y)
   })
 
-  it('turns from the strip under the page without leaving the page rail open', async () => {
-    await bootApp({ size: [1600, 1000], settings: { mushafStyle: 'hafs', pageTurnAnimation: false } })
-    await goTo(50)
-    const h = view().getBoundingClientRect().height
-    await userEvent.dragAndDrop(view(), view(), {
-      sourcePosition: { x: 90, y: h - 6 },
-      targetPosition: { x: 210, y: h - 6 },
-    })
-    await until(turned([51, 52]), 2_000, 'the next spread')
-    await settle(REVEAL_INTENT_MS + CLOSE_GRACE_MS + 150)
-    expect(railState.open).toBe(false)
-    expect($(RAIL)).toBeNull()
-  })
+  it.each(['the canvas-bottom band', 'the page-number strip'] as const)(
+    'turns from %s, in the rail’s reveal zone, without leaving the page rail open',
+    async (from) => {
+      await bootApp({ size: [1600, 1000], settings: { mushafStyle: 'hafs', pageTurnAnimation: false } })
+      await goTo(50)
+      const v = view().getBoundingClientRect()
+      const stage = rect('[data-qd-stage]')
+      // Under the pages' frame, over the right page's number (the band itself takes no pointer events).
+      const start =
+        from === 'the page-number strip'
+          ? {
+              x: stage.left + stage.width * 0.75 - v.left,
+              y: stage.top + stage.height * (FRAME_BOTTOM / PH) + 8 - v.top,
+            }
+          : { x: 90, y: v.height - 6 }
+      try {
+        await userEvent.dragAndDrop(view(), view(), {
+          sourcePosition: start,
+          targetPosition: { x: start.x + 120, y: start.y },
+        })
+        await until(turned([51, 52]), 2_000, 'the next spread')
+        await settle(REVEAL_INTENT_MS + CLOSE_GRACE_MS + 150)
+        expect(railState.open).toBe(false)
+        expect($(RAIL)).toBeNull()
+      } finally {
+        // The real mouse rests in the reveal zone: parked on the title bar, it opens no rail in the tests that follow.
+        await userEvent.hover(document.querySelector('.titlebar, header') ?? document.body)
+      }
+    },
+  )
 
   it('collapses a text selection made elsewhere when a word is clicked, and selects its ayah', async () => {
     await spreadAt(50)

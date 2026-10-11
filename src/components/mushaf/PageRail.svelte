@@ -2,13 +2,20 @@
   PageRail (§8.11). Owner: WP8f. The 604-step page rail at the bottom of the Mushaf canvas. Takes no props: it reads
   stores (§7.9).
 
-  - **Reveal.** Hovering the bottom 24 px of the page area (outside the dock) shows it after a short intent delay; it
-    stays while the pointer is over it or in the band between it and the canvas bottom (the dock excepted), and
-    leaves 450 ms after the pointer does. `P` (`reader.railRequest`) shows it and moves focus to it. It floats just above whatever sits at the
-    bottom of the page area (the bar dock, the follow chip, the memorisation bars), else 8 px off the bottom edge.
+  - **Reveal.** The pointer resting 90 ms (within 4 px) anywhere under the bottom edge of the pages' frame (the
+    page-number strip and below, across the book, down to the canvas bottom) or in the bottom 24 px of the page area
+    shows it (`inRevealZone`), never over the dock, the overlay slot's chips and bars, a toast, the ayah action bar or
+    anything else drawn over the Mushaf (the floating sidebar and its scrim); passing through on the way to the dock
+    or out of the window does nothing. The zone
+    follows the book through zoom, scroll, turns and resizes: a resting pointer is tested again when the book moves
+    under it. It stays while the pointer is over it or in the band between it and the canvas bottom, and leaves 450 ms
+    after the pointer does. A held button (a drag on the page, §8.13) never reveals or keeps it. `P`
+    (`reader.railRequest`) shows it and moves focus to it. It floats just above whatever sits at the bottom of the page
+    area (the bar dock, the follow chip, the memorisation bars), else 8 px off the bottom edge.
   - **Book order, never mirrored** (§11.3): page 1 at the right end, the last page at the left end, in both UI
-    languages. The fill runs from page 1 to the page shown; 30 juz ticks carry Arabic-Indic labels while the rail is
-    hovered or focused (thinned so they never collide); a live label above the thumb reads "surah · page · juz".
+    languages. The fill runs from page 1 to the page shown; 30 juz ticks carry labels in Eastern Arabic numbers while
+    the rail is hovered or focused (thinned so they never collide); a live label above the thumb reads
+    "surah · page · juz".
   - **Pointer.** Hover previews the page under the pointer in the live label. Dragging only previews (the FlipHUD shows
     the page in the canvas centre); the release, or a click, navigates with a single turn. A pointer never focuses the
     rail, so ← → keep turning pages afterwards.
@@ -35,7 +42,7 @@
 
   /** The strip's height (§8.11). */
   export const RAIL_H = 28
-  /** The reveal zone at the bottom of the canvas (§8.11). */
+  /** The band at the bottom of the page area that always reveals the rail (§8.11), the frame in view or not. */
   export const HOT_ZONE_PX = 24
   /** The strip never grows wider than this (a long rail is hard to aim along). */
   export const RAIL_MAX_W = 1120
@@ -45,6 +52,8 @@
   export const CLOSE_GRACE_MS = 450
   /** The pointer must rest in the reveal zone this long (passing through it on the way out does nothing). */
   export const REVEAL_INTENT_MS = 90
+  /** A move this far from where the rest began starts it again (a reach for the dock never rests). */
+  export const REST_SLOP_PX = 4
   /** Juz labels stay at least this far apart. */
   export const LABEL_MIN_GAP = 22
 
@@ -66,6 +75,37 @@
   export function pageAtX(x: number, left: number, width: number, last: number): number {
     if (!(width > 0)) return 1
     return pageAtFraction((left + width - x) / width, last)
+  }
+
+  /** Where the rail's reveal zone lies (client px), measured on each test: it follows the book. */
+  export interface RevealGeometry {
+    /** The page area: the canvas minus the side card's column (§8.2). */
+    left: number
+    right: number
+    /** The canvas's top and bottom edges. */
+    top: number
+    bottom: number
+    /** The book on screen (`[data-qd-stage]`): its extent and its frame's bottom edge; `null` before it is laid out. */
+    book: { left: number; right: number; frameBottom: number } | null
+  }
+
+  /**
+   * Whether (x, y) is in the rail's reveal zone (§8.11): under the bottom edge of the pages' frame (the page-number
+   * strip and below), across the book's width, down to the canvas bottom; and always the bottom `HOT_ZONE_PX` of the
+   * page area. A book zoomed past the canvas whose frame bottom is out of view (or none laid out) leaves only that
+   * band. The dock and the overlay slot are excepted by the caller.
+   */
+  export function inRevealZone(x: number, y: number, g: RevealGeometry): boolean {
+    if (!(x >= g.left && x <= g.right && y >= g.top && y < g.bottom)) return false
+    if (y >= g.bottom - HOT_ZONE_PX) return true
+    const b = g.book
+    return (
+      b !== null &&
+      Number.isFinite(b.frameBottom) &&
+      y >= b.frameBottom &&
+      x >= Math.max(g.left, b.left) &&
+      x <= Math.min(g.right, b.right)
+    )
   }
 
   /**
@@ -119,7 +159,7 @@
     }
   }
 
-  /** A page range "261–262" isolated for bidi, like references (§11.3): RLI for Arabic-Indic digits, LRI otherwise. */
+  /** A page range "261–262" isolated for bidi, like references (§11.3): RLI for Eastern Arabic numbers, else LRI. */
   export function isolatedRange(first: number, last: number): string {
     return `${settings.arabicDigits ? RLI : LRI}${i18n.num(first)}–${i18n.num(last)}${PDI}`
   }
@@ -172,7 +212,7 @@
 <script lang="ts">
   import { onDestroy, tick, untrack } from 'svelte'
   import { fly } from 'svelte/transition'
-  import { PAD_X, PAGE_COUNT, SIDE_DOCK_W } from '$lib/mushaf/geometry'
+  import { FRAME_BOTTOM, PAD_X, PAGE_COUNT, PH, SIDE_DOCK_W } from '$lib/mushaf/geometry'
   import { ui } from '$lib/stores'
 
   /** Gap between the strip and what it floats above; and its distance from a free canvas bottom. */
@@ -331,8 +371,45 @@
     return [...document.querySelectorAll('[data-qd-region="dock"] [data-qd-dock-pill]')]
   }
 
+  /**
+   * The overlay slot's visible chips and bars (§7.5): the follow, division and hint chips, the memorisation bars.
+   * While the pointer aims at one the rail stays away: it would hide the chips (they step aside while it is open) and
+   * lift itself over the bars.
+   */
+  function slotParts(): Element[] {
+    const slot = layer?.parentElement?.querySelector('.mv-slot')
+    return [...(slot?.children ?? [])].filter((el) => {
+      const b = el.getBoundingClientRect()
+      return b.width > 0 && b.height > 0
+    })
+  }
+
   function inside(b: DOMRect, x: number, y: number): boolean {
     return x >= b.left && x <= b.right && y >= b.top && y <= b.bottom
+  }
+
+  /**
+   * The pointer is using something at the bottom of the canvas, not reaching for the rail: the dock, the slot's chips
+   * and bars, or what is portalled over the zone: the toasts (above the dock, §9.5) and the ayah action bar (below a
+   * selection that ends on the last line).
+   */
+  function inUse(x: number, y: number): boolean {
+    const parts = [
+      ...dockParts(),
+      ...slotParts(),
+      ...document.querySelectorAll('[data-sonner-toast], .ab[role="toolbar"]'),
+    ]
+    return parts.some((el) => inside(el.getBoundingClientRect(), x, y))
+  }
+
+  /**
+   * The book on screen (`[data-qd-stage]`, PH·qfs tall): its extent and its frame's bottom edge, in client px. Read
+   * from the stage's own box, so it holds under any zoom and scroll offset, and before a still-blank page has a footer.
+   */
+  function bookBox(view: Element): RevealGeometry['book'] {
+    const s = view.querySelector('[data-qd-stage]')?.getBoundingClientRect()
+    if (!s || !(s.width > 0) || !(s.height > 0)) return null
+    return { left: s.left, right: s.right, frameBottom: s.top + s.height * (FRAME_BOTTOM / PH) }
   }
 
   /** How far above the canvas bottom the strip floats: clear of the dock and the slot's chips under its span. */
@@ -365,23 +442,33 @@
     if (!view) return null
     const r = view.getBoundingClientRect()
     if (x < r.left || x >= r.right || y < r.top || y >= r.bottom) return null
-    // Over the dock the pointer is using the dock: the rail lets go (after the grace, which covers crossing it).
-    for (const part of dockParts()) if (inside(part.getBoundingClientRect(), x, y)) return null
+    // Only over the Mushaf itself: not over what floats above the canvas (the floating sidebar, its scrim).
+    const hit = document.elementFromPoint(x, y)
+    if (!hit || !view.contains(hit)) return null
+    // Over the dock, a slot chip or bar the pointer is using it: the rail lets go (after the grace, which covers
+    // crossing the dock from the edge up to the rail).
+    if (inUse(x, y)) return null
     if (shown && strip) {
       const s = strip.getBoundingClientRect()
       if (x >= s.left - BAND_X && x <= s.right + BAND_X && y >= s.top - BAND_TOP) return 'band'
     }
     const area = pageArea(r)
-    if (x < area.left || x > area.right || y < r.bottom - HOT_ZONE_PX) return null
-    return 'hot'
+    const g = { left: area.left, right: area.right, top: r.top, bottom: r.bottom, book: bookBox(view) }
+    return inRevealZone(x, y, g) ? 'hot' : null
   }
 
   let inHot = false
+  /** Where the pointer's rest in the zone began: a move of `REST_SLOP_PX` or more from it starts the wait again. */
+  let rest: { x: number; y: number } | null = null
+  /** The mouse's last place and buttons (no touch), to test it again when the book moves under it. */
+  let lastPointer: { x: number; y: number; buttons: number } | null = null
 
-  function onWindowPointerMove(e: PointerEvent): void {
-    if (e.pointerType === 'touch') return
-    // A button held down (a text selection, a drag elsewhere) or an open menu never reveals the rail.
-    const zone = (e.buttons !== 0 && !dragging) || ui.layerOpen ? null : zoneAt(e.clientX, e.clientY)
+  /** Whether the pointer at (x, y) wants the rail: after the intent delay in the zone, at once in the band. */
+  function evaluate(x: number, y: number, buttons: number): void {
+    // A button held down (a drag on the page, a text selection elsewhere) or an open menu never reveals the rail. A
+    // recheck keeps the buttons of the last move, so a drag that scrolls or turns the book never reveals it either;
+    // after the release the rail comes once the pointer moves again.
+    const zone = (buttons !== 0 && !dragging) || ui.layerOpen ? null : zoneAt(x, y)
     if (zone === 'band' || (zone === 'hot' && shown)) {
       clearTimeout(intentTimer)
       intentTimer = undefined
@@ -391,21 +478,39 @@
     }
     if (zone === 'hot') {
       inHot = true
-      intentTimer ??= setTimeout(() => {
+      // A rest, not time spent in the zone: a pointer still moving through it (to the dock, out of the window) never
+      // reveals the rail. A recheck at the same place keeps the wait going.
+      if (rest && Math.hypot(x - rest.x, y - rest.y) >= REST_SLOP_PX) {
+        clearTimeout(intentTimer)
         intentTimer = undefined
-        if (inHot && !reader.flipping) pointerNear = true
-      }, REVEAL_INTENT_MS)
+      }
+      if (intentTimer === undefined) {
+        rest = { x, y }
+        intentTimer = setTimeout(() => {
+          intentTimer = undefined
+          if (inHot && !reader.flipping) pointerNear = true
+        }, REVEAL_INTENT_MS)
+      }
       return
     }
     inHot = false
+    rest = null
     clearTimeout(intentTimer)
     intentTimer = undefined
     if (pointerNear) pointerNear = false
   }
 
+  function onWindowPointerMove(e: PointerEvent): void {
+    if (e.pointerType === 'touch') return
+    lastPointer = { x: e.clientX, y: e.clientY, buttons: e.buttons }
+    evaluate(e.clientX, e.clientY, e.buttons)
+  }
+
   function onWindowMouseOut(e: MouseEvent): void {
     if (e.relatedTarget !== null) return
+    lastPointer = null
     inHot = false
+    rest = null
     clearTimeout(intentTimer)
     intentTimer = undefined
     pointerNear = false
@@ -418,6 +523,40 @@
       window.removeEventListener('pointermove', onWindowPointerMove)
       window.removeEventListener('mouseout', onWindowMouseOut)
     }
+  })
+
+  // The zone follows the book: a resting pointer is tested again (next frame, once laid out) when the book moves or
+  // resizes under it (a zoom, a turn, a resize, the dock changing, the canvas scrolling). Engines differ on whether
+  // such a change sends a pointer move, so the rail never waits for one.
+  let recheckFrame = 0
+
+  function recheck(): void {
+    if (recheckFrame !== 0) return
+    recheckFrame = requestAnimationFrame(() => {
+      recheckFrame = 0
+      const p = lastPointer
+      if (p) evaluate(p.x, p.y, p.buttons)
+    })
+  }
+
+  $effect(() => {
+    void reader.qfs
+    void reader.visiblePages
+    void reader.spread
+    void reader.scrolls
+    void reader.dock
+    void ui.zen
+    void ui.zenDock
+    void ui.windowSize
+    untrack(recheck)
+  })
+
+  // …and the scroll area's viewport scrolling (zoomed), as the turn zones follow it.
+  $effect(() => {
+    const scroller = layer?.parentElement?.querySelector('[data-scroll-area-viewport]')
+    if (!scroller) return
+    scroller.addEventListener('scroll', recheck, { passive: true })
+    return () => scroller.removeEventListener('scroll', recheck)
   })
 
   // --- turning -------------------------------------------------------------------------------------------------------------
@@ -565,6 +704,7 @@
     clearTimeout(intentTimer)
     clearTimeout(commitTimer)
     clearTimeout(pendingTimer)
+    cancelAnimationFrame(recheckFrame)
     if (floating) ui.popFloating()
     floating = false
     railState.open = false

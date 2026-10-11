@@ -5,8 +5,8 @@
   - **Once.** It is offered until `settings.hintsSeen` contains `"page_turn"`; showing it to the end, "Got it", or
     turning a page while it waits or shows adds that id, so it never comes back.
   - **When.** After the welcome flow (`onboardingDone`), in the Mushaf with no dialog open, 1.2 s after the reader
-    settles (never during boot or a turn). It stays 12 s, steps aside while the page rail is open, and leaves as soon
-    as a page is turned, since that is what it teaches.
+    settles (never during boot or a turn). It stays 12 s (not counting while the page rail is open and it steps aside),
+    and leaves as soon as a page is turned, since that is what it teaches.
   - The keys are keycaps in one left-to-right group, so the arrows read ← → in both UI languages (§11.3). The chip is a
     polite status, read once when it appears.
 -->
@@ -65,8 +65,18 @@
         delayTimer = undefined
         if (done || !eligible) return
         visible = true
-        showTimer = setTimeout(markSeen, SHOW_MS)
+        if (!railState.open) showTimer = setTimeout(markSeen, SHOW_MS)
       }, DELAY_MS)
+    })
+  })
+
+  // The open page rail hides it: its 12 s wait for the rail to go, so it is never marked seen unshown.
+  $effect(() => {
+    const open = railState.open
+    untrack(() => {
+      if (!visible) return
+      clearTimeout(showTimer)
+      showTimer = open ? undefined : setTimeout(markSeen, SHOW_MS)
     })
   })
 

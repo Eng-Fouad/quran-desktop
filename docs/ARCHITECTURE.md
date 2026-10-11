@@ -3955,11 +3955,16 @@ html[data-turn="prev"] { --qd-out: qd-out-left;  --qd-in: qd-in-right; }
   prefetch extended to ±8 pages in the flip direction. Turning never queues more than one pending page.
 - **`FlipHUD`** (WP8f): a chip in the canvas centre, e.g. `الحجر · ص ٢٦٢ · ج ١٤` in Naskh 18 px on `--surface-overlay`,
   shown while flipping or dragging the rail, fading out 600 ms after the last flip (instant under reduced motion).
-- **`PageRail`** (WP8f): a 28 px strip revealed by hovering the bottom 24 px of the canvas (outside the dock) or by `P`.
-  604 steps laid out **right-to-left** (page 1 on the right, book semantics, never mirrored), 30 juz ticks with Arabic-Indic
-  labels on hover, and a live label "surah · page · juz". Dragging only previews (FlipHUD); release navigates with a single
-  turn. A focused rail is `role=slider` (`aria-valuetext` "Page 262, Al-Ḥijr, Juz 14") and takes ←/→ for ±1 page (← = next,
-  book semantics) and Shift for ±10.
+- **`PageRail`** (WP8f): a 28 px strip revealed by `P`, or by the pointer resting 90 ms within 4 px (v1.2, owner
+  request) anywhere under the bottom edge of the pages' frame (the page-number strip and below, across the book's width,
+  down to the canvas bottom) or in the bottom 24 px of the page area; never over the dock, the overlay slot's chips and
+  bars, a toast or anything drawn over the Mushaf (the floating sidebar, its scrim), never while the pointer is still
+  moving through on its way to the dock or out of the window, never with a button held (a drag, §8.13). The zone follows
+  the book through zoom, scroll, turns and resizes; the strip itself still floats above the dock. 604 steps laid out
+  **right-to-left** (page 1 on the right, book semantics, never mirrored), 30 juz ticks labelled in Eastern Arabic
+  numbers on hover, and a live label "surah · page · juz". Dragging only previews (FlipHUD); release navigates with a
+  single turn. A focused rail is `role=slider` (`aria-valuetext` "Page 262, Al-Ḥijr, Juz 14") and takes ←/→ for ±1 page
+  (← = next, book semantics) and Shift for ±10.
 - **`PageTurnZones`** (WP8f): two zones, 56 px wide and full canvas height, in the canvas space outside the paper (narrowed to
   the free space when less, never covering the text block). The **left** zone means next page and the **right** zone previous,
   in physical book order, never mirrored. Each shows a 40 px circular chevron (`--surface-raised`, `shadow-1`) at opacity 0,
@@ -3998,12 +4003,12 @@ html[data-turn="prev"] { --qd-out: qd-out-left;  --qd-in: qd-in-right; }
     are at the bottom, the zen hint and top toasts centred, the turn-zone chevrons at the book's middle (it may cover
     the top of a full-height zone's column, never its chevron).
   - **Look.** Always present while the Mushaf shows, quiet at rest: 40 % with the pointer off the canvas, 60 % over it
-    (as the turn-zone chevrons, §8.11), 100 % hovered, keyboard-focused, or for 0.9 s after any zoom (wheel, pinch,
-    keys, palette, Settings): it is the zoom readout, and the change is announced ("Zoom 120%"). **Yield:** when the
-    text block, a running head, a dog-ear, the ribbon or a margin marker/mark lies within 4 px of it (a zoomed or
-    scrolled book, a dog-ear in the tightest fit), it is hidden and click-through until the pointer comes within 24 px
-    of it, it takes focus or a zoom wakes it; a held press (a drag) never brings it back. Measured in one frame after
-    a resize, scroll, turn or late mark, never while flipping.
+    (as the turn-zone chevrons, §8.11), 100 % hovered, keyboard-focused, or for 0.9 s after any zoom in the reader
+    (wheel, pinch, keys, palette; a change made in Settings is simply there on return): it is the zoom readout, and the
+    change is announced ("Zoom 120%"). **Yield:** when the text block, a running head, a dog-ear, the ribbon or a margin
+    marker/mark lies within 4 px of it (a zoomed or scrolled book, a dog-ear in the tightest fit), it is hidden and
+    click-through until the pointer comes within 24 px of it, it takes focus or a zoom wakes it; a held press (a drag)
+    never brings it back. Measured in one frame after a resize, scroll, turn or late mark, never while flipping.
   - **Zen** (§9.6): hidden until the pointer moves, and again while it rests (`ui.pointerIdle`); it moves down by
     `ZEN_TOP_ZONE_PX`, so reaching for it never reveals the title bar.
   - **Keys and pointer.** `role="toolbar"` (`aria-orientation="vertical"`), one tab stop after the pages, the turn
@@ -4709,7 +4714,7 @@ every row above into the frozen `shortcuts.ts` dictionaries (en + ar, §11.1).
 | drag (zoom > 100 %) | Mushaf page and margins | pan the canvas (§8.13) |
 | click a page-turn zone chevron | Mushaf canvas edges | left zone = next page, right zone = previous (§8.11) |
 | click + / the level / − | Mushaf canvas, top inline-end corner | zoom in / back to the fit / zoom out, around the canvas centre (§8.13) |
-| hover the bottom 24 px of the canvas | Mushaf canvas | reveal the page rail; drag previews, release turns (§8.11) |
+| hover under the pages' frame (the page-number strip and below) or the bottom 24 px of the canvas | Mushaf canvas, not the dock or the overlay slot | reveal the page rail; drag previews, release turns (§8.11) |
 | hover / click / Shift+click / double-click / Mod+click / right-click | ayah words | §8.17 (click also shows the action bar) |
 | click empty paper or canvas | Mushaf | clear the selection |
 | click margin marker | Mushaf | select that ayah; tooltip shows the juz/hizb/sajda name |

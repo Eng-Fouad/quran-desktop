@@ -12,6 +12,7 @@ import {
   fitLines,
   FOOT,
   FR,
+  FRAME_BOTTOM,
   HEAD,
   isOpeningPage,
   LH,
@@ -67,6 +68,10 @@ describe('page constants (§8.2)', () => {
     expect(BLOCK_INNER).toBeCloseTo(1.75, 12)
     expect(BLOCK_INNER + TB_W + BLOCK_OUTER).toBeCloseTo(PW, 12)
     expect(OPENING_TOP_LINES).toBe(3.5)
+    // The frame's bottom edge is where the page-number band starts (the page rail's reveal zone, §8.11).
+    expect(FRAME_BOTTOM).toBeCloseTo(PH - FOOT - M_TB, 12)
+    expect(FRAME_BOTTOM).toBeCloseTo(29.95, 12)
+    expect(FRAME_BOTTOM).toBeCloseTo(BLOCK_TOP + TB_H + FR, 12)
   })
 
   it('page.css mirrors every constant as a --mp-* custom property', () => {

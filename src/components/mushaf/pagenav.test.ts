@@ -1,7 +1,7 @@
 /**
- * Page navigation affordances, pure parts (§8.11, §8.12; WP8f): the rail's book-order geometry, label thinning and
- * keys; the page label shared by the rail and the FlipHUD (on the mock's real index); the turn zones' geometry; the
- * Arabic genitive ordinals and the division starts of the arrival chip.
+ * Page navigation affordances, pure parts (§8.11, §8.12; WP8f): the rail's book-order geometry, label thinning, keys
+ * and reveal zone; the page label shared by the rail and the FlipHUD (on the mock's real index); the turn zones'
+ * geometry; the Arabic genitive ordinals and the division starts of the arrival chip.
  */
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { defaultSettings } from '$lib/contracts/settings'
@@ -12,6 +12,8 @@ import { app, i18n, quran, settings } from '$lib/stores'
 import { LRI, PDI, RLI } from '$lib/stores/i18n.svelte'
 import { arabicOrdinal, divisionStarts, isForwardStep } from './DivisionChip.svelte'
 import {
+  HOT_ZONE_PX,
+  inRevealZone,
   isolatedRange,
   juzLabelled,
   juzLabelStep,
@@ -20,6 +22,7 @@ import {
   pageLabel,
   railFraction,
   railKeyTarget,
+  type RevealGeometry,
 } from './PageRail.svelte'
 import { CHEVRON, SCROLLBAR_CLEARANCE, ZONE_GAP, ZONE_W, zoneGeometry } from './PageTurnZones.svelte'
 
@@ -87,6 +90,67 @@ describe('rail geometry (book order, §8.11)', () => {
     expect(railKeyTarget('PageUp', false, 1, 604, juz)).toBe(1)
     expect(railKeyTarget('a', false, 262, 604, juz)).toBeNull()
     expect(railKeyTarget('Enter', false, 262, 604, juz)).toBeNull()
+  })
+})
+
+describe('rail reveal zone (§8.11)', () => {
+  // A 1000 px page area over an 800 px canvas; the book spans 200–800 with its frame's bottom edge at y = 650.
+  const book = { left: 200, right: 800, frameBottom: 650 }
+  const geo = (b: RevealGeometry['book'] = book): RevealGeometry => ({
+    left: 0,
+    right: 1000,
+    top: 0,
+    bottom: 800,
+    book: b,
+  })
+
+  it('starts at the frame’s bottom edge (the page-number strip) and runs down to the canvas bottom', () => {
+    expect(inRevealZone(500, 649, geo())).toBe(false)
+    expect(inRevealZone(500, 650, geo())).toBe(true)
+    expect(inRevealZone(500, 799, geo())).toBe(true)
+    expect(inRevealZone(500, 800, geo())).toBe(false)
+    expect(inRevealZone(500, 300, geo())).toBe(false)
+  })
+
+  it('spans the book, not the gutters beside it, while the bottom band spans the whole page area', () => {
+    expect(inRevealZone(200, 700, geo())).toBe(true)
+    expect(inRevealZone(800, 700, geo())).toBe(true)
+    expect(inRevealZone(100, 700, geo())).toBe(false)
+    expect(inRevealZone(900, 700, geo())).toBe(false)
+    expect(HOT_ZONE_PX).toBe(24)
+    expect(inRevealZone(100, 780, geo())).toBe(true)
+    expect(inRevealZone(100, 776, geo())).toBe(true)
+    expect(inRevealZone(100, 775, geo())).toBe(false)
+    expect(inRevealZone(0, 790, geo())).toBe(true)
+    expect(inRevealZone(1000, 790, geo())).toBe(true)
+  })
+
+  it('stays inside the page area (never over the side card column) and the canvas', () => {
+    expect(inRevealZone(1100, 790, geo())).toBe(false)
+    expect(inRevealZone(-1, 790, geo())).toBe(false)
+    // A book wider than the page area (zoomed) is clipped to it.
+    const wide = geo({ left: -400, right: 1400, frameBottom: 650 })
+    expect(inRevealZone(10, 700, wide)).toBe(true)
+    expect(inRevealZone(1050, 700, wide)).toBe(false)
+    expect(inRevealZone(500, -10, geo({ left: 200, right: 800, frameBottom: -50 }))).toBe(false)
+  })
+
+  it('leaves only the bottom band with no book laid out or its frame below the canvas (zoomed)', () => {
+    expect(inRevealZone(500, 700, geo(null))).toBe(false)
+    expect(inRevealZone(500, 776, geo(null))).toBe(true)
+    const below = geo({ left: 200, right: 800, frameBottom: 900 })
+    expect(inRevealZone(500, 700, below)).toBe(false)
+    expect(inRevealZone(500, 790, below)).toBe(true)
+    const unknown = geo({ left: 200, right: 800, frameBottom: Number.NaN })
+    expect(inRevealZone(500, 700, unknown)).toBe(false)
+    expect(inRevealZone(500, 790, unknown)).toBe(true)
+  })
+
+  it('covers everything under a book zoomed out, across its width', () => {
+    const small = geo({ left: 350, right: 650, frameBottom: 400 })
+    expect(inRevealZone(500, 400, small)).toBe(true)
+    expect(inRevealZone(500, 600, small)).toBe(true)
+    expect(inRevealZone(300, 600, small)).toBe(false)
   })
 })
 
@@ -217,7 +281,7 @@ describe('the page label (§8.11), on the mock index', () => {
     expect(isolatedRange(281, 282)).toBe(`${LRI}281–282${PDI}`)
   })
 
-  it('follows the Arabic UI: Arabic names and Arabic-Indic digits (الحجر · ص ٢٦٢ · ج ١٤)', async () => {
+  it('follows the Arabic UI: Arabic names and Eastern Arabic numbers (الحجر · ص ٢٦٢ · ج ١٤)', async () => {
     await settings.update({ uiLanguage: 'ar' })
     expect(pageLabel([262])?.text).toBe('الحجر · ص ٢٦٢ · ج ١٤')
     expect(pageLabel([262])?.valueText).toBe('الصفحة ٢٦٢، الحجر، الجزء ١٤')

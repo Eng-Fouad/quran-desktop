@@ -14,6 +14,7 @@ import { bootApp, resetApp, settle } from '../shell/testing/boot'
 import { idleSnapshot } from '$lib/ipc/mock/state'
 import { player, quran, reader, settings, ui } from '$lib/stores'
 import { LRI, PDI } from '$lib/stores/i18n.svelte'
+import { railState } from './PageRail.svelte'
 
 const $ = <T extends Element = HTMLElement>(selector: string) => document.querySelector<T>(selector)
 const rect = (selector: string) => $(selector)?.getBoundingClientRect() ?? new DOMRect()
@@ -337,6 +338,26 @@ describe('DivisionChip (§8.12)', () => {
     await until(() => reader.visiblePages.includes(291), 2_000, 'the turn')
     await settle(300)
     expect($(DIVISION)).toBeNull()
+  })
+
+  it('waits while the page rail is open: greeted once it goes, the page still shown', async () => {
+    await boot()
+    await userEvent.hover(document.querySelector('.titlebar, header') ?? document.body)
+    const juz17 = quran.pageOfAyah('v2', quran.juzRange(17).from)
+    await goTo(juz17 - 2)
+    await userEvent.keyboard('p')
+    await until(() => railState.open, 2_000, 'the rail')
+    reader.next()
+    await until(() => reader.visiblePages.includes(juz17) && !reader.turning, 2_000, 'the turn')
+    await settle(1_200)
+    // Hidden by the rail: neither shown nor announced, nor spent.
+    expect($(DIVISION)).toBeNull()
+    expect(ui.announcement).not.toBe('Beginning of Juz 17')
+    await userEvent.keyboard('{Escape}')
+    await until(() => !railState.open, 2_000, 'the rail gone')
+    await until(() => $(DIVISION) !== null, 2_000, 'the chip')
+    expect($(`${DIVISION} .short`)?.textContent).toBe('Juz 17')
+    await until(() => ui.announcement === 'Beginning of Juz 17', 2_000, 'the announcement')
   })
 
   it('follows the recitation into a new juz, across the page turn it causes', async () => {
