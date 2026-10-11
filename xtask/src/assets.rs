@@ -6,7 +6,13 @@
 //!    modification, so no woff2 conversion or subsetting) to `public/fonts/KFGQPC-Hafs-V30.ttf`, and the EULA, read
 //!    from the font's own name table (IDs 0 and 13), to `public/fonts/KFGQPC-Hafs-V30.LICENSE.txt`;
 //! 3. pins the font's sha256 in `xtask/assets.lock` on first use (trust on first use); later runs MUST match unless
-//!    `--force` is given, and a mismatch writes nothing.
+//!    `--force` is given, and a mismatch writes nothing;
+//! 4. when the download fails (no connection, a timeout, an HTTP error, a body over the size cap), takes the font from
+//!    `xtask/assets/KFGQPC-Hafs-V30.ttf`, the unmodified pinned file committed to the repository (LEAD 24: GitHub's
+//!    runners cannot connect to fonts.qurancomplex.gov.sa), once its size and sha256 match the pin. Only with a pin and
+//!    without `--force`: the committed copy never pins or re-pins. A downloaded archive or font of the wrong size or
+//!    hash never falls back: that is an upstream change to review. A run that pins or re-pins rewrites the committed
+//!    copy, so it always matches the lock.
 //!
 //! A run whose local font already matches the lock downloads nothing: CI restores `public/fonts/` from a cache keyed by
 //! the lock's hash, and fonts.qurancomplex.gov.sa is not hit on every run. The licence text is still regenerated from
@@ -42,6 +48,9 @@ pub struct ArchiveFont<'a> {
     pub file: &'a str,
     /// Licence text output, `/`-separated and relative to the repository root.
     pub licence_file: &'a str,
+    /// The pinned font committed to the repository (`/`-separated, relative to the root), used when the download
+    /// fails.
+    pub committed: Option<&'a str>,
 }
 
 /// The bundled Mushaf-text font (BRIEF §2, D23).
@@ -53,6 +62,7 @@ pub const KFGQPC_HAFS_V30: ArchiveFont<'static> = ArchiveFont {
     bytes: 301_356,
     file: "public/fonts/KFGQPC-Hafs-V30.ttf",
     licence_file: "public/fonts/KFGQPC-Hafs-V30.LICENSE.txt",
+    committed: Some("xtask/assets/KFGQPC-Hafs-V30.ttf"),
 };
 
 /// The sha256 pins, relative to the repository root.
@@ -84,6 +94,10 @@ pub fn run(args: &FetchAssetsArgs) -> anyhow::Result<()> {
         Pin::Repinned { previous } => {
             format!("downloaded, re-pinned in {LOCK_FILE} with --force; was {previous}")
         }
+        Pin::Committed { download_error } => format!(
+            "download failed ({download_error}); copied from {}, matches {LOCK_FILE}",
+            font.committed.unwrap_or("the committed copy")
+        ),
     };
     println!(
         "  ok   {}  {} B  sha256 {}",
@@ -97,6 +111,11 @@ pub fn run(args: &FetchAssetsArgs) -> anyhow::Result<()> {
         font.licence_file,
         state(report.licence_written)
     );
+    if let (true, Some(committed)) = (report.committed_written, font.committed) {
+        println!(
+            "  ok   {committed} updated: commit it together with the lock and the licence text"
+        );
+    }
     if report.lock_written {
         println!("  ok   {LOCK_FILE} updated: commit it together with the licence text");
     }
@@ -114,6 +133,8 @@ pub enum Pin {
     Pinned,
     /// `--force` accepted a different file; `previous` is the sha256 it replaced.
     Repinned { previous: String },
+    /// The download failed (`download_error`); the committed copy matches the lock and was used.
+    Committed { download_error: String },
 }
 
 /// What [`fetch_archive_font`] did.
@@ -129,6 +150,8 @@ pub struct FontReport {
     pub licence_written: bool,
     /// `assets.lock` was (re)written.
     pub lock_written: bool,
+    /// The committed copy was (re)written (a run that pinned or re-pinned).
+    pub committed_written: bool,
 }
 
 /// Brings `root/{font.file}` and `root/{font.licence_file}` in line with upstream and the pin in `lock_path`
@@ -163,44 +186,40 @@ pub fn fetch_archive_font(
             font_written: false,
             licence_written,
             lock_written: false,
+            committed_written: false,
         });
     }
 
-    let archive = runtime
+    let download = runtime
         .block_on(net::get(client, font.url, MAX_ARCHIVE_BYTES, retry))
-        .with_context(|| format!("download {}", font.url))?;
-    ensure!(
-        byte_len(&archive) == font.archive_bytes,
-        "{}: the archive is {} B, expected exactly {} B (ARCHITECTURE.md §4.7). Upstream published a new release: \
-         review it before changing the expected sizes",
-        font.url,
-        group(byte_len(&archive)),
-        group(font.archive_bytes)
-    );
-    let ttf = extract_entry(&archive, font.entry, font.bytes)
-        .with_context(|| format!("extract {:?} from {}", font.entry, font.url))?;
-    ensure!(
-        byte_len(&ttf) == font.bytes,
-        "{:?} is {} B, expected exactly {} B (ARCHITECTURE.md §4.7)",
-        font.entry,
-        group(byte_len(&ttf)),
-        group(font.bytes)
-    );
-    let sha256 = sha256_hex(&ttf);
-    let pin = match pinned {
-        None => Pin::Pinned,
-        Some(entry) if entry.sha256 == sha256 => Pin::Matched,
-        Some(entry) if force => Pin::Repinned {
-            previous: entry.sha256,
-        },
-        Some(entry) => bail!(
-            "{} has sha256 {sha256}, but {} pins {}. The upstream font changed: review it, then run \
-             `cargo xtask fetch-assets --force` to pin the new file. Nothing was written",
-            font.entry,
-            lock_path.display(),
-            entry.sha256
-        ),
+        .with_context(|| format!("download {}", font.url));
+    let (ttf, pin) = match download {
+        Ok(archive) => {
+            let ttf = downloaded_font(font, &archive)?;
+            let sha256 = sha256_hex(&ttf);
+            let pin = match pinned {
+                None => Pin::Pinned,
+                Some(entry) if entry.sha256 == sha256 => Pin::Matched,
+                Some(entry) if force => Pin::Repinned {
+                    previous: entry.sha256,
+                },
+                Some(entry) => bail!(
+                    "{} has sha256 {sha256}, but {} pins {}. The upstream font changed: review it, then run \
+                     `cargo xtask fetch-assets --force` to pin the new file. Nothing was written",
+                    font.entry,
+                    lock_path.display(),
+                    entry.sha256
+                ),
+            };
+            (ttf, pin)
+        }
+        Err(error) => {
+            let download_error = format!("{error:#}");
+            let ttf = committed_copy(font, root, pinned.as_ref(), force, error)?;
+            (ttf, Pin::Committed { download_error })
+        }
     };
+    let sha256 = sha256_hex(&ttf);
     // The EULA must be readable before the font is shipped.
     let licence = licence_text(font, &ttf)?;
 
@@ -213,6 +232,13 @@ pub fn fetch_archive_font(
         sha256: sha256.clone(),
     });
     let lock_written = write_if_changed(lock_path, lock.render()?.as_bytes())?;
+    // A new pin is a new committed copy: the fallback must always match the lock.
+    let committed_written = match (&pin, font.committed) {
+        (Pin::Pinned | Pin::Repinned { .. }, Some(committed)) => {
+            write_if_changed(&rel_path(root, committed), &ttf)?
+        }
+        _ => false,
+    };
     Ok(FontReport {
         pin,
         sha256,
@@ -220,7 +246,76 @@ pub fn fetch_archive_font(
         font_written,
         licence_written,
         lock_written,
+        committed_written,
     })
+}
+
+/// The font in a downloaded archive, after the exact-size checks that tell an upstream release apart.
+fn downloaded_font(font: &ArchiveFont<'_>, archive: &[u8]) -> anyhow::Result<Vec<u8>> {
+    ensure!(
+        byte_len(archive) == font.archive_bytes,
+        "{}: the archive is {} B, expected exactly {} B (ARCHITECTURE.md §4.7). Upstream published a new release: \
+         review it before changing the expected sizes",
+        font.url,
+        group(byte_len(archive)),
+        group(font.archive_bytes)
+    );
+    let ttf = extract_entry(archive, font.entry, font.bytes)
+        .with_context(|| format!("extract {:?} from {}", font.entry, font.url))?;
+    ensure!(
+        byte_len(&ttf) == font.bytes,
+        "{:?} is {} B, expected exactly {} B (ARCHITECTURE.md §4.7)",
+        font.entry,
+        group(byte_len(&ttf)),
+        group(font.bytes)
+    );
+    Ok(ttf)
+}
+
+/// The committed copy of `font`, for a run whose download failed with `download`: only with a pin and without
+/// `--force` (the copy never pins or re-pins), and only when it is exactly the pinned file. Otherwise the download
+/// error, with the reason the copy was not used.
+fn committed_copy(
+    font: &ArchiveFont<'_>,
+    root: &Path,
+    pinned: Option<&LockedAsset>,
+    force: bool,
+    download: anyhow::Error,
+) -> anyhow::Result<Vec<u8>> {
+    let Some(committed) = font.committed else {
+        return Err(download);
+    };
+    if force {
+        return Err(download.context(format!(
+            "--force pins from upstream only, never from the committed copy {committed}"
+        )));
+    }
+    let Some(entry) = pinned else {
+        return Err(download.context(format!(
+            "nothing is pinned yet, so the committed copy {committed} is not used"
+        )));
+    };
+    let bytes = match read_optional(&rel_path(root, committed)) {
+        Ok(Some(bytes)) => bytes,
+        Ok(None) => {
+            return Err(download.context(format!("the committed copy {committed} is missing")));
+        }
+        Err(read) => {
+            return Err(download.context(format!(
+                "the committed copy {committed} cannot be read ({read:#})"
+            )));
+        }
+    };
+    let sha256 = sha256_hex(&bytes);
+    if byte_len(&bytes) != font.bytes || sha256 != entry.sha256 {
+        return Err(download.context(format!(
+            "the committed copy {committed} ({} B, sha256 {sha256}) is not the pinned file ({} B, sha256 {})",
+            group(byte_len(&bytes)),
+            group(font.bytes),
+            entry.sha256
+        )));
+    }
+    Ok(bytes)
 }
 
 /// Reads the archive member whose file name (in any directory) is `name`; exactly one such member must exist.

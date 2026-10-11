@@ -64,7 +64,7 @@ Platform prerequisites (the Tauri v2 set):
 ```sh
 pnpm i --frozen-lockfile      # node modules (the lockfile is authoritative; see §6)
 pnpm check:tooling            # every command named in the spec resolves (node, pnpm, cargo, git, scripts, crates)
-pnpm assets                   # cargo xtask fetch-assets: KFGQPC Hafs V30 TTF → public/fonts/ (gitignored, D23)
+pnpm assets                   # cargo xtask fetch-assets: KFGQPC Hafs V30 TTF → public/fonts/ (gitignored, D23; offline fallback LEAD 24)
 pnpm dev:web                  # the UI in a browser against the IPC mock: http://localhost:1420
 ```
 
@@ -140,7 +140,7 @@ test-name filter; give several to libtest after `--`: `cargo test -p quran-core 
 | `build-core --source qdc\|qul [--out …] [--cache data/cache] [--offline] [--jobs 4]` | Build core.db, run every gate, rename on success. |
 | `verify-core [--db …] [--report target/verify-core.json]` | The 18 gates on a built core.db; the report is JSON. |
 | `export-fixtures [--only mushaf,search,content,packs] [--db …] [--content-db …] [--packs …]` | Browser-mock fixtures. |
-| `fetch-assets [--force]` | The KFGQPC Hafs TTF, checked against `xtask/assets.lock`; regenerates its licence text. |
+| `fetch-assets [--force]` | The KFGQPC Hafs TTF, checked against `xtask/assets.lock` (downloaded; when that fails, the committed `xtask/assets/` copy); regenerates its licence text. |
 | `fetch-dev-packs [--out data/dev-packs] [--force] [--all-pages]` | QCF fonts of the fixture pages (or all 604) and the decor fonts. |
 | `licenses` | Regenerate `src/lib/about/thirdparty.json`; fails unless every shipped package carries its licence text (below). |
 | `catalog-check [--online]` | Validate `src-tauri/resources/catalog.json` (with `--online`, HEAD every URL). |
@@ -390,7 +390,7 @@ A person publishes the draft after [`RELEASE_CHECKLIST.md`](RELEASE_CHECKLIST.md
 
 | Symptom | Cause and fix |
 |---|---|
-| Quran text in a fallback font; console warns "Failed to decode downloaded font … KFGQPC-Hafs-V30.ttf" (Vite answers the missing file with `index.html`) and "qd-hafs did not load"; `vite build` notes that `/fonts/KFGQPC-Hafs-V30.ttf` didn't resolve | The bundled font is fetched, not committed (D23): run `pnpm assets`. |
+| Quran text in a fallback font; console warns "Failed to decode downloaded font … KFGQPC-Hafs-V30.ttf" (Vite answers the missing file with `index.html`) and "qd-hafs did not load"; `vite build` notes that `/fonts/KFGQPC-Hafs-V30.ttf` didn't resolve | `public/fonts/` is filled by `pnpm assets` (a download, or the committed pinned copy when fonts.qurancomplex.gov.sa is unreachable; LEAD 24): run it. |
 | A Rust build of `src-tauri` fails because the `frontendDist` path `../dist` does not exist | Only a `custom-protocol` build reads `dist/`, and `pnpm tauri build` runs `pnpm build` first. If you invoke cargo with `--features custom-protocol` yourself, run `pnpm build` once. |
 | App shows "Core data missing (dev build)"; `core.db` is 0 bytes | The build.rs placeholder. Run `pnpm core:qdc` (or download the CI artifact while private). |
 | `cargo: command not found` in pnpm scripts (Git Bash) | `%USERPROFILE%\.cargo\bin` is not on PATH (§1). |

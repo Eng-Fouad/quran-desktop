@@ -229,7 +229,7 @@ Then:
 
 ```sh
 pnpm i --frozen-lockfile
-pnpm assets                              # the bundled KFGQPC Hafs font (fetched and verified, not committed)
+pnpm assets                              # the bundled KFGQPC Hafs font (downloaded and verified; offline, the committed copy)
 pnpm dev:web                             # the interface in a browser against the IPC mock: http://localhost:1420
 pnpm core:qdc                            # a development core.db from the Quran.com API (stays on your machine)
 pnpm tauri build --debug --no-bundle     # the real app (or `pnpm app:dev` for live reload)
@@ -297,4 +297,5 @@ warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Gen
 
 Third-party components keep their own licences: the open-source packages are listed with their licence texts in the
 app (**About ▸ Open-source licences**), the KFGQPC Hafs font ships unmodified under the King Fahd Complex's end-user
-licence, and the data and audio sources above are used under their own terms.
+licence (its copy in `xtask/assets/` too: it is not covered by the GPL), and the data and audio sources above are used
+under their own terms.

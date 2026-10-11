@@ -99,3 +99,14 @@ summarises them); item 17's data rulings are also corrected in place in ARCHITEC
     calls `app_quit`; Rust exits anyway after 1.5 s (`QUIT_GRACE`). Before the first `window_ready`, for a second
     request, and from the WebView2 failure dialog the app exits at once (`window::exit_now`). `app_quit` itself is
     unchanged. macOS Cmd+Q (the default app menu's Quit) still ends the app directly; see INTEGRATION.md.
+
+## After the macOS pass (2026-10-11)
+24. **The bundled font is committed, as a fallback** (owner decision; changes D23, answers ARCHITECTURE §15.3 item 5):
+    GitHub's runners time out connecting to fonts.qurancomplex.gov.sa, so CI's font cache (keyed by `xtask/assets.lock`)
+    was never filled and every job that needs the font failed. The unmodified KFGQPC Hafs V30 TTF (the item 7 pin) is
+    committed at `xtask/assets/KFGQPC-Hafs-V30.ttf`, beside a note that it is under the KFGQPC EULA, not the GPL.
+    `cargo xtask fetch-assets` still downloads first; when the download fails it takes the committed copy, after
+    checking its size and sha256 against the pin, and writes the same `public/fonts/` font and licence text (§4.7 step
+    5). Never on first use or with `--force`, and never for a downloaded file of the wrong size or hash. A pin or re-pin
+    rewrites the committed copy; a test checks that it matches the lock. CI still restores its cache first and saves
+    it after the first run that fills `public/fonts/`.

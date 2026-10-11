@@ -284,6 +284,15 @@ fn spec<'a>(url: &'a str, archive: &[u8], font: &[u8]) -> ArchiveFont<'a> {
         bytes: u64::try_from(font.len()).unwrap(),
         file: "public/fonts/Test-Sans.ttf",
         licence_file: "public/fonts/Test-Sans.LICENSE.txt",
+        committed: None,
+    }
+}
+
+/// [`spec`] with a committed copy to fall back to.
+fn committed_spec<'a>(url: &'a str, archive: &[u8], font: &[u8]) -> ArchiveFont<'a> {
+    ArchiveFont {
+        committed: Some("xtask/assets/Test-Sans.ttf"),
+        ..spec(url, archive, font)
     }
 }
 
@@ -503,6 +512,179 @@ fn an_upstream_change_fails_without_force_and_is_repinned_with_force() -> anyhow
 }
 
 #[test]
+fn a_failed_download_falls_back_to_the_committed_copy_of_the_pinned_font() -> anyhow::Result<()> {
+    let env = Env::new();
+    let font = licensed_ttf("Version 1.0");
+    let archive = zip(&[("Test Sans.ttf", &font)]);
+    env.server.serve("/font.zip", Reply::ok(archive.clone()));
+    let url = env.server.url("/font.zip");
+    let spec = committed_spec(&url, &archive, &font);
+    let committed = spec.committed.context("a committed copy")?;
+
+    // Pinning writes the committed copy too, so it always matches the lock.
+    let first = env.fetch(&spec, false)?;
+    assert_eq!(first.pin, Pin::Pinned);
+    assert!(first.committed_written);
+    assert_eq!(env.read(committed), font);
+    let lock_before = std::fs::read(env.lock_path())?;
+    let licence_before = env.read(spec.licence_file);
+
+    // The server is unreachable for the fetched font: the committed copy fills in, and the outputs are the same.
+    std::fs::remove_file(assets::rel_path(env.root(), spec.file))?;
+    std::fs::remove_file(assets::rel_path(env.root(), spec.licence_file))?;
+    env.server.serve("/font.zip", Reply::status(503));
+    let report = env.fetch(&spec, false)?;
+    assert!(
+        matches!(&report.pin, Pin::Committed { download_error } if download_error.contains("503")),
+        "{:?}",
+        report.pin
+    );
+    assert!(report.font_written && report.licence_written);
+    assert!(!report.lock_written && !report.committed_written);
+    assert_eq!(report.sha256, assets::sha256_hex(&font));
+    assert_eq!(env.read(spec.file), font);
+    assert_eq!(env.read(spec.licence_file), licence_before);
+    assert_eq!(std::fs::read(env.lock_path())?, lock_before);
+    assert_eq!(
+        env.server.hits("/font.zip"),
+        1 + 3,
+        "the download is retried before the fallback"
+    );
+
+    // Without a committed copy the download error stands.
+    std::fs::remove_file(assets::rel_path(env.root(), spec.file))?;
+    let without = ArchiveFont {
+        committed: None,
+        ..spec
+    };
+    let message = format!("{:#}", env.fetch(&without, false).unwrap_err());
+    assert!(message.contains("503"), "{message}");
+    assert!(!assets::rel_path(env.root(), spec.file).exists());
+    Ok(())
+}
+
+#[test]
+fn the_committed_copy_is_used_only_as_the_pinned_file_never_to_pin() -> anyhow::Result<()> {
+    let env = Env::new();
+    let v1 = licensed_ttf("Version 1.0");
+    let v2 = licensed_ttf("Version 2.0"); // same size, different bytes
+    let archive = zip(&[("Test Sans.ttf", &v1)]);
+    let url = env.server.url("/font.zip");
+    let spec = committed_spec(&url, &archive, &v1);
+    let committed = spec.committed.context("a committed copy")?;
+    let committed_path = assets::rel_path(env.root(), committed);
+    let fails = |force: bool| format!("{:#}", env.fetch(&spec, force).unwrap_err());
+
+    // Nothing pinned yet: a committed copy is never trusted on first use.
+    std::fs::create_dir_all(committed_path.parent().context("a parent")?)?;
+    std::fs::write(&committed_path, &v1)?;
+    env.server.serve("/font.zip", Reply::status(404));
+    let message = fails(false);
+    assert!(
+        message.contains("nothing is pinned yet") && message.contains("404"),
+        "{message}"
+    );
+    assert!(!env.lock_path().exists());
+    assert!(!assets::rel_path(env.root(), spec.file).exists());
+
+    // Pin v1, then lose the fetched copy and the server.
+    env.server.serve("/font.zip", Reply::ok(archive.clone()));
+    env.fetch(&spec, false)?;
+    std::fs::remove_file(assets::rel_path(env.root(), spec.file))?;
+    env.server.serve("/font.zip", Reply::status(500));
+
+    // --force pins from upstream only.
+    let message = fails(true);
+    assert!(message.contains("--force"), "{message}");
+    // A committed copy that is not the pinned file is refused.
+    std::fs::write(&committed_path, &v2)?;
+    let message = fails(false);
+    assert!(
+        message.contains("is not the pinned file") && message.contains("500"),
+        "{message}"
+    );
+    // A missing one too.
+    std::fs::remove_file(&committed_path)?;
+    let message = fails(false);
+    assert!(message.contains("is missing"), "{message}");
+    assert!(
+        !assets::rel_path(env.root(), spec.file).exists(),
+        "a failed run writes nothing"
+    );
+
+    // An upstream change is reported, never hidden by the committed copy.
+    std::fs::write(&committed_path, &v1)?;
+    let mut bigger = archive.clone();
+    bigger.push(0);
+    env.server.serve("/font.zip", Reply::ok(bigger));
+    let message = fails(false);
+    assert!(message.contains("expected exactly"), "{message}");
+    assert!(!assets::rel_path(env.root(), spec.file).exists());
+    Ok(())
+}
+
+#[test]
+fn an_upstream_change_never_falls_back_and_a_repin_rewrites_the_committed_copy()
+-> anyhow::Result<()> {
+    let env = Env::new();
+    let v1 = licensed_ttf("Version 1.0");
+    let v2 = licensed_ttf("Version 2.0"); // same size, different bytes
+    let archive_v1 = zip(&[("Test Sans.ttf", &v1)]);
+    let archive_v2 = zip(&[("Test Sans.ttf", &v2)]);
+    assert_eq!(archive_v1.len(), archive_v2.len());
+    let url = env.server.url("/font.zip");
+    let spec = committed_spec(&url, &archive_v1, &v1);
+    let committed = spec.committed.context("a committed copy")?;
+    env.server.serve("/font.zip", Reply::ok(archive_v1));
+    env.fetch(&spec, false)?;
+    std::fs::remove_file(assets::rel_path(env.root(), spec.file))?;
+    let lock_before = std::fs::read(env.lock_path())?;
+
+    // A same-size font with another hash is reported, never replaced by the committed copy.
+    env.server.serve("/font.zip", Reply::ok(archive_v2.clone()));
+    let message = format!("{:#}", env.fetch(&spec, false).unwrap_err());
+    assert!(
+        message.contains("--force") && message.contains(&assets::sha256_hex(&v1)),
+        "{message}"
+    );
+    // So is a font of another size in an archive of the expected size.
+    let mut short = spec;
+    short.bytes -= 1;
+    let message = format!("{:#}", env.fetch(&short, false).unwrap_err());
+    assert!(message.contains("expected exactly"), "{message}");
+    assert!(
+        !assets::rel_path(env.root(), spec.file).exists(),
+        "nothing written"
+    );
+    assert_eq!(std::fs::read(env.lock_path())?, lock_before);
+    assert_eq!(env.read(committed), v1);
+
+    // --force re-pins from upstream and rewrites the committed copy with it.
+    let report = env.fetch(&spec, true)?;
+    assert_eq!(
+        report.pin,
+        Pin::Repinned {
+            previous: assets::sha256_hex(&v1)
+        }
+    );
+    assert!(report.committed_written);
+    assert_eq!(env.read(committed), v2);
+
+    // The rewritten copy is the one a later failed download falls back to.
+    std::fs::remove_file(assets::rel_path(env.root(), spec.file))?;
+    env.server.serve("/font.zip", Reply::status(503));
+    let report = env.fetch(&spec, false)?;
+    assert!(
+        matches!(report.pin, Pin::Committed { .. }),
+        "{:?}",
+        report.pin
+    );
+    assert_eq!(report.sha256, assets::sha256_hex(&v2));
+    assert_eq!(env.read(spec.file), v2);
+    Ok(())
+}
+
+#[test]
 fn archive_and_font_sizes_are_exact() -> anyhow::Result<()> {
     let env = Env::new();
     let font = licensed_ttf("Version 1.0");
@@ -618,6 +800,31 @@ fn the_real_font_produces_the_committed_licence_text() -> anyhow::Result<()> {
     assert_eq!(committed, assets::licence_text(&font, &ttf)?);
     assert!(committed.contains("ELECTRONIC END-USER LICENSE AGREEMENT"));
     assert!(committed.contains("cannot be Sold, Modified, Altered"));
+    Ok(())
+}
+
+#[test]
+fn the_committed_font_is_the_pinned_file() -> anyhow::Result<()> {
+    // The fallback of `fetch-assets` (LEAD 24): committed, so this runs everywhere.
+    let root = cli::workspace_root();
+    let font = assets::KFGQPC_HAFS_V30;
+    let committed = font
+        .committed
+        .context("KFGQPC Hafs V30 has a committed copy")?;
+    let ttf = std::fs::read(assets::rel_path(&root, committed))
+        .with_context(|| format!("read {committed}"))?;
+    let lock = AssetsLock::read(&assets::rel_path(&root, assets::LOCK_FILE))?;
+    let pin = lock
+        .get(font.file)
+        .context("the font is pinned in xtask/assets.lock")?;
+    assert_eq!(assets::byte_len(&ttf), pin.bytes);
+    assert_eq!(
+        assets::sha256_hex(&ttf),
+        pin.sha256,
+        "{committed} must be the pinned file"
+    );
+    let licence = std::fs::read_to_string(assets::rel_path(&root, font.licence_file))?;
+    assert_eq!(licence, assets::licence_text(&font, &ttf)?);
     Ok(())
 }
 

@@ -36,6 +36,7 @@ is the lead's fold-in of every accepted deviation (`docs/deviations/WP*.md`), ev
 | LEAD 21 | No kashida (tatweel) justification of the Unicode text; the hafs style is fitted per spread instead (§10.1 below; ARCHITECTURE §8.4). |
 | LEAD 22 | Release build: `opt-level = "z"` with decode, resampling and WSOLA at 3; tauri without `dynamic-acl`; rustls stays on aws-lc-rs; the setup and uninstall executables carry the app icon; the MSI upgrade code is pinned (NSIS is the only Windows release asset). |
 | LEAD 23 | Contract: event `quit-requested`. A user's quit hides the window and lets the page save its debounced writes before `app_quit` (§8 below). |
+| LEAD 24 | The unmodified KFGQPC Hafs V30 TTF is committed at `xtask/assets/KFGQPC-Hafs-V30.ttf`; `fetch-assets` falls back to it, checked against the same pin, when the download fails (GitHub's runners cannot reach fonts.qurancomplex.gov.sa). Changes D23; answers ARCHITECTURE §15.3 item 5. |
 
 ## 1. Process, tooling and acceptance (§0.2, §13.1–13.2, §14)
 

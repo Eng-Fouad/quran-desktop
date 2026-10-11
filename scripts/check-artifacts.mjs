@@ -21,7 +21,8 @@
 //   dev-packs      anything under data/dev-packs/ (QCF fonts may not be redistributed as an asset package, §4.8)
 //   bundle         an installer or application bundle (.msi, .dmg, .deb, .AppImage, .app/, target/**/bundle/, …)
 //   executable     a PE, ELF or Mach-O binary (an application build or an installer)
-//   font           a font binary (QCF page and decor fonts; the KFGQPC TTF is fetched, never mirrored: D23)
+//   font           a font binary (QCF page and decor fonts; the KFGQPC TTF is never a CI artifact: it ships inside the
+//                  installer and, unmodified, as the repository's xtask/assets/ copy, LEAD 24)
 //   uninspectable  an unsupported, encrypted, corrupt, too deeply nested or oversized archive, or an unreadable file
 //
 // --private applies the private-repository rules of §13.3. While the repository and its Actions are private, CI may

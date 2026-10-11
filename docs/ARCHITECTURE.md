@@ -72,7 +72,7 @@ calibrate against screenshots (§12.6), and record in the single file named for 
 | D20 | QF-sourced runtime content (QDC timings, Quran.com tafsir, WBW) goes in **`content.db`** with `fetched_at` and a per-row **`pinned`** flag. Rows that back an installed pack or a pinned (explicitly downloaded) audio file are `pinned = 1` and survive "Clear cache"; stream-only rows and the `kv` table are disposable. Licence-clean packs (QuranEnc) go in versioned pack DBs. | Keeps the QF 7-day revalidation rule mechanical (§2.5.7) without letting "Clear cache" silently break installed packs or offline playback of pinned audio (the previous "disposable cache" design did). One DB with a pinned flag instead of two DBs avoids migrating rows when a surah is pinned. |
 | D21 | Audio files live in `packs/audio/` (data dir), not the OS cache dir. Streamed files are LRU-evictable (`pinned = 0`). Explicit downloads are pinned. | macOS may purge `~/Library/Caches`, and explicit downloads must survive. |
 | D22 | `tauri-plugin-os` (BRIEF §2, already in the scaffold) is registered and used **from Rust only**: `AppInfo.os_version` and the first-run UI-language guess come from `tauri_plugin_os::version()` / `tauri_plugin_os::locale()` in `app_bootstrap`/setup. The frontend never calls the plugin (platform comes from `app_bootstrap`), so no `os:` permission is granted. | Keeps BRIEF's plugin list; gives `os_version` and the locale a defined source without extra crates. |
-| D23 | The KFGQPC Hafs V30 TTF is fetched by `cargo xtask fetch-assets` (size-checked, sha-locked) and gitignored. It is still bundled in installers. | The EULA allows unmodified redistribution, but the repo shouldn't mirror third-party binaries. Open question 5 in §15.3. |
+| D23 | The KFGQPC Hafs V30 TTF is fetched by `cargo xtask fetch-assets` (size-checked, sha-locked) into `public/fonts/KFGQPC-Hafs-V30.ttf` (gitignored; its licence text beside it is committed). It is still bundled in installers. **Changed by LEAD 24:** the unmodified pinned TTF is also committed at `xtask/assets/KFGQPC-Hafs-V30.ttf`, and fetch-assets falls back to it when the download fails (§4.7). | The EULA allows unmodified redistribution. GitHub's runners cannot connect to fonts.qurancomplex.gov.sa, so CI needs a copy it can reach. Open question 5 in §15.3 is answered. |
 | D24 | Debug builds honour `QD_TEST=1` (exposes `window.__QD_TEST__`, sets `AppInfo.testMode`), `QD_DATA_DIR` (overrides the data root), `QD_CORE_DB` (core.db path; default `$CARGO_MANIFEST_DIR/resources/core.db`) and `QD_AUDIO_SINK=null\|wav:<path>` (null or WAV-file output plus a marker/tick log). Release builds compile all of them out (`#[cfg(debug_assertions)]`). The scaffold's `QURAN_DESKTOP_QA`/`QURAN_DESKTOP_DATA_DIR` names are renamed to these in `scripts/qa/*` (WP0D). | Deterministic CDP screenshot, metric and audio runs (§12.6) without test-only code in release. |
 | D25 | Memorisation scheduling is a deterministic Leitner-style table (§5.10), not FSRS. | Predictable, explainable, testable. FSRS can replace it later without a schema change (`strength`/`due_at` are generic). |
 | D26 | **Click selects and shows the `AyahActionBar`; the side pane opens from the bar, a double-click or Enter** (BRIEF §1.1.1 says "click → select (opens side pane)"). | Reading flow: a pane popping open on every click covers text and shifts attention. The action bar makes play/repeat/bookmark/highlight/note/copy/tafsir discoverable for mouse users, which the right-click menu alone did not. `settings.ayahActionBar = false` restores a bar-less click. |
@@ -2188,10 +2188,14 @@ fixtures/
    conversion) to `public/fonts/KFGQPC-Hafs-V30.ttf`, and the EULA (name table ID 13, extracted as text) to
    `public/fonts/KFGQPC-Hafs-V30.LICENSE.txt`.
 3. Record sha256 in `xtask/assets.lock` on first run (trust on first use). Later runs MUST match unless `--force` is given.
-4. `public/fonts/KFGQPC-Hafs-V30.ttf` is **gitignored** (D23). CI and developers fetch it with this command; CI caches the
+4. `public/fonts/KFGQPC-Hafs-V30.ttf` is **gitignored**. CI and developers fetch it with this command; CI caches the
    result keyed by the hash of `xtask/assets.lock` so fonts.qurancomplex.gov.sa is not hit on every run. The EULA allows
-   redistribution of the unmodified file inside the installer, so the installer still bundles it. The repository simply
-   doesn't mirror a third-party binary. The licence text file is committed.
+   redistribution of the unmodified file, so the installer bundles it. The licence text file is committed.
+5. **Fallback (LEAD 24).** When the download in step 1 fails (no connection, a timeout, an HTTP error, a body over the
+   size cap), the font comes from `xtask/assets/KFGQPC-Hafs-V30.ttf`, the unmodified pinned file committed to the
+   repository, once its size and sha256 match the pin; the outputs are those of step 2. Only with a pin and without
+   `--force`: the committed copy never pins or re-pins. A downloaded archive or font of the wrong size or hash never
+   falls back (an upstream change to review). A run that pins or re-pins rewrites the committed copy too.
 
 ### 4.8 `fetch-dev-packs` (WP3c; local development only)
 - Downloads, via the catalog URL templates (`quran_packs::catalog`), the QCF v1, v2 and v4 woff2 files for the §4.6 page list
@@ -5738,7 +5742,8 @@ errors (lead visual review is a separate merge gate). Every package also meets �
    updater in v1.1.
 4. Decorative fonts (QCF_SurahHeader, quran-common, sura_names) carry no licence string. Confirm on-demand download is acceptable,
    or rely on our SVG/Unicode fallbacks only.
-5. Whether to commit the KFGQPC Hafs V30 TTF to the repo (EULA allows redistribution unmodified) instead of fetching it in CI (D23).
+5. ~~Whether to commit the KFGQPC Hafs V30 TTF to the repo (EULA allows redistribution unmodified) instead of fetching it in CI
+   (D23).~~ Resolved by LEAD 24 (2026-10-11): it is committed as the fallback of `fetch-assets`; the download stays first.
 6. Whether the repository and its Actions stay **private** until item 1 is resolved. While private, CI may upload qdc
    core.db/fixtures for developers (§13.3); once public, the stricter rules apply automatically.
 7. Print-scan verification items delegated to WP8c: opening-page medallion shape and hidden running heads on pages 1–2, and
