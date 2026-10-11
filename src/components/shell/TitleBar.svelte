@@ -29,7 +29,7 @@
   import OfflineBadge from './OfflineBadge.svelte'
   import WindowControls from './WindowControls.svelte'
 
-  const kind = $derived(titleBarKind(app.platform))
+  const kind = $derived(titleBarKind(app.platform, settings.value.uiScalePct))
 
   /** The label of a registered shortcut by id, if registered. */
   function keyOf(id: string): string | undefined {

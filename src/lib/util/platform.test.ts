@@ -34,6 +34,9 @@ describe('platform helpers', () => {
     })
     expect(titleBarKind('linux')).toEqual({ drag: false, windowControls: false, trafficLightInset: 0 })
     expect(TRAFFIC_LIGHT_INSET).toBe(78)
+    // The webview zooms the bar, not the native lights: the reserve keeps their width at every interface size.
+    expect(titleBarKind('macos', 80).trafficLightInset).toBe(97.5)
+    expect(titleBarKind('macos', 200).trafficLightInset).toBe(39)
   })
 
   it('names the Segoe caption glyphs, and falls back to SVG without canvas text measurement', () => {

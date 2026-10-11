@@ -25,19 +25,28 @@ export interface TitleBarKind {
   drag: boolean
   /** Custom caption buttons (minimise, maximise, close): Windows only (`decorations: false`). */
   windowControls: boolean
-  /** Space kept free on the physical left for the traffic lights (macOS overlay title bar), in px. */
+  /** Space kept free on the physical left for the traffic lights (macOS overlay title bar), in CSS px. */
   trafficLightInset: number
 }
 
 /** The macOS traffic-light reserve (§9.6; `trafficLightPosition` x 16 + three 12 px lights with 8 px gaps + margin). */
 export const TRAFFIC_LIGHT_INSET = 78
 
-export function titleBarKind(platform: Platform): TitleBarKind {
+/**
+ * The title bar for `platform` at the interface size `uiScalePct`. The webview zooms the bar but not the native traffic
+ * lights, so their reserve is divided by the zoom: it stays 78 pt wide (at 80 % an undivided one put the app icon over
+ * the zoom button).
+ */
+export function titleBarKind(platform: Platform, uiScalePct = 100): TitleBarKind {
   switch (platform) {
     case 'windows':
       return { drag: true, windowControls: true, trafficLightInset: 0 }
     case 'macos':
-      return { drag: true, windowControls: false, trafficLightInset: TRAFFIC_LIGHT_INSET }
+      return {
+        drag: true,
+        windowControls: false,
+        trafficLightInset: (TRAFFIC_LIGHT_INSET * 100) / uiScalePct,
+      }
     case 'linux':
       // Native decorations above a plain 40 px toolbar.
       return { drag: false, windowControls: false, trafficLightInset: 0 }
