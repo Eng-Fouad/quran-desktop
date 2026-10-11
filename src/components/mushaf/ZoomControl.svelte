@@ -8,7 +8,8 @@
     scrollbars). Every fit leaves at least PAD_X + M_OUT·qfs ≥ 58 px between the canvas edge and the running head or
     the text, so at the fit the capsule (52 px in at most) never covers the page, in any dock mode; with the side card
     it sits in the card's reserved column, above the card. "+ above −" needs no mirroring. In zen it moves down by the
-    title bar's reveal zone (`ZEN_TOP_ZONE_PX`), so reaching for it never brings the title bar.
+    title bar's reveal zone (`ZEN_TOP_ZONE_PX`), so reaching for it never brings the title bar. The "Aa" display
+    button (`DisplayControl`) sits 8 px below it.
   - **Buttons.** + zooms in, the level ("120%", in the UI's numbers) goes back to the fit, − zooms out, all around the
     canvas centre like `Mod+=` / `Mod+0` / `Mod+-`, whose keys their tooltips show (as the user bound them). The button
     that would do nothing (+ at 300 %, the level at the fit, − at 50 %) is `aria-disabled`, so it keeps focus. It is
@@ -19,73 +20,15 @@
     or woken. When the Quran text, a running head or a mark lies under it (a zoomed or scrolled book, a dog-ear in the
     tightest fit), it yields: hidden and click-through until the pointer comes within 24 px, it takes focus or a zoom
     wakes it. A held press (a drag on the page) never brings it back. In zen it is hidden until the pointer moves, and
-    again while the pointer rests (`ui.pointerIdle`).
+    again while the pointer rests (`ui.pointerIdle`). These rules are `CanvasControl`'s, shared with the display button.
   - **Keys.** `role="toolbar"` (vertical) with one tab stop, after the pages, the turn zones, the rail and the slot's
     chips: ↑/↓ and Home/End move between its buttons; Escape hands focus back to the reading cursor and keeps the
     selection. A pointer never takes focus, so ← → keep turning pages after a click. The wheel over it scrolls a zoomed
     canvas, as over the pages, and turns the page while it fits.
 -->
 <script module lang="ts">
-  /** A client rect's edges (px). */
-  export interface Box {
-    left: number
-    top: number
-    right: number
-    bottom: number
-  }
-
-  /**
-   * How the control shows: `hidden` (invisible and click-through), `idle` (40 %, the pointer elsewhere), `quiet` (60 %,
-   * the pointer over the canvas) or `active` (100 %).
-   */
-  export type ZoomControlState = 'hidden' | 'idle' | 'quiet' | 'active'
-
   /** How long any zoom wakes the control at full strength. */
   export const ZOOM_WAKE_MS = 900
-  /** A control that yielded to the page comes back when the pointer comes this close (px). */
-  export const REACH_PX = 24
-  /** It yields to what comes within this distance of it (px). */
-  export const TEXT_GAP = 4
-  /** What the control never rests on: the Quran text, the running heads and the user's marks. */
-  export const PROTECTED = '.mp-block, .mp-head, .mp-dogear, .mp-ribbon, .mp-margin .mk, .mp-margin .mm'
-
-  /** Whether `box` meets any non-empty rect of `rects`, each grown by `gap` on every side. */
-  export function overlapsAny(box: Box, rects: readonly Box[], gap = TEXT_GAP): boolean {
-    return rects.some(
-      (r) =>
-        r.right > r.left &&
-        r.bottom > r.top &&
-        r.left - gap < box.right &&
-        r.right + gap > box.left &&
-        r.top - gap < box.bottom &&
-        r.bottom + gap > box.top,
-    )
-  }
-
-  /** Whether the client point (`x`, `y`) lies in `box` or within `reach` of it. */
-  export function nearBox(x: number, y: number, box: Box, reach = REACH_PX): boolean {
-    const dx = Math.max(box.left - x, 0, x - box.right)
-    const dy = Math.max(box.top - y, 0, y - box.bottom)
-    return Math.hypot(dx, dy) <= reach
-  }
-
-  /**
-   * §8.13: hovered, focused or woken by a zoom, the control is at full strength; zen hides it until the pointer moves
-   * (and while it rests); over the page it yields unless the pointer reaches for it; otherwise it is quiet over the
-   * canvas and quieter still away from it.
-   */
-  export function zoomControlState(s: {
-    engaged: boolean
-    zenHidden: boolean
-    overText: boolean
-    near: boolean
-    overCanvas: boolean
-  }): ZoomControlState {
-    if (s.engaged) return 'active'
-    if (s.zenHidden) return 'hidden'
-    if (s.overText) return s.near ? 'active' : 'hidden'
-    return s.overCanvas ? 'quiet' : 'idle'
-  }
 </script>
 
 <script lang="ts">
@@ -98,6 +41,7 @@
   import { i18n, reader, shortcuts, ui } from '$lib/stores'
   import { A11Y_TAB_STOP, STAGE_SELECTOR } from '$lib/stores/reader.svelte'
   import { ZEN_TOP_ZONE_PX } from '$lib/stores/ui.svelte'
+  import { CanvasControl, PROTECTED } from './canvasControl.svelte'
 
   type Item = 'in' | 'fit' | 'out'
   /** The buttons, top to bottom. */
@@ -126,29 +70,32 @@
 
   // --- how it shows --------------------------------------------------------------------------------------------------
 
-  let overCanvas = $state(false)
-  /** Something `PROTECTED` lies under the capsule. */
-  let overText = $state(false)
-  /** The pointer is within `REACH_PX` of the capsule. */
-  let near = $state(false)
-  let hovering = $state(false)
-  let focusWithin = $state(false)
   /** Within `ZOOM_WAKE_MS` of a zoom. */
   let woken = $state(false)
-  /** Zen: the pointer has moved since zen started (§9.6). */
-  let zenMoved = $state(false)
   /** The toolbar's one tab stop. */
   let roving = $state<Item>('in')
 
-  const zenHidden = $derived(ui.zen && (!zenMoved || ui.pointerIdle))
-  const presence = $derived(
-    zoomControlState({ engaged: hovering || focusWithin || woken, zenHidden, overText, near, overCanvas }),
-  )
-
-  // Zen starts with the control hidden until the pointer moves (§9.6).
-  $effect(() => {
-    if (ui.zen) untrack(() => (zenMoved = false))
+  // Quiet at rest, yielding to the text, marks and running heads under it, hidden in zen until the pointer moves.
+  const control = new CanvasControl({
+    element: () => pill,
+    covers: (view) => {
+      const stage = view.querySelector(STAGE_SELECTOR)
+      return stage ? [...stage.querySelectorAll(PROTECTED)].map((el) => el.getBoundingClientRect()) : []
+    },
+    watched: (view) => view.querySelector(STAGE_SELECTOR),
+    scroller: (view) => view.querySelector('[data-scroll-area-viewport]'),
+    // Highlights (hover, selection, recitation) never move what the control yields to.
+    ignore: (target) => target instanceof Element && target.closest('.mp-hl') !== null,
+    // Zen, the UI direction, the book's size and a flip ending move the capsule or the book.
+    deps: () => {
+      void ui.zen
+      void i18n.dir
+      void reader.qfs
+      void reader.scrolls
+    },
+    paused: () => reader.flipping,
   })
+  const presence = $derived(control.state(woken))
 
   // Any zoom wakes the control and is announced: it is the zoom readout.
   let wakeTimer: ReturnType<typeof setTimeout> | undefined
@@ -166,97 +113,6 @@
   })
   $effect(() => () => clearTimeout(wakeTimer))
 
-  // --- what lies under it --------------------------------------------------------------------------------------------
-
-  /** The capsule's client box at the last measure (it keeps its layout while hidden); `null` before the first. */
-  let box: Box | null = null
-
-  function measure(): void {
-    const view = pill?.parentElement
-    if (!pill || !view) return
-    const stage = view.querySelector(STAGE_SELECTOR)
-    watchStage(stage)
-    const r = pill.getBoundingClientRect()
-    box = { left: r.left, top: r.top, right: r.right, bottom: r.bottom }
-    const rects = stage ? [...stage.querySelectorAll(PROTECTED)].map((el) => el.getBoundingClientRect()) : []
-    const over = overlapsAny(box, rects)
-    if (over !== overText) overText = over
-  }
-
-  let frame = 0
-  /** One measure per frame at most, and none while flipping (the flip's end measures once). */
-  function schedule(): void {
-    if (frame !== 0 || reader.flipping) return
-    frame = requestAnimationFrame(() => {
-      frame = 0
-      measure()
-    })
-  }
-
-  // Re-measure when the capsule or the book can move: zen, the UI direction, the book's size, a flip ending.
-  $effect(() => {
-    void ui.zen
-    void i18n.dir
-    void reader.qfs
-    void reader.scrolls
-    if (reader.flipping) return
-    untrack(schedule)
-  })
-
-  /** Resizes of the canvas and of the book (the stage element is re-checked on every measure). */
-  let resizes: ResizeObserver | null = null
-  let observedStage: Element | null = null
-
-  function watchStage(stage: Element | null): void {
-    if (!resizes || stage === observedStage) return
-    if (observedStage) resizes.unobserve(observedStage)
-    observedStage = stage
-    if (stage) resizes.observe(stage)
-  }
-
-  // …the canvas or the book resizing, the canvas scrolling, pages turning and marks arriving late, and the pointer.
-  $effect(() => {
-    const view = pill?.parentElement
-    if (!view) return
-    resizes = new ResizeObserver(schedule)
-    resizes.observe(view)
-    watchStage(view.querySelector(STAGE_SELECTOR))
-    const scroller = view.querySelector('[data-scroll-area-viewport]')
-    const onScroll = () => schedule()
-    scroller?.addEventListener('scroll', onScroll, { passive: true })
-    // Highlights (hover, selection, recitation) never move what the control yields to.
-    const mutations = new MutationObserver((records) => {
-      if (records.some((r) => !(r.target instanceof Element && r.target.closest('.mp-hl')))) schedule()
-    })
-    if (scroller) mutations.observe(scroller, { childList: true, subtree: true })
-    const onMove = (e: PointerEvent): void => {
-      if (e.pointerType === 'touch') return
-      if (!overCanvas) overCanvas = true
-      if (ui.zen && !zenMoved) zenMoved = true
-      // A held press (a drag on the page) never brings a yielded control back.
-      if (e.buttons !== 0) return
-      const reach = box !== null && nearBox(e.clientX, e.clientY, box)
-      if (reach !== near) near = reach
-    }
-    const onLeave = (): void => {
-      overCanvas = false
-      near = false
-    }
-    view.addEventListener('pointermove', onMove, { passive: true })
-    view.addEventListener('pointerleave', onLeave, { passive: true })
-    return () => {
-      resizes?.disconnect()
-      resizes = null
-      observedStage = null
-      mutations.disconnect()
-      scroller?.removeEventListener('scroll', onScroll)
-      view.removeEventListener('pointermove', onMove)
-      view.removeEventListener('pointerleave', onLeave)
-      cancelAnimationFrame(frame)
-      frame = 0
-    }
-  })
-
   // --- input ---------------------------------------------------------------------------------------------------------
 
   /** A pointer press never moves focus here: ← → must keep turning pages after a click (§8.11). */
@@ -265,11 +121,11 @@
   }
 
   function onpointerenter(e: PointerEvent): void {
-    if (e.pointerType !== 'touch') hovering = true
+    control.pointerEnter(e)
   }
 
   function onpointerleave(e: PointerEvent): void {
-    if (e.pointerType !== 'touch') hovering = false
+    control.pointerLeave(e)
   }
 
   /** Over the capsule the wheel scrolls a zoomed canvas, as over the pages; it bubbles on to `use:wheel` (§8.13). */
@@ -279,13 +135,13 @@
   }
 
   function onfocusin(e: FocusEvent): void {
-    focusWithin = true
+    control.focusIn()
     const item = e.target instanceof HTMLElement ? e.target.dataset.zoom : undefined
     if (item === 'in' || item === 'fit' || item === 'out') roving = item
   }
 
   function onfocusout(e: FocusEvent): void {
-    if (!(e.relatedTarget instanceof Node && pill?.contains(e.relatedTarget))) focusWithin = false
+    control.focusOut(e)
   }
 
   /** Toolbar keys; plain keys inside a toolbar never reach the reader's shortcuts (§7.7 widget guard). */

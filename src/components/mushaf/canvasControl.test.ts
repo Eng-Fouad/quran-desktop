@@ -1,17 +1,17 @@
 /**
- * The zoom control, pure parts (§8.13): what it yields to (`overlapsAny`), when the pointer reaches for it (`nearBox`)
- * and how it shows (`zoomControlState`).
+ * The canvas controls' presence, pure parts (§8.13; the zoom control and the "Aa" display button): what they yield to
+ * (`overlapsAny`), when the pointer reaches for one (`nearBox`) and how it shows (`canvasControlState`).
  */
 import { describe, expect, it } from 'vitest'
 import {
   type Box,
+  canvasControlState,
   nearBox,
   overlapsAny,
   REACH_PX,
   TEXT_GAP,
-  ZOOM_WAKE_MS,
-  zoomControlState,
-} from './ZoomControl.svelte'
+} from './canvasControl.svelte'
+import { ZOOM_WAKE_MS } from './ZoomControl.svelte'
 
 /** The capsule: 40 × 92 px, 12 px in from the right of a canvas whose top right is at (1000, 0). */
 const PILL: Box = { left: 948, top: 16, right: 988, bottom: 108 }
@@ -56,30 +56,30 @@ describe('nearBox (the pointer reaching for a yielded capsule)', () => {
   })
 })
 
-describe('zoomControlState (§8.13)', () => {
+describe('canvasControlState (§8.13)', () => {
   const base = { engaged: false, zenHidden: false, overText: false, near: false, overCanvas: false }
 
   it('is quieter away from the canvas and quiet over it, never hidden at rest', () => {
-    expect(zoomControlState(base)).toBe('idle')
-    expect(zoomControlState({ ...base, overCanvas: true })).toBe('quiet')
-    expect(zoomControlState({ ...base, overCanvas: true, near: true })).toBe('quiet')
+    expect(canvasControlState(base)).toBe('idle')
+    expect(canvasControlState({ ...base, overCanvas: true })).toBe('quiet')
+    expect(canvasControlState({ ...base, overCanvas: true, near: true })).toBe('quiet')
   })
 
   it('is at full strength while hovered, focused or woken, whatever else holds', () => {
-    expect(zoomControlState({ ...base, engaged: true })).toBe('active')
-    expect(zoomControlState({ ...base, engaged: true, zenHidden: true })).toBe('active')
-    expect(zoomControlState({ ...base, engaged: true, overText: true })).toBe('active')
+    expect(canvasControlState({ ...base, engaged: true })).toBe('active')
+    expect(canvasControlState({ ...base, engaged: true, zenHidden: true })).toBe('active')
+    expect(canvasControlState({ ...base, engaged: true, overText: true })).toBe('active')
     expect(ZOOM_WAKE_MS).toBe(900)
   })
 
   it('hides in zen until the pointer moves', () => {
-    expect(zoomControlState({ ...base, zenHidden: true, overCanvas: true })).toBe('hidden')
-    expect(zoomControlState({ ...base, zenHidden: true, overText: true, near: true })).toBe('hidden')
+    expect(canvasControlState({ ...base, zenHidden: true, overCanvas: true })).toBe('hidden')
+    expect(canvasControlState({ ...base, zenHidden: true, overText: true, near: true })).toBe('hidden')
   })
 
   it('yields to the page under it until the pointer reaches for it', () => {
-    expect(zoomControlState({ ...base, overText: true, overCanvas: true })).toBe('hidden')
-    expect(zoomControlState({ ...base, overText: true })).toBe('hidden')
-    expect(zoomControlState({ ...base, overText: true, overCanvas: true, near: true })).toBe('active')
+    expect(canvasControlState({ ...base, overText: true, overCanvas: true })).toBe('hidden')
+    expect(canvasControlState({ ...base, overText: true })).toBe('hidden')
+    expect(canvasControlState({ ...base, overText: true, overCanvas: true, near: true })).toBe('active')
   })
 })

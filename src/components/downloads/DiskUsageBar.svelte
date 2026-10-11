@@ -6,6 +6,9 @@
 
   Segments use the kind colours of the pack rows (the leading tiles), so a row and its share of the bar read alike. The
   streaming cache is the half-tone of the recitation accent, as in the surah grid.
+
+  `variant="strip"` draws only the bar, 4 px thin, for the rail's Downloads flyout header (its accessible name lists the
+  sizes); the flyout says the total itself, in the same words (`usageTotal`).
 -->
 <script lang="ts">
   import type { Snippet } from 'svelte'
@@ -13,13 +16,16 @@
   import type { DiskUsage } from '$lib/ipc/bindings'
   import { i18n } from '$lib/stores'
   import { LRI, PDI } from '$lib/stores/i18n.svelte'
+  import { usageTotal } from './format'
 
   interface Props {
     usage: DiskUsage | null
     actions?: Snippet
+    /** `card` (the manager's header) or `strip` (the bar alone, thin). */
+    variant?: 'card' | 'strip'
   }
 
-  let { usage, actions }: Props = $props()
+  let { usage, actions, variant = 'card' }: Props = $props()
 
   type SegmentKey = 'audio' | 'stream' | 'mushaf' | 'decor' | 'translation' | 'tafsir' | 'content' | 'library'
 
@@ -53,70 +59,80 @@
   const summary = $derived(segments.map((s) => item(s.key, s.kib)).join(i18n.t('downloads.sep')))
 </script>
 
-<section class="usage" aria-labelledby="{uid}-title" data-qd-usage>
-  <div class="head">
-    <div class="totals">
-      <h2 id="{uid}-title" class="caption">{i18n.t('downloads.usage.title')}</h2>
-      <p class="total" aria-live="polite">
-        {#if usage === null}
-          <span class="muted">{i18n.t('downloads.usage.measuring')}</span>
-        {:else if total === 0}
-          <span class="muted">{i18n.t('downloads.usage.empty')}</span>
-        {:else}
-          {i18n.t('downloads.usage.used', { size: i18n.bytes(total) })}
-        {/if}
-      </p>
-    </div>
-    {#if actions}
-      <div class="actions" role="group" aria-label={i18n.t('downloads.header.actions')}>
-        {@render actions()}
-      </div>
-    {/if}
+{#snippet bar()}
+  <div
+    class="bar"
+    role="img"
+    aria-label={usage === null
+      ? i18n.t('downloads.usage.measuring')
+      : summary || i18n.t('downloads.usage.empty')}
+  >
+    {#each segments as s (s.key)}
+      <span class="seg k-{s.key}" style:flex-grow={s.kib}></span>
+    {/each}
   </div>
+{/snippet}
 
-  {#if usage === null}
-    <Skeleton h={10} radius="full" />
-  {:else}
-    <div class="bar" role="img" aria-label={summary || i18n.t('downloads.usage.empty')}>
-      {#each segments as s (s.key)}
-        <span class="seg k-{s.key}" style:flex-grow={s.kib}></span>
-      {/each}
+{#if variant === 'strip'}
+  <div class="usage strip" data-qd-usage-strip>
+    {@render bar()}
+  </div>
+{:else}
+  <section class="usage" aria-labelledby="{uid}-title" data-qd-usage>
+    <div class="head">
+      <div class="totals">
+        <h2 id="{uid}-title" class="caption">{i18n.t('downloads.usage.title')}</h2>
+        <p class="total" aria-live="polite">
+          <span class:muted={usage === null || total === 0}>{usageTotal(usage)}</span>
+        </p>
+      </div>
+      {#if actions}
+        <div class="actions" role="group" aria-label={i18n.t('downloads.header.actions')}>
+          {@render actions()}
+        </div>
+      {/if}
     </div>
-  {/if}
 
-  {#if segments.length > 0}
-    <ul class="legend" aria-label={i18n.t('downloads.usage.label')}>
-      {#each segments as s (s.key)}
-        <li class="entry" data-segment={s.key}>
-          {#if s.hint}
-            <Tooltip content={hint(s.key)} side="bottom">
-              {#snippet children({ props })}
-                <span {...props} class="key hinted">
-                  <span class="dot k-{s.key}" aria-hidden="true"></span>
-                  <span class="name">{label(s.key)}</span>
-                  <span class="size">{i18n.bytes(s.kib)}</span>
-                  <span class="sr-only">{hint(s.key)}</span>
-                </span>
-              {/snippet}
-            </Tooltip>
-          {:else}
-            <span class="key">
-              <span class="dot k-{s.key}" aria-hidden="true"></span>
-              <span class="name">{label(s.key)}</span>
-              <span class="size">{i18n.bytes(s.kib)}</span>
-            </span>
-          {/if}
-        </li>
-      {/each}
-    </ul>
-  {/if}
+    {#if usage === null}
+      <Skeleton h={10} radius="full" />
+    {:else}
+      {@render bar()}
+    {/if}
 
-  {#if usage !== null && usage.dataDir !== ''}
-    <p class="where" title={usage.dataDir}>
-      {i18n.t('downloads.usage.where', { path: `${LRI}${usage.dataDir}${PDI}` })}
-    </p>
-  {/if}
-</section>
+    {#if segments.length > 0}
+      <ul class="legend" aria-label={i18n.t('downloads.usage.label')}>
+        {#each segments as s (s.key)}
+          <li class="entry" data-segment={s.key}>
+            {#if s.hint}
+              <Tooltip content={hint(s.key)} side="bottom">
+                {#snippet children({ props })}
+                  <span {...props} class="key hinted">
+                    <span class="dot k-{s.key}" aria-hidden="true"></span>
+                    <span class="name">{label(s.key)}</span>
+                    <span class="size">{i18n.bytes(s.kib)}</span>
+                    <span class="sr-only">{hint(s.key)}</span>
+                  </span>
+                {/snippet}
+              </Tooltip>
+            {:else}
+              <span class="key">
+                <span class="dot k-{s.key}" aria-hidden="true"></span>
+                <span class="name">{label(s.key)}</span>
+                <span class="size">{i18n.bytes(s.kib)}</span>
+              </span>
+            {/if}
+          </li>
+        {/each}
+      </ul>
+    {/if}
+
+    {#if usage !== null && usage.dataDir !== ''}
+      <p class="where" title={usage.dataDir}>
+        {i18n.t('downloads.usage.where', { path: `${LRI}${usage.dataDir}${PDI}` })}
+      </p>
+    {/if}
+  </section>
+{/if}
 
 <style>
   .usage {
@@ -139,6 +155,23 @@
     border-radius: var(--radius-lg);
     background-color: var(--surface-raised);
     box-shadow: var(--shadow-1);
+  }
+
+  .usage.strip {
+    display: block;
+    padding: 0;
+    border: 0;
+    background: none;
+    box-shadow: none;
+  }
+
+  .strip .bar {
+    gap: 1px;
+    block-size: 4px;
+  }
+
+  .strip .seg {
+    min-inline-size: 2px;
   }
 
   .head {

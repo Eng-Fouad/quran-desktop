@@ -38,7 +38,7 @@ export { default as TooltipProvider } from './TooltipProvider.svelte'
 export { default as VirtualList } from './VirtualList.svelte'
 
 export { filterItems, foldForMatch, groupItems } from './filter'
-export { trackFloating, resolveDir } from './floating.svelte'
+export { resolveDir, setModalLayer, trackFloating } from './floating.svelte'
 export { firstTabbable, focusInitial } from './focus'
 export { isMacModifier, splitChord } from './kbd'
 export { panePct, pctToPx, pxToPct, type PanePct, type PanePx } from './splitter'

@@ -169,6 +169,15 @@ setting for every style; the preview fetches while online and the Summary lede s
     preselected, the preview, the fit), then the reading step (new shot `S02-reading`), then the offline lock on the
     Mushaf step with the preview in Hafs.
 
+### Owner request 2026-10-11: About in the Settings dialog
+
+29. **About shows in the Settings dialog's frame** (WP7c 22) over the reader, opened from Settings › About › Credits or
+    the palette, and named "About Quran for Desktop" (a hidden "About" plus the visible name). It has no button back
+    to Settings, as before: Escape and the close button return to the reader, and `Mod+F` turns the dialog to Settings
+    with "Search settings" focused (WP7c 23). Focus starts on "Copy diagnostics". The
+    column takes `--qd-dock-reserve` and `--qd-close-room` from the dialog instead of its own dock sum. S25 checks the
+    dialog, its name and the reader mounted under it.
+
 ## Requests
 
 - **WP7c (`App.svelte`): open the onboarding on first run.** Nothing opens the onboarding today. `OnboardingDialog` is

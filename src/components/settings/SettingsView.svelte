@@ -1,6 +1,6 @@
 <!--
-  SettingsView (§7.5, §9.7): the Settings view, shown in the canvas (`ui.view === 'settings'`). Takes no props: it
-  reads stores (§7.9).
+  SettingsView (§7.5, §9.7): the Settings view (`ui.view === 'settings'`), shown in the shell's Settings dialog over the
+  reader (`SettingsDialog`, owner request 2026-10-11). Takes no props: it reads stores (§7.9).
 
   A 200 px section navigation (the view title, a search field, the ten sections) beside one section at a time in a
   column of at most 720 px: its title, a lede and cards of 56 px rows whose labels and ranges come from `settingsMeta`.
@@ -8,8 +8,11 @@
 
   Search: typing in the field shows the matching rows of every section, live controls included, grouped under their
   section and card; a section button then shows that section. The match runs on each row's label, description,
-  options and keywords, in the UI language and in English. Narrow canvases (under 880 px, e.g. at a large interface
-  size) fold the navigation into a scrolling strip above the column. The column keeps clear of the player dock.
+  options and keywords, in the UI language and in English. Under 880 px of width (a small window, a large interface
+  size) the navigation folds into a strip above the column: the title and the search, then the sections in one row
+  that scrolls sideways (the wheel too) and keeps the open section in view. The dialog sets what the view keeps free:
+  `--qd-dock-reserve` at its end (where the player dock lies over it) and `--qd-close-room` in its top inline-end
+  corner (the close button).
 -->
 <script lang="ts">
   import AudioLines from '@lucide/svelte/icons/audio-lines'
@@ -25,7 +28,7 @@
   import type { LucideIcon } from '@lucide/svelte'
   import type { Component } from 'svelte'
   import { Button, EmptyState, ScrollArea, SearchInput } from '$components/ui'
-  import { i18n, reader } from '$lib/stores'
+  import { i18n } from '$lib/stores'
   import { provideSettingsSearch } from './controls/context'
   import { metaOf, type SettingsSection, SETTINGS_SECTIONS } from './meta'
   import About from './sections/About.svelte'
@@ -38,7 +41,7 @@
   import Storage from './sections/Storage.svelte'
   import System from './sections/System.svelte'
   import Translations from './sections/Translations.svelte'
-  import { settingsView } from './view.svelte'
+  import { SETTINGS_TITLE_ID, settingsView } from './view.svelte'
 
   const SECTIONS: Readonly<Record<SettingsSection, { icon: LucideIcon; body: Component }>> = {
     appearance: { icon: Palette, body: Appearance },
@@ -76,24 +79,34 @@
     return out
   })
 
-  /** Space kept free under the column for the player dock: the side card (120 px) or the bar, plus its margin. */
-  const dockReserve = $derived(
-    reader.dock === 'side' ? 120 + 34 : reader.dock === 'compact' ? 56 + 34 : 64 + 34,
-  )
-
   let viewport: HTMLElement | null = $state(null)
+  let strip: HTMLElement | null = $state(null)
+  let stripWidth = $state(0)
 
   function show(section: SettingsSection): void {
     settingsView.open(section)
     viewport?.scrollTo({ top: 0 })
   }
 
-  /** ↑/↓ (and Home/End) move between the section buttons. */
+  /** The strip scrolls sideways: its sections do not all fit in one row (narrow; never in the column layout). */
+  function overflows(list: HTMLElement): boolean {
+    return list.scrollWidth > list.clientWidth + 1
+  }
+
+  /** ↑/↓ (and Home/End) move between the section buttons; ←/→ too in the strip, in reading order. */
   function onNavKeydown(e: KeyboardEvent): void {
-    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) return
-    const buttons = [
-      ...(e.currentTarget as HTMLElement).querySelectorAll<HTMLButtonElement>('button[data-section]'),
-    ]
+    const list = e.currentTarget as HTMLElement
+    const row = getComputedStyle(list).flexDirection.startsWith('row')
+    const forward = i18n.dir === 'rtl' ? 'ArrowLeft' : 'ArrowRight'
+    const backward = i18n.dir === 'rtl' ? 'ArrowRight' : 'ArrowLeft'
+    const step =
+      e.key === 'ArrowDown' || (row && e.key === forward)
+        ? 1
+        : e.key === 'ArrowUp' || (row && e.key === backward)
+          ? -1
+          : 0
+    if (step === 0 && e.key !== 'Home' && e.key !== 'End') return
+    const buttons = [...list.querySelectorAll<HTMLButtonElement>('button[data-section]')]
     const index = buttons.findIndex((b) => b === document.activeElement)
     if (index < 0) return
     const next =
@@ -101,17 +114,54 @@
         ? 0
         : e.key === 'End'
           ? buttons.length - 1
-          : (index + (e.key === 'ArrowDown' ? 1 : -1) + buttons.length) % buttons.length
+          : (index + step + buttons.length) % buttons.length
     e.preventDefault()
     buttons[next]?.focus()
   }
+
+  // The strip keeps the open section in view (on a section change, and when the strip appears or resizes).
+  $effect(() => {
+    const list = strip
+    void stripWidth
+    void settingsView.section
+    if (list === null) return
+    const frame = requestAnimationFrame(() => {
+      const current = list.querySelector<HTMLElement>('button[aria-current="page"]')
+      if (current === null || !overflows(list)) return
+      const box = list.getBoundingClientRect()
+      const item = current.getBoundingClientRect()
+      const pad = parseFloat(getComputedStyle(list).scrollPaddingInlineStart) || 0
+      // Physical deltas: scrollBy moves the same way in both directions (scrollLeft is negative in RTL).
+      if (item.left < box.left + pad) list.scrollBy({ left: item.left - box.left - pad })
+      else if (item.right > box.right - pad) list.scrollBy({ left: item.right - box.right + pad })
+    })
+    return () => cancelAnimationFrame(frame)
+  })
+
+  // A vertical wheel over the strip scrolls it sideways while it can still move that way; at its ends the wheel goes on
+  // to the page.
+  $effect(() => {
+    const list = strip
+    if (list === null) return
+    const onWheel = (e: WheelEvent) => {
+      if (e.ctrlKey || Math.abs(e.deltaY) <= Math.abs(e.deltaX) || !overflows(list)) return
+      // Down moves towards the strip's end: right in LTR, left in RTL (where scrollLeft runs from 0 down to −max).
+      const travelled = Math.abs(list.scrollLeft)
+      const end = list.scrollWidth - list.clientWidth
+      if (e.deltaY > 0 ? travelled >= end - 1 : travelled <= 0) return
+      e.preventDefault()
+      list.scrollBy({ left: i18n.dir === 'rtl' ? -e.deltaY : e.deltaY })
+    }
+    list.addEventListener('wheel', onWheel, { passive: false })
+    return () => list.removeEventListener('wheel', onWheel)
+  })
 </script>
 
-<div class="settings" data-qd-view="settings" style:--_reserve="{dockReserve}px">
+<div class="settings" data-qd-view="settings">
   <ScrollArea class="scroll" bind:viewport>
     <div class="layout">
       <nav class="nav" aria-label={i18n.t('settings.nav.label')}>
-        <h1 class="view-title">{i18n.t('settings.title')}</h1>
+        <h1 class="view-title" id={SETTINGS_TITLE_ID}>{i18n.t('settings.title')}</h1>
         <div class="search">
           <SearchInput
             size="sm"
@@ -123,7 +173,7 @@
           />
         </div>
         <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-        <ul class="sections" onkeydown={onNavKeydown}>
+        <ul class="sections" onkeydown={onNavKeydown} bind:this={strip} bind:clientWidth={stripWidth}>
           {#each SETTINGS_SECTIONS as id (id)}
             {@const Icon = SECTIONS[id].icon}
             {@const current = !searching && settingsView.section === id}
@@ -212,13 +262,18 @@
     block-size: 100%;
   }
 
+  /* The scrollbar stays above the sticky navigation (the strip spans the whole width). */
+  .settings > :global(.scroll > .scrollbar) {
+    z-index: 3;
+  }
+
   .layout {
     display: grid;
     grid-template-columns: 200px minmax(0, 720px);
     justify-content: center;
     column-gap: var(--space-10);
-    padding-block: var(--space-8) calc(var(--_reserve) + var(--space-6));
-    padding-inline: var(--space-8);
+    padding-block: var(--space-8) calc(var(--qd-dock-reserve, 0px) + var(--space-6));
+    padding-inline: var(--space-8) max(var(--space-8), var(--qd-close-room, 0px));
   }
 
   /* --- navigation --------------------------------------------------------------------------------------------- */
@@ -412,7 +467,7 @@
     text-underline-offset: 3px;
   }
 
-  /* --- narrow: the navigation becomes a strip above the column ------------------------------------------------ */
+  /* --- narrow: the navigation becomes a strip above the column, its sections in one scrolling row -------------- */
 
   @container settings-view (max-width: 880px) {
     .layout {
@@ -445,15 +500,30 @@
       font-size: var(--text-lg);
     }
 
+    /* The close button sits at the end of this row. */
     .search {
       grid-area: search;
       padding: 0;
+      margin-inline-end: max(0px, var(--qd-close-room, 0px) - var(--space-5));
     }
 
+    /* Edge to edge of the strip; the block padding keeps the focus ring inside the scroller. */
     .sections {
       grid-area: sections;
-      flex-flow: row wrap;
+      flex-flow: row nowrap;
       gap: var(--space-1);
+      margin-block: -4px;
+      margin-inline: calc(-1 * var(--space-5));
+      padding-block: 4px;
+      padding-inline: var(--space-5);
+      overflow-x: auto;
+      overscroll-behavior-x: contain;
+      scroll-padding-inline: var(--space-5);
+      scrollbar-width: none;
+    }
+
+    .sections > li {
+      flex: none;
     }
 
     .section-link {

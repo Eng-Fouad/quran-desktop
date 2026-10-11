@@ -69,7 +69,17 @@
     returnFocus = active instanceof HTMLElement && active !== document.body ? active : null
   })
 
-  trackFloating(() => (trigger === undefined ? pointOpen : open))
+  trackFloating(
+    () => (trigger === undefined ? pointOpen : open),
+    () => {
+      if (trigger === undefined) {
+        onClose?.()
+        return
+      }
+      open = false
+      onOpenChange?.(false)
+    },
+  )
   const zIndex = floatingZ('menu')
 
   function handlePointOpenChange(next: boolean): void {

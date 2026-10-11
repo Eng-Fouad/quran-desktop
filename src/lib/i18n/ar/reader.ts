@@ -24,6 +24,11 @@ export const reader = {
     reset: 'التكبير {pct}٪، ملاءمة النافذة',
     announce: 'التكبير {pct}٪',
   },
+  display: {
+    button: 'العرض',
+    textSize: 'حجم نص الترجمة',
+    allSettings: 'جميع الإعدادات',
+  },
   follow: {
     back: 'العودة إلى التلاوة',
     where: 'التلاوة في الصفحة {page}',

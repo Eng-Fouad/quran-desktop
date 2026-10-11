@@ -2,16 +2,19 @@
   App (§7.5, §9.6): the shell. Owner: WP7c.
 
   TitleBar · StartupBanner · body [ <nav> NavRail │ PaneLayout( <aside> Sidebar │ <main> canvas │ <aside> SidePane ) ]
-  · OverlayHost · AyahContextMenu · LiveRegion, all under one TooltipProvider.
+  · SettingsDialog · OverlayHost · AyahContextMenu · LiveRegion, all under one TooltipProvider.
 
-  - The canvas `<main>` holds the view (reader: Mushaf or translation; downloads, settings, about), the dock region
-    (`role=region`, the player stays in every view, §7.4) and the toast layer. The toast layer covers the canvas and is
-    a containing block for svelte-sonner's fixed list, so toasts centre on the dock (bar) or sit above the side card,
-    whatever the sidebar and side pane take. They also stay above the bottom-centre overlays (§7.5's slot: "Return to
-    recitation", the division and hint chips, the memorisation bars; `ui.overlayReach`), never over them. Nor over
-    the Quran text: where the band under the book is too short for them (zen, where the book centres in the whole
-    canvas, or a held `qfs` whose book fills it), they move to the canvas's top edge (`toastPlacement.ts`). In zen,
-    with the dock away, they rest just above the canvas bottom.
+  - The canvas `<main>` holds the view (reader: Mushaf or translation; downloads, which hides the sidebar), the dock
+    region (`role=region`, the player stays in every view, §7.4) and the toast layer. Settings and About show in
+    `SettingsDialog` over the reader, which stays mounted under it (owner request 2026-10-11): while it is open the dock
+    is lifted above its scrim, and floating content opened from the chrome left usable (the dock's popovers) stacks
+    above it as from inside it.
+  - The toast layer covers the canvas and is a containing block for svelte-sonner's fixed list, so toasts centre on the
+    dock (bar) or sit above the side card, whatever the sidebar and side pane take. They also stay above the
+    bottom-centre overlays (§7.5's slot: "Return to recitation", the division and hint chips, the memorisation bars;
+    `ui.overlayReach`), never over them. Nor over the Quran text: where the band under the book is too short for them
+    (zen, where the book centres in the whole canvas, or a held `qfs` whose book fills it), they move to the canvas's
+    top edge (`toastPlacement.ts`). In zen, with the dock away, they rest just above the canvas bottom.
   - "Skip to Quran text" is the first tab stop (§8.15): it focuses the reading cursor's ayah, else the canvas.
   - Zen (`Z`, §9.6): only the canvas stays; the title bar slides in at the top edge and the dock at the bottom 80 px
     (or briefly on an audio key); the cursor hides after 2.5 s still. A hint names the key that leaves it.
@@ -24,28 +27,27 @@
 -->
 <script lang="ts">
   import { onMount, untrack } from 'svelte'
-  import AboutView from '$components/about/AboutView.svelte'
   import DownloadsView from '$components/downloads/DownloadsView.svelte'
   import AyahContextMenu from '$components/mushaf/AyahContextMenu.svelte'
   import MushafView from '$components/mushaf/MushafView.svelte'
   import PlayerDock from '$components/player/PlayerDock.svelte'
   import SideDockCard from '$components/player/SideDockCard.svelte'
-  import SettingsView from '$components/settings/SettingsView.svelte'
   import { refuseDrop } from '$components/shell/dropGuard'
   import FatalScreen from '$components/shell/FatalScreen.svelte'
   import LiveRegion from '$components/shell/LiveRegion.svelte'
   import NavRail from '$components/shell/NavRail.svelte'
   import OverlayHost from '$components/shell/OverlayHost.svelte'
   import PaneLayout from '$components/shell/PaneLayout.svelte'
+  import SettingsDialog from '$components/shell/SettingsDialog.svelte'
   import Sidebar from '$components/shell/Sidebar.svelte'
   import StartupBanner from '$components/shell/StartupBanner.svelte'
   import { TOAST_TOP_GAP, type TextClear, toastSide, trackTextClear } from '$components/shell/toastPlacement'
   import TitleBar from '$components/shell/TitleBar.svelte'
   import SidePane from '$components/sidepane/SidePane.svelte'
   import TranslationView from '$components/translation/TranslationView.svelte'
-  import { Kbd, Toaster, TooltipProvider } from '$components/ui'
+  import { Kbd, setModalLayer, Toaster, TooltipProvider } from '$components/ui'
   import { app, i18n, reader, settings, shortcuts, ui } from '$lib/stores'
-  import { TITLEBAR_H } from '$lib/stores/ui.svelte'
+  import { readingCursor, TITLEBAR_H } from '$lib/stores/ui.svelte'
   import { splitAround } from '$lib/util/format'
 
   /** Toasts sit this far above the canvas bottom: above the 64 px bar (§9.5), or above the 120 px side card. */
@@ -61,6 +63,10 @@
   const SIDE_CARD_INSET = 24
   /** How long the zen hint stays. */
   const ZEN_HINT_MS = 2_600
+
+  // While the Settings dialog is open, a popover or menu opened from the chrome it leaves usable (the dock, the title
+  // bar) stacks above it, as one opened inside it does; dialogs and sheets set their own layer for their content.
+  setModalLayer(() => (ui.settingsOpen ? 'dialog' : null))
 
   const sidebarLabel = $derived(i18n.t(`shell.tabs.${settings.value.sidebar.tab}`))
   const sideDock = $derived(reader.dock === 'side')
@@ -119,11 +125,7 @@
   /** "Skip to Quran text" (§8.15): the reading cursor's roving item, else the first ayah item, else the canvas. */
   function skipToText(e: MouseEvent): void {
     e.preventDefault()
-    const target =
-      document.querySelector<HTMLElement>('.mp-a11y li[tabindex="0"]') ??
-      document.querySelector<HTMLElement>('.mp-a11y li') ??
-      document.getElementById('qd-main')
-    target?.focus({ preventScroll: true })
+    readingCursor()?.focus({ preventScroll: true })
   }
 
   function onpointermove(e: PointerEvent): void {
@@ -164,7 +166,11 @@
       data-zen-dock={ui.zen && ui.zenDock ? '' : undefined}
       data-pointer-idle={ui.zen && ui.pointerIdle ? '' : undefined}
     >
-      <div class="titlebar-slot" inert={ui.zen && !ui.zenTitleBar ? true : undefined}>
+      <div
+        class="titlebar-slot"
+        data-qd-region="titlebar"
+        inert={ui.zen && !ui.zenTitleBar ? true : undefined}
+      >
         <TitleBar />
       </div>
       <StartupBanner />
@@ -178,21 +184,17 @@
           {/snippet}
           {#snippet canvas()}
             <main class="canvas" id="qd-main" tabindex="-1" data-view={ui.view} bind:this={canvasEl}>
-              {#if ui.view === 'reader'}
-                {#if settings.value.readingMode === 'mushaf'}
-                  <MushafView />
-                {:else}
-                  <TranslationView />
-                {/if}
-              {:else if ui.view === 'downloads'}
+              <!-- Settings and About keep the reader mounted under their dialog. -->
+              {#if ui.view === 'downloads'}
                 <DownloadsView />
-              {:else if ui.view === 'settings'}
-                <SettingsView />
+              {:else if settings.value.readingMode === 'mushaf'}
+                <MushafView />
               {:else}
-                <AboutView />
+                <TranslationView />
               {/if}
               <div
                 class="dock-region"
+                class:lifted={ui.settingsOpen}
                 data-qd-region="dock"
                 role="region"
                 aria-label={i18n.t('shell.landmarks.player')}
@@ -221,6 +223,7 @@
           {/snippet}
         </PaneLayout>
       </div>
+      <SettingsDialog />
       <OverlayHost />
       <AyahContextMenu />
       <LiveRegion />
@@ -287,6 +290,11 @@
     transition:
       opacity var(--dur-normal) var(--ease-standard),
       translate var(--dur-normal) var(--ease-decelerate);
+  }
+
+  /* Above the Settings dialog (--z-dialog − 1), under every other dialog (later in the document at --z-dialog). */
+  .dock-region.lifted {
+    z-index: var(--z-dialog);
   }
 
   .dock-region[data-dock='side'] {

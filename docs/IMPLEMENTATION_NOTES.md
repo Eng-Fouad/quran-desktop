@@ -492,12 +492,44 @@ is the lead's fold-in of every accepted deviation (`docs/deviations/WP*.md`), ev
 - **Overlays** (§7.4): the host mounts only the top overlay, and each instance opens on its own stack entry
   (`overlayOpen(kind)`), which fixes a body lock left by an overlay opened within the 260 ms exit window (WP7c 1,
   INT web). Dialogs and sheets give floating content above them a modal-layer context (popovers +1, menus +2) (INT web).
+- **Settings dialog** (§7.4; owner request 2026-10-11, "show the Settings and Downloads panels in a different way"):
+  `settings` and `about` show in a large in-window dialog over the reader, which stays mounted (no more
+  `reader.setViewport(0, 0)` on every visit, and a zoomed page keeps its scroll). `ui.view` stays the source of truth;
+  the host is `SettingsDialog` in `App`, not an overlay kind (the overlay host renders only the top overlay, so a
+  confirmation would unmount Settings). It is `Dialog layer="view"`: `--z-dialog − 1`, so every overlay paints above it,
+  no floating or modal layer (no body lock; the caption buttons and Snap Layouts stay live) but `ui.settingsOpen`; it
+  opens only while no overlay, dialog or sheet is up (a deep link during a confirmation waits), and closes the
+  popovers, menus and context menu still open as it opens (`ui.dismissFloating`), which would otherwise float above it.
+  The dock is lifted above it and the chrome's popovers stack above it; clicks on the title bar, the dock and toasts are
+  not "outside". The floating frame is centred between the title bar and the dock, so the dock never lies over it; in
+  the filled frame its views keep the dock's band free (`settingsFrame`). The frame stays
+  below the title bar's band in zen too (the bar's reveal zone), so the bar slides in uncovered. Focus starts on
+  "Search settings" and returns to the opener, or stays with the destination when the view moved on (Downloads)
+  (WP7c 22–24, WP12b 10–12, WP12c 29).
+- **Downloads in two tiers** (§7.4, §9.7; the same owner request): the rail's Downloads button opens an arrowless
+  activity flyout (`DownloadsFlyout`, a floating layer: jobs with one action and Stop, failures with their reason, what
+  waits for a connection, "Recently finished", "Update all", "Get content" links that open the manager on a kind, and
+  "Manage downloads" with `Mod+Shift+D`). It never opens by itself; below 480 × 400 CSS px the button opens the manager,
+  and while the manager shows it returns to the reader. The manager stays `ui.view = 'downloads'` and now hides the
+  sidebar (`shellLayout`'s `manager` term); `openSidebar` leaves it for the reader, so a rail tab, `Mod+1…7`, `Mod+B` and
+  `Mod+F` work from it. Focus goes to its heading on open and to the reading cursor when it closes (`ui.focusReader`;
+  a teardown still reads the old state, so the check runs after a tick). The reading cursor (`readingCursor`, also the
+  "Skip to Quran text" target) is translation mode's roving verse there, no longer the canvas. The packs store keeps
+  `recent` (completed jobs leave `jobs`), `waitingIds` and `failedJobs`; `updateAll` and `openManager(tab)` live in
+  `downloads/actions.ts` (WP12a 12–15, WP7c 26–27).
 - **Shortcuts** (§7.7): precedence is an exact chord over punctuation matched by character, then the more specific scope,
   then the most recent registration; a disallowed auto-repeat is still consumed; `Shift+`punctuation matches the physical
   US key; `Mod+Ctrl` exists only on macOS; **every capture-phase Escape is decided after propagation** (a handler that
   called `preventDefault()` wins); the app Escape chain is layer → floating sidebar → non-reader view → zen (WP0E 7,
   WP7c 3, INT fix 2 ui). The audio shortcuts are registered by the dock, the study shortcuts by `AyahContextMenu`, the
-  reader's by the reader (WP9a 1, WP11c 4, WP8e 9).
+  reader's by the reader (WP9a 1, WP11c 4, WP8e 9). While the Settings dialog is open only its allow-list runs (the
+  audio group, palette, search, Escape, Settings, Downloads, theme, UI scale, full screen); the other global ones are
+  consumed, so a chord never reaches the webview (`Mod+G` find), and reader-scoped ones do not apply outside the
+  reader. `Mod+F` focuses "Search settings" there (About turns back to Settings; a palette on top closes first);
+  `Mod+,` toggles the dialog, also from its field, but never over another layer except the palette when it is the only
+  one (outside the dialog), which it closes first. The palette offers its "Settings" row only where the key would act,
+  since the row runs after the palette has closed. The theme and UI-scale chords type nothing, so they are
+  `allowInInput` (WP7c 23).
 - **Startup** (§7.8): the font and the bootstrap load in parallel; the onboarding opens on a first run
   (`app.firstRun && !onboardingDone`), never in test mode (WP0C 12, INT web). In test mode `App.svelte` installs the
   QA hooks after mounting, from their own chunk (WP7c).
@@ -635,6 +667,15 @@ is the lead's fold-in of every accepted deviation (`docs/deviations/WP*.md`), ev
   the pointer comes within 24 px; at the fit it never covers the page (58 px of margin against its 52). A toolbar with
   one tab stop and vertical arrows; a pointer never takes focus; Escape returns to the reading cursor and keeps the
   selection.
+- **Display button** (`DisplayControl.svelte`; owner request 2026-10-11, the approved phase 2 of "show the Settings and
+  Downloads panels in a different way"): an "Aa" capsule 8 px under the zoom control, and in translation mode where that
+  control would be, in the gutter beside the column. It opens the reading-display popover (§11.4), so a theme or ink
+  change is judged on the real page rather than behind the Settings scrim. The zoom control's presence rules moved into
+  `CanvasControl` (`canvasControl.svelte.ts`) so both controls look, yield and hide in zen alike; in translation mode
+  the button yields to the paper, which reaches it only in a canvas narrower than the column plus 2 × 56 px. Both
+  controls import those rules from `canvasControl.svelte.ts` (no aliases left in `ZoomControl`). A pointer never takes
+  focus; "All settings" closes the popover and gives focus back before the Settings dialog opens, so the dialog returns
+  it there (WP8e 13; S39).
 - **Drag** (`pan.ts`, owner request): the mode is fixed at the press from `zoomPct`, not `reader.scrolls`. At ≤ 100 % a
   horizontal-dominant drag turns one page on release (≥ 80 px, or 30 px within 250 ms; right = next, never mirrored);
   while the canvas still scrolls at `QFS_MIN`, a drag that sets off vertical-dominant pans vertically. Above 100 % a
@@ -710,6 +751,12 @@ is the lead's fold-in of every accepted deviation (`docs/deviations/WP*.md`), ev
   backup…" and "Show files…" (WP7c 7–8, INT web). Undo toasts replace each other (`ui.toastUndo`) (WP7c 9).
 - The breadcrumb opens Go to, names a spread "Pages 261–262", and separates segments with "،" in Arabic; it is keyed on
   text so a turn never shifts it (WP7c 13, INT web).
+- The rail's pill follows `data-active` (tabs keep `aria-pressed`; Settings is a dialog trigger with `aria-haspopup` and
+  `aria-expanded`, and closes the dialog when it shows) (owner 2026-10-11; WP7c 24). Downloads is the flyout's trigger
+  (`aria-expanded`, `aria-current="page"` while the manager shows; no popup attributes where the click navigates
+  instead); a 16 px progress ring replaced the pulsing dot, with a waiting count and a failure mark, and its tooltip
+  lost the key (the flyout's footer has it). In a window too short for every button the tabs scroll, their buttons
+  kept at 40 px, and Downloads and Settings stay at the foot (WP7c 26).
 
 ### 11.4 Surfaces (§9.7)
 
@@ -750,12 +797,23 @@ is the lead's fold-in of every accepted deviation (`docs/deviations/WP*.md`), ev
 - **Downloads (WP12a):** one job per pack, items asked meanwhile wait in `pending`; a full download puts the pack to use;
   offline failures resume when online; "Download when online" waits instead of failing; "Download the rest" counts
   on-demand items as present (INT fix 2 ui). Surah 1 of a reciter cannot be removed while another of its surahs stays
-  downloaded (it holds the basmala) (WP12a 9, WP5e 11).
+  downloaded (it holds the basmala) (WP12a 9, WP5e 11). Since the owner's 2026-10-11 request the rail button opens an
+  activity flyout first and the manager is one click on ("Manage downloads", a "Get content" link, `Mod+Shift+D`); the
+  manager hides the sidebar, focuses its heading, keeps the dock off its last rows, and its rows put the actions under
+  the title below 560 px of row (§9 above; WP12a 12–15).
 - **Settings (WP12b):** one section at a time with a cross-section search; `settingsMeta` names i18n keys, options and ranges
   (the palette reads it); sliders that re-lay the window save on release; theme miniatures read a colour table verified
   against the tokens; choosing close-to-tray also marks the first-close question answered; the Mica switch is disabled on
   Linux and where `window_set_chrome` is unsupported; Settings › Storage has "Library backup" (Back up…, Restore…)
-  (WP12b 1–4, INT web).
+  (WP12b 1–4, INT web). Since the owner's 2026-10-11 request it is the 1040 × 760 dialog over the reader (§9 above),
+  filling the room under 880 × 560 CSS px; the navigation's "Settings" names it and a corner X closes it; under 880 px of
+  width the sections fold into one row that scrolls sideways (the wheel too) instead of 2–5 wrapping rows at 150–200 %,
+  and the open section stays in view (WP12b 10–12). The canvas's "Aa" popover (`DisplayPopover`, the same request)
+  reuses the theme and style cards (`compact`) and `settingsMeta`'s ranges, and offers only the rows that change the
+  page on screen (`displayRows`): the theme; ink on Night and Black; beside the Mushaf the style and the pages; the
+  translation text size where translation text shows. The ink and page-layout rules are Settings' own, kept once in
+  `display.ts` for both. Its "All settings" opens the dialog on the reading mode's section (Mushaf, or Translations),
+  and it handles `Mod+,` itself, which never acts over a floating layer (WP12b 13).
 - **Onboarding and About (WP12c):** the flow state outlives the dialog; five steps (owner 2026-10-11): Welcome, Mushaf
   (the style cards with "Ornate surah headers" for every style beside a live preview of page 1, which fetches page 1's
   font and, while ticked, `decor` when online, and nothing offline), Translation and recitation, Starter set, Keys; both
@@ -768,7 +826,8 @@ is the lead's fold-in of every accepted deviation (`docs/deviations/WP*.md`), ev
   "Download all pages" requires it); totals under 10 MB are exact kB (en 832 kB, ar 1,119 kB). About opens with a "This app" group (the GPL notice and
   "Show the licence", the source-code link, the icon credit); core-data credit follows the build (QUL for qul, the
   Quran.com API for qdc); QUL's licence line says "QUL publishes no licence for this data" until the permission is
-  recorded (`QUL_PERMISSION`) (INT identity, INT fix 1 ui).
+  recorded (`QUL_PERMISSION`) (INT identity, INT fix 1 ui). About shows in the Settings dialog's frame, named "About
+  Quran for Desktop" (owner 2026-10-11; WP12c 29).
 
 ### 11.5 Brand (§9.9)
 
@@ -818,8 +877,9 @@ is the lead's fold-in of every accepted deviation (`docs/deviations/WP*.md`), ev
   `qd:page`, turn and flip timing, the glide, FontFaces, palettes and CSP, and writes `metrics-report.json`
   (`qd-metrics-report/2`); CPU and memory count the app **and** its WebView2 processes; `scripts/qa/idle-cpu.mjs` measures
   idle CPU without test mode (WP13b 5, INT fix 2 tooling).
-- **Scenarios** S01–S38, `smoke`, `ic2` (IC1/IC2 pass in the real app). S38 (new) asserts that a recitation requests no frame
-  loop and that the page draws nothing while hidden in the tray (INT gate 3). `relaunch({ close: true })` quits the way a
+- **Scenarios** S01–S39, `smoke`, `ic2` (IC1/IC2 pass in the real app). S38 (new) asserts that a recitation requests no frame
+  loop and that the page draws nothing while hidden in the tray (INT gate 3). S39 (owner 2026-10-11) shows the canvas's
+  "Aa" display popover beside the Mushaf and in translation mode (WP8e 13). `relaunch({ close: true })` quits the way a
   user does (the window's close, not the harness's `app_quit`); S35 uses it to check that a turn made inside the
   position's debounce survives the close (INT final gate).
 - **Single instance** is keyed by the bundle identifier: concurrent real-app runs of renamed exes forward to each other,

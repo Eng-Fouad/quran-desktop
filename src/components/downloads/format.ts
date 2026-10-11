@@ -1,11 +1,11 @@
 /**
- * Formatting for the Downloads manager (§9.7, §11.2): language names, progress pairs ("12.4 of 93.2 MB"), rates,
- * pack subtitles and reciter monograms. Owner: WP12a. Sizes arrive in KiB (§0.2); units follow `i18n.bytes`
- * (kB/MB/GB in the UI language and digits).
+ * Formatting for the Downloads manager and the rail flyout (§9.7, §11.2): language names, progress pairs ("12.4 of
+ * 93.2 MB"), rates, pack subtitles, finished jobs, the storage total and reciter monograms. Owner: WP12a. Sizes arrive
+ * in KiB (§0.2); units follow `i18n.bytes` (kB/MB/GB in the UI language and digits).
  */
-import type { JobSnapshot, PackInfo, PackItemState } from '$lib/ipc/bindings'
-import { i18n } from '$lib/stores'
-import { itemNoun, languageOf } from '$lib/stores/packs.svelte'
+import type { DiskUsage, JobSnapshot, PackInfo, PackItemState } from '$lib/ipc/bindings'
+import { i18n, quran } from '$lib/stores'
+import { itemNoun, languageOf, type FinishedJob } from '$lib/stores/packs.svelte'
 import { LRI, PDI } from '$lib/stores/i18n.svelte'
 
 const names = new Map<string, Intl.DisplayNames | null>()
@@ -96,6 +96,40 @@ export function jobLine(job: JobSnapshot): string {
     default:
       return ''
   }
+}
+
+/**
+ * The rail flyout's shorter line (it has no room for the rate and the time left): "8.2 of 45.7 MB" while downloading,
+ * "Paused · 9.6 of 45.7 MB", else the phase ("Waiting to start", "Installing…").
+ */
+export function jobAmount(job: JobSnapshot): string {
+  if (job.phase === 'downloading' && job.totalKib > 0) return sizePair(job.receivedKib, job.totalKib)
+  return jobLine(job)
+}
+
+/**
+ * A finished job's line in the flyout: what it brought ("Downloaded", "Updated", "Downloaded Al-Kahf", "3 pages
+ * downloaded"), then its size when known.
+ */
+export function finishedLine(f: FinishedJob, p: PackInfo): string {
+  const first = f.items?.[0]
+  let what: string
+  if (f.update) what = i18n.t('downloads.flyout.updated')
+  else if (f.items === null) what = i18n.t('downloads.flyout.finished')
+  else if (f.items.length === 1 && first !== undefined && p.kind === 'recitation') {
+    what = i18n.t('downloads.flyout.finishedSurah', { surah: quran.surahName(first) })
+  } else what = i18n.tp(`downloads.flyout.finishedItems.${itemNoun(p.kind)}`, f.items.length)
+  return f.kib > 0 ? [what, i18n.bytes(f.kib)].join(i18n.t('downloads.sep')) : what
+}
+
+/**
+ * The storage total, as the manager's header card and the flyout's header say it: "290 MB used", "Nothing downloaded
+ * yet", or "Measuring…" until the disk usage has loaded.
+ */
+export function usageTotal(usage: DiskUsage | null): string {
+  if (usage === null) return i18n.t('downloads.usage.measuring')
+  if (usage.totalKib === 0) return i18n.t('downloads.usage.empty')
+  return i18n.t('downloads.usage.used', { size: i18n.bytes(usage.totalKib) })
 }
 
 /** Present (pinned or fetched) and pinned items of a per-item pack, and what they take. */

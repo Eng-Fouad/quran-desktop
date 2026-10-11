@@ -4,6 +4,8 @@
   or needing a connection (offline or with network use off, the page shows the Hafs fallback, §8.5). A radio group.
   Tajweed needs COLR colour fonts: when this webview failed the §8.6 probe (`fonts.v4Supported === false`), its card says
   so and cannot be chosen (choosing it would only be switched back to Madani 1421 AH).
+  `compact` (the reading-display popover): two across, each card its name and where its fonts stand, in one line of
+  status text (no tile, no hint), with the same availability rules.
 -->
 <script lang="ts">
   import BookOpen from '@lucide/svelte/icons/book-open'
@@ -21,9 +23,11 @@
   interface Props {
     labelledBy: string
     describedBy?: string
+    /** Two across, names and status only (the reading-display popover). */
+    compact?: boolean
   }
 
-  let { labelledBy, describedBy }: Props = $props()
+  let { labelledBy, describedBy, compact = false }: Props = $props()
 
   const STYLES: readonly { style: MushafStyle; icon: LucideIcon }[] = [
     { style: 'hafs', icon: Type },
@@ -66,7 +70,7 @@
 </script>
 
 <div
-  class="styles"
+  class={['styles', { compact }]}
   role="radiogroup"
   aria-labelledby={labelledBy}
   aria-describedby={describedBy}
@@ -86,12 +90,19 @@
       data-value={style}
       onclick={() => choose(style)}
     >
-      <span class="tile" aria-hidden="true"><Icon size={18} strokeWidth={1.75} /></span>
-      <span class="text">
-        <span class="title">{i18n.t(`settings.options.mushafStyle.${style}`)}</span>
-        <span class="hint">{i18n.t(`settings.options.mushafStyleHint.${style}`)}</span>
-        <span class="status"><Badge tone={status.tone} size="sm">{status.text}</Badge></span>
-      </span>
+      {#if compact}
+        <span class="text">
+          <span class="title">{i18n.t(`settings.options.mushafStyle.${style}`)}</span>
+          <span class="status-text" data-tone={status.tone}>{status.text}</span>
+        </span>
+      {:else}
+        <span class="tile" aria-hidden="true"><Icon size={18} strokeWidth={1.75} /></span>
+        <span class="text">
+          <span class="title">{i18n.t(`settings.options.mushafStyle.${style}`)}</span>
+          <span class="hint">{i18n.t(`settings.options.mushafStyleHint.${style}`)}</span>
+          <span class="status"><Badge tone={status.tone} size="sm">{status.text}</Badge></span>
+        </span>
+      {/if}
     </button>
   {/each}
 </div>
@@ -186,6 +197,36 @@
 
   .status {
     margin-block-start: var(--space-1);
+  }
+
+  /* Compact: two across, the name over one wrapping line of status in its tone's text colour. */
+  .compact {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-2);
+  }
+
+  .compact .style {
+    grid-template-columns: minmax(0, 1fr);
+    padding-block: var(--space-2);
+    padding-inline: var(--space-3);
+  }
+
+  .compact .title {
+    font-size: var(--text-sm);
+  }
+
+  .status-text {
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    line-height: var(--leading-title);
+  }
+
+  .status-text[data-tone='success'] {
+    color: var(--success-text);
+  }
+
+  .status-text[data-tone='warning'] {
+    color: var(--warning-text);
   }
 
   @media (forced-colors: active) {

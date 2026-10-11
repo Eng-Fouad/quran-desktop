@@ -17,6 +17,7 @@
   import SliderRow from '../controls/SliderRow.svelte'
   import StylePicker from '../controls/StylePicker.svelte'
   import SwitchRow from '../controls/SwitchRow.svelte'
+  import { PAGE_MODES } from '../display'
   import { save } from '../model'
 
   const search = settingsSearch()
@@ -68,7 +69,7 @@
 </SettingGroup>
 
 <SettingGroup id="pages">
-  <ChoiceRow id="pageMode" values={['auto', 'single', 'spread']} shortcut="shortcuts.view.pageMode" />
+  <ChoiceRow id="pageMode" values={PAGE_MODES} shortcut="shortcuts.view.pageMode" />
   <SliderRow id="zoomPct" shortcut="shortcuts.view.zoomIn" />
 </SettingGroup>
 

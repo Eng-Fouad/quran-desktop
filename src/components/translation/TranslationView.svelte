@@ -20,6 +20,8 @@
   - Recitation (§9.7): the playing verse is kept at 30 % from the top. A manual scroll pauses that for 4 s and offers
     "Return to recitation" while the verse is off screen.
   States (§9.8): no translation to show → `AddTranslationCard`; a selected pack that cannot be shown → `PackNotice`.
+  The "Aa" display button (`DisplayControl`, WP8e; owner request 2026-10-11) sits in the top inline-end corner, in the
+  gutter beside the column, and opens the reading-display popover (theme, ink, text size), live on the feed.
   Owner: WP11a.
 -->
 <script lang="ts">
@@ -29,6 +31,7 @@
   import { onMount, untrack } from 'svelte'
   import type { HighlightColor } from '$lib/ipc/bindings'
   import VirtualList from '$components/ui/VirtualList.svelte'
+  import DisplayControl from '$components/mushaf/DisplayControl.svelte'
   import { overlayReach } from '$components/shell/overlayReach'
   import { i18n, library, player, quran, reader, settings, translations, ui } from '$lib/stores'
   import { parseRef } from '$lib/text/html'
@@ -567,6 +570,8 @@
       </div>
     {/if}
   {/if}
+  <!-- Outside the feed's scroller, after it in tab order. -->
+  <DisplayControl />
 </div>
 
 <style>

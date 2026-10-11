@@ -2,7 +2,8 @@
   Test fixture (WP7b): a Dialog with a trigger, two body inputs and footer actions, plus a control outside it; with
   `select`, a Select in the body (floating content opened from inside a modal layer); with `disabledFirst`, the sheet's
   body starts with a disabled icon button (the study pane at 1:1, whose "Previous ayah" is disabled); with `onlyDisabled`
-  the sheet holds nothing that can take focus but that button.
+  the sheet holds nothing that can take focus but that button; with `view`, an in-window view dialog (`layer="view"`,
+  the Settings dialog's) below a 40 px band, which a click on the outside control does not close.
 -->
 <script lang="ts">
   import ChevronLeft from '@lucide/svelte/icons/chevron-left'
@@ -14,6 +15,7 @@
     select?: boolean
     disabledFirst?: boolean
     onlyDisabled?: boolean
+    view?: boolean
     onSave?: () => void
   }
 
@@ -23,6 +25,7 @@
     select = false,
     disabledFirst = false,
     onlyDisabled = false,
+    view = false,
     onSave,
   }: Props = $props()
 
@@ -60,6 +63,13 @@
     {dismissible}
     {trigger}
     {footer}
+    layer={view ? 'view' : 'dialog'}
+    insetTop={view ? 40 : 0}
+    onInteractOutside={view
+      ? (e: PointerEvent) => {
+          if (e.target instanceof Element && e.target.closest('#outside')) e.preventDefault()
+        }
+      : undefined}
   >
     <TextInput id="name" aria-label="Name" />
     <TextInput id="details" aria-label="Details" />

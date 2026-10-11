@@ -8,8 +8,10 @@
     Quran.com identity of its name and icon), Quran text and layout, fonts, translations and tafsir as installed (each
     with its version and link), word by word, recitations.
   - **Open-source licences** (`OpenSourceList`): collapsible, loaded lazily from `thirdparty.json`.
-  The column keeps clear of the player dock, which stays visible in every view (§7.4). Opening the view refreshes the
-  catalogue, so packs installed meanwhile are credited.
+  It shows in the shell's Settings dialog over the reader (`SettingsDialog`, owner request 2026-10-11), which sets what
+  the column keeps free: `--qd-dock-reserve` at its end (where the player dock lies over the dialog) and
+  `--qd-close-room` at the inline end (the close button). Opening the view refreshes the catalogue, so packs installed
+  meanwhile are credited.
 -->
 <script lang="ts">
   import Check from '@lucide/svelte/icons/check'
@@ -19,7 +21,7 @@
   import appIcon from '../../assets/app-icon.svg'
   import { Badge, Button, ScrollArea } from '$components/ui'
   import { attributionGroups } from '$lib/about/attributions'
-  import { app, i18n, packs, reader, settings, ui } from '$lib/stores'
+  import { app, i18n, packs, settings, ui } from '$lib/stores'
   import AttributionList from './AttributionList.svelte'
   import OpenSourceList from './OpenSourceList.svelte'
 
@@ -28,11 +30,6 @@
 
   const info = $derived(app.info)
   const groups = $derived(attributionGroups({ packs: packs.list, coreSource: info.core.source }))
-
-  /** Space kept free under the column for the player dock (the side card, or the bar), plus its margin. */
-  const dockReserve = $derived(
-    reader.dock === 'side' ? 120 + 34 : reader.dock === 'compact' ? 56 + 34 : 64 + 34,
-  )
 
   /** The build date of core.db as an ISO day ("2026-10-10"), or the raw value when it is not an ISO timestamp. */
   const builtOn = $derived(/^\d{4}-\d{2}-\d{2}/.exec(info.core.builtAt)?.[0] ?? (info.core.builtAt || '—'))
@@ -93,7 +90,7 @@
   })
 </script>
 
-<div class="about" data-qd-view="about" style:--_reserve="{dockReserve}px">
+<div class="about" data-qd-view="about">
   <ScrollArea class="scroll">
     <div class="column">
       <header class="hero" aria-labelledby="about-name">
@@ -166,8 +163,8 @@
     inline-size: 100%;
     max-inline-size: 820px;
     margin-inline: auto;
-    padding-block: var(--space-8) calc(var(--_reserve) + var(--space-6));
-    padding-inline: var(--space-8);
+    padding-block: var(--space-8) calc(var(--qd-dock-reserve, 0px) + var(--space-6));
+    padding-inline: var(--space-8) max(var(--space-8), var(--qd-close-room, 0px));
   }
 
   /* --- header ------------------------------------------------------------------------------------------------------ */

@@ -228,4 +228,23 @@ export const downloads = {
     loading: 'Loading packs…',
     errorTitle: 'Couldn’t load the packs',
   },
+  /** The rail's Downloads flyout (owner request 2026-10-11): what runs, waits, failed and just finished. */
+  flyout: {
+    /** Accessible name of the list of jobs and requests. */
+    jobs: 'Current downloads',
+    nothing: 'Nothing downloading',
+    /** Links that open the manager on a kind of pack. */
+    getContent: 'Get content',
+    recent: 'Recently finished',
+    /** A finished job's line, before its size: a whole pack, an update, one surah, several items. */
+    finished: 'Downloaded',
+    updated: 'Updated',
+    finishedSurah: 'Downloaded {surah}',
+    finishedItems: {
+      page: { one: '{count} page downloaded', other: '{count} pages downloaded' },
+      surah: { one: '{count} surah downloaded', other: '{count} surahs downloaded' },
+      chapter: { one: '{count} surah downloaded', other: '{count} surahs downloaded' },
+    },
+    manage: 'Manage downloads',
+  },
 } as const

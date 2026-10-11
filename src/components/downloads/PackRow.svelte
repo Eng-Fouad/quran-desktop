@@ -9,26 +9,22 @@
     reads "Waiting · Waits for a connection" with Cancel: it starts by itself, so it is no failure.
   - Right-click (or Shift+F10 / the menu key on a focused control) opens the row's menu (§10.3): its actions and
     Open folder.
+  - Below 560 px of row width (a narrow canvas, 150–200 % UI scale) the badge and actions wrap under the title, so the
+    name keeps the row's width (a container query on the row; owner request 2026-10-11).
   - `children` renders under the row (a recitation's surah grid); `extraActions` before the actions (its toggle).
 -->
 <script lang="ts">
-  import AudioLines from '@lucide/svelte/icons/audio-lines'
-  import BookOpen from '@lucide/svelte/icons/book-open'
-  import BookText from '@lucide/svelte/icons/book-text'
   import CircleAlert from '@lucide/svelte/icons/circle-alert'
   import WifiOff from '@lucide/svelte/icons/wifi-off'
-  import Languages from '@lucide/svelte/icons/languages'
-  import Shapes from '@lucide/svelte/icons/shapes'
-  import WholeWord from '@lucide/svelte/icons/whole-word'
-  import type { LucideIcon } from '@lucide/svelte'
   import type { Snippet } from 'svelte'
   import { Badge, Button, ContextMenu, IconButton, Progress } from '$components/ui'
   import type { Tone } from '$components/ui'
-  import type { PackInfo, PackKind } from '$lib/ipc/bindings'
+  import type { PackInfo } from '$lib/ipc/bindings'
   import { i18n, packs, settings } from '$lib/stores'
   import { hasContent, languageOf, mushafPackId, reciterIdOf } from '$lib/stores/packs.svelte'
   import { rowActions, rowMenu } from './actions'
   import { jobLine, subtitle } from './format'
+  import KindTile from './KindTile.svelte'
 
   interface Props {
     pack: PackInfo
@@ -42,15 +38,6 @@
 
   let { pack, leading, extraActions, children }: Props = $props()
 
-  const ICONS: Record<PackKind, LucideIcon> = {
-    mushaf_fonts: BookOpen,
-    decor: Shapes,
-    translation: Languages,
-    tafsir: BookText,
-    recitation: AudioLines,
-    wbw: WholeWord,
-  }
-
   const job = $derived(packs.jobs.get(pack.id))
   const items = $derived(packs.items.get(pack.id))
   const pending = $derived(packs.pending.has(pack.id))
@@ -61,7 +48,6 @@
   const actions = $derived(rowActions(pack, job))
   const menu = $derived(rowMenu(pack, job))
   const line = $derived(job ? jobLine(job) : '')
-  const Icon = $derived(ICONS[pack.kind])
 
   /** The pack is what the reader uses now (style, translation, tafsir, word by word or reciter). */
   const inUse = $derived.by(() => {
@@ -132,7 +118,7 @@
           {#if leading}
             {@render leading()}
           {:else}
-            <span class="tile k-{pack.kind}"><Icon size={18} strokeWidth={1.75} /></span>
+            <KindTile kind={pack.kind} />
           {/if}
         </div>
 
@@ -217,6 +203,7 @@
     position: relative;
     display: flex;
     flex-direction: column;
+    container: pack-row / inline-size;
     transition: background-color var(--dur-fast) var(--ease-standard);
   }
 
@@ -238,42 +225,6 @@
     display: flex;
     align-self: start;
     margin-block-start: 1px;
-  }
-
-  /* Kind colours, as in the disk-usage bar (DiskUsageBar). */
-  .tile {
-    --_k: var(--text-muted);
-    display: inline-grid;
-    place-items: center;
-    inline-size: 36px;
-    block-size: 36px;
-    border-radius: var(--radius-md);
-    background-color: color-mix(in srgb, var(--_k) 13%, var(--surface-raised));
-    color: color-mix(in srgb, var(--_k) 88%, var(--text));
-  }
-
-  .k-mushaf_fonts {
-    --_k: var(--frame-gold);
-  }
-
-  .k-decor {
-    --_k: color-mix(in srgb, var(--frame-gold) 80%, var(--text));
-  }
-
-  .k-translation {
-    --_k: color-mix(in srgb, var(--user-hl-blue-solid) 78%, var(--text));
-  }
-
-  .k-tafsir {
-    --_k: color-mix(in srgb, var(--user-hl-purple-solid) 78%, var(--text));
-  }
-
-  .k-recitation {
-    --_k: var(--accent);
-  }
-
-  .k-wbw {
-    --_k: color-mix(in srgb, var(--user-hl-yellow-solid) 82%, var(--text));
   }
 
   .body {
@@ -414,9 +365,17 @@
     color: var(--danger-text);
   }
 
-  @media (forced-colors: active) {
-    .tile {
-      border: 1px solid CanvasText;
+  /* A narrow row: the badge and the actions move under the title, at the body's inline start. */
+  @container pack-row (max-width: 560px) {
+    .row {
+      grid-template-columns: 36px minmax(0, 1fr);
+      row-gap: var(--space-2);
+    }
+
+    .end {
+      grid-column: 2;
+      flex-wrap: wrap;
+      justify-content: flex-start;
     }
   }
 </style>

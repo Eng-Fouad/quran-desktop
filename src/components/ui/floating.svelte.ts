@@ -2,7 +2,7 @@
  * Floating-layer registration (§7.4, §7.7 rule 1). Every open menu, context menu, popover, select or combobox listbox,
  * and every modal dialog or sheet counts as a layer: while one is open, the shortcut listener runs only `allowInInput`
  * definitions, so typeahead in a menu (`b` → "Bookmark") never toggles a bookmark and arrows in a listbox never turn
- * the page.
+ * the page. Menus, popovers and listboxes close when the Settings dialog opens (`ui.dismissFloating`).
  */
 import { getContext, setContext, untrack } from 'svelte'
 import { i18n } from '$lib/stores/i18n.svelte'
@@ -11,14 +11,24 @@ import type { Dir } from './types'
 
 /**
  * Registers a floating layer with `ui.pushFloating()` while `isOpen()` holds, and unregisters it when it closes or the
- * component is destroyed (push/pop always balance). Call during component initialisation.
+ * component is destroyed (push/pop always balance). With `close`, an open layer also closes itself when
+ * `ui.dismissFloating()` asks (the Settings dialog opening, §7.4); dialogs and sheets pass none. Call during component
+ * initialisation.
  */
-export function trackFloating(isOpen: () => boolean): void {
+export function trackFloating(isOpen: () => boolean, close?: () => void): void {
   $effect(() => {
     if (!isOpen()) return
     // `pushFloating` reads the counter it writes: untracked, so the effect depends on `isOpen()` alone.
     untrack(() => ui.pushFloating())
     return () => untrack(() => ui.popFloating())
+  })
+  if (close === undefined) return
+  let armed = false
+  $effect(() => {
+    void ui.floatingDismissals
+    // The first run only subscribes: a request made before this layer existed was not for it.
+    if (armed && untrack(isOpen)) untrack(close)
+    armed = true
   })
 }
 
@@ -51,9 +61,10 @@ const MODAL_LAYER = Symbol('qd.modal-layer')
 /**
  * `Dialog` and `Sheet`: floating content opened from inside them (call during initialisation) stacks above their
  * layer. Floating content is portalled to `<body>` at `--z-popover` (40) or `--z-menu` (50), below `--z-dialog` (60) and
- * `--z-palette` (70), so without this a select, menu or popover opened in a dialog would render behind it.
+ * `--z-palette` (70), so without this a select, menu or popover opened in a dialog would render behind it. `null`:
+ * no modal layer right now (`App` lifts the chrome's floating content only while the Settings dialog is open).
  */
-export function setModalLayer(layer: () => ModalLayer): void {
+export function setModalLayer(layer: () => ModalLayer | null): void {
   setContext(MODAL_LAYER, layer)
 }
 
@@ -63,8 +74,11 @@ export function setModalLayer(layer: () => ModalLayer): void {
  * no modal, `undefined`, and the stylesheet's `--z-popover` / `--z-menu` apply. Call during initialisation.
  */
 export function floatingZ(kind: 'popover' | 'menu'): () => string | undefined {
-  const layer = getContext<(() => ModalLayer) | undefined>(MODAL_LAYER)
+  const layer = getContext<(() => ModalLayer | null) | undefined>(MODAL_LAYER)
   if (!layer) return () => undefined
   const step = kind === 'popover' ? 1 : 2
-  return () => `calc(var(--z-${layer()}) + ${step})`
+  return () => {
+    const current = layer()
+    return current === null ? undefined : `calc(var(--z-${current}) + ${step})`
+  }
 }

@@ -64,7 +64,10 @@
   /** The input text: the query while typing, otherwise the selected label. */
   const inputText = $derived(open && query !== null ? query : selectedLabel)
 
-  trackFloating(() => open)
+  trackFloating(
+    () => open,
+    () => (open = false),
+  )
   const zIndex = floatingZ('menu')
 
   $effect(() => {

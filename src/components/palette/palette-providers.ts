@@ -103,8 +103,9 @@ import { SHORTCUT_GROUPS, type ShortcutDef, type ShortcutGroup } from '$lib/cont
 import { isTextKey, translate } from '$lib/i18n'
 import type { HistoryEntry, HistoryMode, ReciterInfo, Settings, SurahInfo } from '$lib/ipc/bindings'
 import { chordAvailable, type Chord, tryParseChord, US_PUNCTUATION } from '$lib/shortcuts'
+import { allowedInSettings } from '$lib/shortcuts/app'
 import { app, history, i18n, library, player, quran, reader, settings, shortcuts, ui } from '$lib/stores'
-import { FOCUS_TARGETS } from '$lib/stores/ui.svelte'
+import { FOCUS_TARGETS, inDialog } from '$lib/stores/ui.svelte'
 import {
   describeTarget,
   listSeparator,
@@ -577,9 +578,13 @@ export function syntheticKeyEvent(def: ShortcutDef, isMac: boolean): KeyboardEve
   })
 }
 
-/** Runs a shortcut's action from the palette: the reader first for reader commands, and only if it still applies. */
+/**
+ * Runs a shortcut's action from the palette: the reader first for reader commands, and for the ones the Settings dialog
+ * does not run (what they act on, the sidebar or the side pane, is under it, §7.4); and only if it still applies.
+ */
 export function runShortcut(def: ShortcutDef): void {
-  if (def.scope !== 'global' && ui.view !== 'reader') ui.setView('reader')
+  const leave = def.scope !== 'global' || (inDialog(ui.view) && !allowedInSettings(def))
+  if (leave && ui.view !== 'reader') ui.setView('reader')
   if (!whenHolds(def)) return
   runAction(() => def.run(syntheticKeyEvent(def, app.isMac)))
 }

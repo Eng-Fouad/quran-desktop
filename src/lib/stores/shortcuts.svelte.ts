@@ -15,7 +15,9 @@
  * Rules, in order: (1) with a layer open and (2) in an editable target only `allowInInput` definitions run; (3) the
  * widget guard (bubble phase, plain and Shift-only chords); (4) scope; (5) `when()`; (6) a key auto-repeat runs only
  * definitions with `repeat: true` (the repeat is still consumed, so a held Space never scrolls); (7) `run(e)` and
- * `preventDefault()`.
+ * `preventDefault()`. While the Settings dialog is open (`ui.settingsOpen`, §7.4), a definition off its allow-list
+ * (`allowedInSettings`: the audio group, the palette, search, Escape, Settings, Downloads, theme, UI scale, full
+ * screen) that reaches step 7 is consumed without running; a reader-scoped one never gets there (step 4).
  *
  * **Precedence** when several definitions match one event: an exact chord beats punctuation matched by character
  * (`Mod+Shift+Digit0` beats `Mod+=` where `=` is Shift+0), then the more specific scope wins (`mushaf`/`translation`,
@@ -47,7 +49,7 @@ import {
   parseChord,
   widgetGuardBlocks,
 } from '$lib/shortcuts'
-import { appShortcuts } from '$lib/shortcuts/app'
+import { allowedInSettings, appShortcuts } from '$lib/shortcuts/app'
 import { app } from './app.svelte'
 import { i18n } from './i18n.svelte'
 import { settings } from './settings.svelte'
@@ -228,6 +230,20 @@ class ShortcutsStore implements Store {
     })
   }
 
+  /**
+   * Whether `e` presses a chord of the registered definition `id` on this platform. For a layer that runs a shortcut's
+   * action itself while rule 1 pauses the definition (the Downloads flyout's "Manage downloads" names `Mod+Shift+D`).
+   */
+  matches(id: string, e: KeyboardEvent): boolean {
+    const def = this.defs.find((d) => d.id === id)
+    if (def === undefined || isInertKeyEvent(e)) return false
+    const isMac = app.isMac
+    return def.keys.some((text) => {
+      const chord = this.#chord(text)
+      return chord !== null && chordAvailable(chord, isMac) && matchQuality(chord, e, isMac) > 0
+    })
+  }
+
   reset(): void {
     this.#dispose()
     this.#deferred = null
@@ -291,6 +307,8 @@ class ShortcutsStore implements Store {
 
   #run({ def }: Hit, e: KeyboardEvent): void {
     e.preventDefault()
+    // The Settings dialog (§7.4): a definition off its allow-list is consumed and does nothing.
+    if (ui.settingsOpen && !allowedInSettings(def)) return
     if (e.repeat && def.repeat !== true) return
     // Zen hides the dock; an audio key shows it for a moment, so the change it made is visible (§9.6).
     if (def.group === 'audio') ui.pokeDock()

@@ -290,6 +290,52 @@ describe('Commands', () => {
     }
   })
 
+  it('leaves the Settings dialog for a command it does not run; offers Settings only outside it', () => {
+    const byId = (id: string) => appShortcuts.find((d) => d.id === id) as ShortcutDef
+    ui.setView('settings')
+    // The sidebar is under the dialog: the command returns to the reader first.
+    const open = ui.sidebarOpen
+    runShortcut(byId('view.sidebar'))
+    expect(ui.view).toBe('reader')
+    expect(ui.sidebarOpen).toBe(!open)
+    // The theme is on its allow-list: it changes in place.
+    ui.setView('about')
+    runShortcut(byId('view.theme'))
+    expect(ui.view).toBe('about')
+    // "Settings" is not offered while the dialog shows (it would close it), but is everywhere else.
+    ui.open('palette', {})
+    expect(find(paletteResults('settings', 'all'), 'cmd:app.settings')).toBeUndefined()
+    ui.close()
+    ui.setView('reader')
+    ui.open('palette', {})
+    expect(find(paletteResults('settings', 'all'), 'cmd:app.settings')).toBeDefined()
+    ui.close()
+    runShortcut(byId('app.settings'))
+    expect(ui.view).toBe('settings')
+  })
+
+  it('offers "Settings" only where choosing it runs: not with a popover or a sheet under the palette', () => {
+    const settingsDef = appShortcuts.find((d) => d.id === 'app.settings') as ShortcutDef
+    // A popover (or the study pane's sheet) stays up under the palette, whose own dialog is one more floating layer:
+    // the row would run once the palette has closed, over that layer, where the key does nothing. It is not offered.
+    ui.pushFloating()
+    ui.open('palette', {})
+    ui.pushFloating()
+    expect(find(paletteResults('settings', 'all'), 'cmd:app.settings')).toBeUndefined()
+    ui.close()
+    ui.popFloating()
+    runShortcut(settingsDef)
+    expect(ui.view).toBe('reader')
+    ui.popFloating()
+    // The palette alone: offered, and it runs once the palette has closed.
+    ui.open('palette', {})
+    const row = find(paletteResults('settings', 'all'), 'cmd:app.settings')
+    expect(row).toBeDefined()
+    ui.close()
+    row?.run()
+    expect(ui.view).toBe('settings')
+  })
+
   it('builds the key event of a chord for the platform', () => {
     const def = (keys: string[]): ShortcutDef => ({
       id: 't',

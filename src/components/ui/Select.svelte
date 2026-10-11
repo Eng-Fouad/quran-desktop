@@ -69,7 +69,10 @@
     items.map(({ value: v, label: l, disabled: d }) => ({ value: v, label: l, disabled: d })),
   )
 
-  trackFloating(() => open && !searchable)
+  trackFloating(
+    () => open && !searchable,
+    () => (open = false),
+  )
   const zIndex = floatingZ('menu')
 
   function setValue(next: string): void {

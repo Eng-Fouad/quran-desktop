@@ -277,6 +277,37 @@ Tests:
     `C:\qdt\WP8e`, then `app-driver.mjs --exe C:\qdt\WP8e\debug\quran-desktop.exe --only S28,S29,S32`).
   - Ports 1728–1730.
 
+### 13. Canvas display button (owner request 2026-10-11)
+
+The approved phase 2 of "show the Settings and Downloads panels in a different way": an "Aa" button on the reading
+canvas opens Settings' display controls beside the page (`DisplayPopover`, WP12b 13), so a theme or ink change is
+judged on the real page rather than behind the Settings dialog's scrim.
+
+- **Where.** `DisplayControl.svelte`: a 40 × 40 glass capsule 8 px under the zoom control (116 px from the canvas top,
+  on its inline-end edge). At the fit it is as clear of the page as the zoom control (52 px in at most against the
+  58 px margin), and it misses the chevrons, the slot, the dock and the side card (asserted at 1600 × 1000, 1366 × 768,
+  and 1920 × 1080 with the side card). The popover opens 8 px toward the canvas, anchored to the capsule, top edges
+  aligned.
+- **Translation mode too.** `TranslationView` (WP11a) mounts the same button where the zoom control would be (16 px
+  down), in the gutter beside the reading column. There it yields to the paper (`.sheet`), which reaches it only when
+  the canvas is narrower than the column plus 2 × 56 px (an 880 px window with the sidebar closed). Escape on it
+  focuses the feed's roving verse (`readingCursor`, which "Skip to Quran text" and the Downloads manager's close use
+  too, WP7c 27), and the wheel over it scrolls the feed.
+- **Shared presence.** The zoom control's look, yield and zen rules moved unchanged into `CanvasControl`
+  (`src/components/mushaf/canvasControl.svelte.ts`) with the pure helpers (`overlapsAny`, `nearBox`,
+  `canvasControlState`, `REACH_PX`, `TEXT_GAP`, `PROTECTED`), imported from there by both controls and their tests;
+  `ZoomControl.svelte`'s module script keeps only `ZOOM_WAKE_MS`. The pure tests moved from `zoomControl.test.ts` to
+  `canvasControl.test.ts`, unchanged but for the names. The display button also counts an open popover as engaged.
+  Each control measures on its own, so one can yield while the other stays.
+- **Focus.** A pointer press never takes focus, as on the zoom control: bits-ui returns focus on close to wherever it
+  was, and ← → keep turning pages. Opened from the keyboard, focus returns to the button. Escape on the closed button is
+  consumed and focuses the reading cursor, keeping the selection.
+- **Tests and scenario.** `src/components/mushaf/DisplayControl.browser.test.ts` (15 tests): the place in three dock
+  modes, the look, the yield, zen, the popover's rows and semantics, live changes, the study-pane row, keys, "All
+  settings" and `Mod+,`, the Arabic mirror, the 380 × 300 window (760 × 600 at 200 %) in both UIs, and translation mode
+  (place, rows, the yield to the paper). New scenario **S39** (web; it seeds installed packs like S21): `S39`,
+  `S39-popover`, `S39-sepia` and `S39-ar`.
+
 ## Requests
 
 - **WP8a (`geometry.ts`, `fitLayout`):** when the fit falls below `QFS_MIN`, compare the candidates at the floor. A

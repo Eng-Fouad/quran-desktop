@@ -2,6 +2,7 @@
   ThemePicker (§9.7): the theme as six cards (Match system, Paper, Sepia, Night, Black, High contrast), each a miniature
   of the page in that theme with the current accent. "Match system" shows its light and dark variants split along the
   diagonal. A radio group: the chosen card is the tab stop, arrow keys choose (mirrored in RTL).
+  `compact` (the reading-display popover): three across with shorter miniatures and the names only.
 -->
 <script lang="ts">
   import Check from '@lucide/svelte/icons/check'
@@ -14,9 +15,11 @@
   interface Props {
     labelledBy: string
     describedBy?: string
+    /** Three across, shorter miniatures, no hints (the reading-display popover). */
+    compact?: boolean
   }
 
-  let { labelledBy, describedBy }: Props = $props()
+  let { labelledBy, describedBy, compact = false }: Props = $props()
 
   const THEMES: readonly ThemeMode[] = ['system', 'paper', 'sepia', 'night', 'black', 'high_contrast']
 
@@ -54,7 +57,7 @@
   </span>
 {/snippet}
 
-<div class="theme-picker">
+<div class={['theme-picker', { compact }]}>
   <div
     class="themes"
     role="radiogroup"
@@ -85,7 +88,7 @@
           {/if}
         </span>
         <span class="name">{i18n.t(`settings.options.theme.${theme}`)}</span>
-        <span class="hint">{hint(theme)}</span>
+        {#if !compact}<span class="hint">{hint(theme)}</span>{/if}
       </button>
     {/each}
   </div>
@@ -113,6 +116,21 @@
     .themes {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
+
+    .compact .themes {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  /* Compact: three across down to 240 px, then two. */
+  @container (max-width: 240px) {
+    .compact .themes {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  .compact .themes {
+    gap: var(--space-2);
   }
 
   .theme {
@@ -218,6 +236,27 @@
   .line.accent {
     background-color: var(--_accent);
     opacity: 1;
+  }
+
+  .compact .theme {
+    padding: 4px 4px 6px;
+  }
+
+  .compact .art {
+    block-size: 44px;
+  }
+
+  .compact .mini {
+    padding-block-start: 6px;
+  }
+
+  .compact .sheet {
+    gap: 4px;
+    padding-block-start: 6px;
+  }
+
+  .compact .name {
+    font-size: var(--text-xs);
   }
 
   .tick {

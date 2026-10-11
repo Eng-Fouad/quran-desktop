@@ -367,6 +367,68 @@ describe('packs store: "Download when online" (a request that waits, never a fai
   })
 })
 
+describe('packs store: what the rail flyout lists (owner request 2026-10-11)', () => {
+  it('keeps the jobs that completed, newest first, one per pack, at most five', async () => {
+    expect(packs.recent).toEqual([])
+    await packs.install('tr.en.saheeh')
+    await until(() => !packs.jobs.has('tr.en.saheeh'))
+    expect(packs.recent).toEqual([
+      expect.objectContaining({ packId: 'tr.en.saheeh', update: false, items: null }),
+    ])
+    expect(packs.recent[0]?.kib).toBe(pack('tr.en.saheeh').sizeKib)
+
+    await packs.install(RECITER, { type: 'items', data: { items: [114] } })
+    await until(() => !packs.jobs.has(RECITER))
+    expect(packs.recent.map((f) => [f.packId, f.items])).toEqual([
+      [RECITER, [114]],
+      ['tr.en.saheeh', null],
+    ])
+    // The same pack again moves up instead of repeating.
+    await packs.install(RECITER, { type: 'items', data: { items: [113] } })
+    await until(() => !packs.jobs.has(RECITER))
+    expect(packs.recent.map((f) => f.packId)).toEqual([RECITER, 'tr.en.saheeh'])
+
+    for (const id of ['tr.fr.rashid', 'tr.es.garcia', 'tr.ur.junagarhi', 'wbw.en']) {
+      await packs.install(id)
+      await until(() => !packs.jobs.has(id))
+    }
+    expect(packs.recent.map((f) => f.packId)).toEqual([
+      'wbw.en',
+      'tr.ur.junagarhi',
+      'tr.es.garcia',
+      'tr.fr.rashid',
+      RECITER,
+    ])
+    // A cancelled job finished nothing.
+    packsMock.setRate(100)
+    await packs.install('mushaf.v1')
+    await run(300)
+    await packs.cancel('mushaf.v1')
+    await until(() => !packs.jobs.has('mushaf.v1'))
+    expect(packs.recent[0]?.packId).toBe('wbw.en')
+    packs.reset()
+    expect(packs.recent).toEqual([])
+  })
+
+  it('lists what waits for a connection apart from the failed jobs', async () => {
+    settings.update({ networkAllowed: false })
+    await run(200)
+    await packs.installWhenOnline(RECITER, { type: 'items', data: { items: [18] } })
+    await packs.install('tr.es.garcia')
+    await until(() => phaseOf('tr.es.garcia') === 'failed')
+    expect(packs.waitingIds).toEqual([RECITER, 'tr.es.garcia'])
+    expect(packs.failedJobs).toEqual([])
+
+    settings.update({ networkAllowed: true })
+    await until(() => packs.waitingIds.length === 0)
+    packsMock.failNext('tr.fr.rashid', 'integrity', 0)
+    await packs.install('tr.fr.rashid')
+    await until(() => phaseOf('tr.fr.rashid') === 'failed')
+    expect(packs.failedJobs.map((j) => j.packId)).toEqual(['tr.fr.rashid'])
+    expect(packs.waitingIds).toEqual([])
+  })
+})
+
 describe('packs store: items, remove and update', () => {
   it('downloads one surah with surah 1 (its basmala) and shows the queued items first', async () => {
     await packs.loadItems(RECITER)

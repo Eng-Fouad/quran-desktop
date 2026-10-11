@@ -141,6 +141,26 @@ describe('Dialog', () => {
   })
 })
 
+describe('Dialog layer="view" (the Settings dialog, §7.4)', () => {
+  it('is no layer of its own, leaves the page usable and sits just under the dialog layer', async () => {
+    await openDialog({ view: true })
+    expect(dialog()).not.toBeNull()
+    expect(ui.floating).toBe(0)
+    expect(ui.modals).toBe(0)
+    expect(ui.layerOpen).toBe(false)
+    expect(getComputedStyle(document.body).pointerEvents).not.toBe('none')
+    expect(getComputedStyle(dialog()?.parentElement as HTMLElement).zIndex).toBe('59')
+    expect(document.querySelector('.backdrop')?.getBoundingClientRect().top).toBe(40)
+    // A click its host exempts keeps it open; any other click outside closes it.
+    await userEvent.click(byId('outside') as HTMLElement)
+    await settle(300)
+    expect(dialog()).not.toBeNull()
+    await userEvent.click(document.body, { position: { x: 5, y: 300 } })
+    await settle(300)
+    expect(dialog()).toBeNull()
+  })
+})
+
 describe('Sheet', () => {
   it('traps focus, closes on Escape and restores focus', async () => {
     await openDialog({ kind: 'sheet' })

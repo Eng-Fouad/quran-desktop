@@ -95,6 +95,70 @@ Owned and delivered:
     - Test and QA hooks: `packsMock.{failNext, setRate, itemKib, reset}`.
 11. **Ports.** Web shots ran with `--serve 1768` (this package's assigned range 1768–1771; §14.3 says 1520).
 
+### Owner request 2026-10-11: the Downloads flyout and the manager's polish
+
+The owner asked to show the Settings and Downloads panels "in a different way" and approved the plan ("Do all, with
+your recommendations"). Downloads became two tiers: a compact activity flyout on the rail button, and the manager.
+
+12. **The rail flyout** (`DownloadsFlyout.svelte`, its rules in `flyout.ts`).
+    - **No arrow.** The design review kept one, but every popover the app anchors to a chrome button is arrowless
+      (Repeat, Speed, More, the reciter picker), as are Windows 11 flyouts. It sits on the rail's inline-end side
+      (`right`, `left` in the Arabic UI), `align="end"` (bottom edges aligned, it grows upward), 10 px off the button.
+    - **Size.** `min(380px, the room)` wide. Its height cap is 60 % of the window but never under 440 px
+      (`flyoutCap`), so under ~500 px of height only the room caps it (the review's `min(60vh, …)` left one row at
+      380 × 300). The header and footer stay; the body is a `ScrollArea`.
+    - **When it opens.** Always on a click, even idle: the idle flyout offers "Get content" links (Mushaf,
+      Recitations, Translations, Tafsir, Word by word) that open the manager on that kind (`openManager(tab)` clears
+      the language and search filters, so the tab is never empty). Below 480 × 400 CSS px in **either** dimension
+      (`flyoutFits`; the 760 × 600 window at 200 % is 380 × 300) the click opens the manager instead, and the flyout
+      closes if the window shrinks under it. While the manager shows, the click returns to the reader. It never
+      opens by itself.
+    - **Content.** The header row holds the title, the storage total (`usageTotal`, the card's own words) and a thin
+      usage bar (`DiskUsageBar variant="strip"`, the same kind colours and the same bar markup as the card); under it
+      the Work offline or offline note (the manager's banner titles) and "N updates available · Update all". The
+      header and footer are `div`s: the content is portalled to the body, where `header` and `footer` would add a
+      banner and a contentinfo landmark. Job rows (running, then queued, paused, failed) show
+      "8.2 of 45.7 MB" without the rate and time left (`jobAmount`; the bar's accessible value keeps the full line), and
+      the row actions as icon buttons (`rowActions`: Pause/Resume/Retry and Stop, or Cancel for a waiting request).
+      "Recently finished" lines read "Downloaded · 318 kB", "Updated", "Downloaded Al-Kawthar" or "3 pages downloaded"
+      (`finishedLine`). Opening it refreshes the disk usage and, when online, checks for updates (at most every 6 h).
+    - **Keys and focus.** It is a floating layer, which pauses `Mod+Shift+D`; the flyout handles that key itself (a
+      window listener while it is open and no overlay is above it, `shortcuts.matches`), since its footer shows it. It
+      opens on its heading; Escape or an outside click returns focus to the rail button; when it closes for the
+      manager, the manager's heading takes focus instead.
+    - `Popover` (WP7b) gains a `role` prop: the flyout's content is `role="dialog"`, which its trigger announces
+      (`aria-haspopup="dialog"`).
+
+13. **Store and helpers.**
+    - `packs.recent`: the last 5 jobs that **completed** this session (`FinishedJob`: pack, job, KiB, update, items,
+      time), newest first, one per pack; a cancelled job is not one. Session state, cleared by `reset()`.
+    - `packs.waitingIds` (requests in `waiting`, then jobs the connection broke while the app is still offline) and
+      `packs.failedJobs` (failed jobs that do not merely wait); the rail counts both.
+    - `actions.ts`: `updateAll()` (moved from `DownloadsView`, shared with the flyout), `openManager(tab?)` and
+      `ManagerTab`. `format.ts`: `jobAmount`, `finishedLine`, `usageTotal` ("290 MB used", shared with the card).
+      `flyout.ts`: `flyoutFits`, `flyoutCap`, `flyoutJobs`, `aggregateProgress` (the rail ring: KiB received of KiB
+      known across queued and running jobs). "Recently finished" lists `packs.recent` as it is (`RECENT_KEPT` caps
+      it), with no second limit of its own.
+    - `KindTile.svelte`: the pack kind tile, taken out of `PackRow` (36 px there, 32 px in the flyout).
+
+14. **Manager polish.**
+    - The manager hides the sidebar (WP7c 27); a rail tab, `Mod+1…7`, `Mod+B` and `Mod+F` return to the reader with
+      that panel.
+    - Focus: the "Downloads" heading (`data-qd-focus="downloads"`, `tabindex="-1"`) on open; when the manager closes
+      for the reader (Escape, the title bar, the rail button), the reading cursor, unless focus went to a rail tab.
+    - `PackRow` is a named container (`pack-row`): below 560 px of row the badge and actions wrap under the title, at
+      the body's inline start.
+    - The dock: the column's end already kept its height free (`dockReserve`); a test now holds the last row above it.
+
+15. **Tests and scenario.** `flyout.browser.test.ts` (9 tests: placement, semantics (no extra landmarks) and
+    dismissal; "Get content" and the hidden sidebar; leaving the manager by Escape, the rail, `Mod+1`, `Mod+B`, `Mod+F`;
+    job, waiting and finished rows with the rail marks and `Mod+Shift+D` inside; 760 × 600 at 150 % and 200 % in both
+    languages, run at their CSS sizes because the mock's CSS zoom moves floating-ui's coordinates; the rail's buttons at
+    those sizes (WP7c 26); the dock), `flyout.test.ts`, two store tests in
+    `packs.test.ts`, the narrow row and the heading focus in `downloads.browser.test.ts`. S23 also checks the hidden
+    sidebar and the rail button's `aria-current`, then returns to the reader and shoots the flyout (`S23-flyout`,
+    `S23-flyout-ar`).
+
 ## Requests
 
 - **WP5e (manager and commands)**:

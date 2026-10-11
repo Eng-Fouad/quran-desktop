@@ -9,7 +9,9 @@ import { i18n } from './i18n.svelte'
 import { settings } from './settings.svelte'
 import { paneCanDock } from '$lib/mushaf/geometry'
 import {
+  inDialog,
   paneLimits,
+  readingCursor,
   RAIL_W,
   shellLayout,
   TITLEBAR_H,
@@ -118,6 +120,28 @@ describe('ui store: overlays and layers (§7.4)', () => {
     // An overlay replaces the context menu.
     ui.open('shortcuts', {})
     expect(ui.contextMenu).toBeNull()
+  })
+
+  it('keeps the Settings dialog out of the layers: neither floating nor modal, reset with the store', () => {
+    expect(['settings', 'about'].map((v) => inDialog(v as 'settings'))).toEqual([true, true])
+    expect(['reader', 'downloads'].map((v) => inDialog(v as 'reader'))).toEqual([false, false])
+    ui.setSettingsOpen(true)
+    expect(ui.layerOpen).toBe(false)
+    expect(ui.captionVisible).toBe(true)
+    ui.reset()
+    expect(ui.settingsOpen).toBe(false)
+  })
+
+  it('asks every floating layer to close, and closes the context menu (the Settings dialog opening)', () => {
+    ui.openContextMenu({ x: 0, y: 0, ayahId: 1 })
+    const before = ui.floatingDismissals
+    ui.dismissFloating()
+    expect(ui.floatingDismissals).toBe(before + 1)
+    expect(ui.contextMenu).toBeNull()
+    // Overlays are no floating layers: they stay.
+    ui.open('goto', {})
+    ui.dismissFloating()
+    expect(ui.isOpen('goto')).toBe(true)
   })
 
   it('dismisses the context menu first, then the top overlay', () => {
@@ -284,6 +308,33 @@ describe('ui store: panes', () => {
     expect(ui.sidebarOpen).toBe(true)
   })
 
+  it('hides the sidebar in the Downloads manager; a tab, Mod+B or Mod+F there returns to the reader', () => {
+    expect(ui.sidebarOpen).toBe(true)
+    ui.setView('downloads')
+    expect(ui.sidebarOpen).toBe(false)
+    // The preference is kept for the reader.
+    expect(settings.value.sidebar.open).toBe(true)
+    ui.toggleSidebar('bookmarks')
+    expect(ui.view).toBe('reader')
+    expect(ui.sidebarOpen).toBe(true)
+    expect(settings.value.sidebar.tab).toBe('bookmarks')
+
+    ui.setView('downloads')
+    ui.toggleSidebar()
+    expect(ui.view).toBe('reader')
+    expect(ui.sidebarOpen).toBe(true)
+    expect(settings.value.sidebar.tab).toBe('bookmarks')
+
+    ui.setView('downloads')
+    ui.focusSearch()
+    expect(ui.view).toBe('reader')
+    expect(settings.value.sidebar.tab).toBe('search')
+    // Elsewhere opening a tab leaves the view alone.
+    ui.setView('settings')
+    ui.openSidebar('index')
+    expect(ui.view).toBe('settings')
+  })
+
   it('collapses the sidebar so the side pane can dock, and restores it when the pane closes (§9.6)', () => {
     resizeWindow(1100, 800)
     expect(ui.windowSize).toEqual({ w: 1100, h: 800 })
@@ -396,6 +447,13 @@ describe('shellLayout (§9.6)', () => {
     // The current widths are always inside the limits, even where nothing wider would dock.
     const tight = at({ windowW: 1252, windowH: 800 })
     expect(tight.sidebarMax).toBeGreaterThanOrEqual(240)
+  })
+
+  it('hides the sidebar, docked or floating, while the Downloads manager shows (owner 2026-10-11)', () => {
+    expect(shellLayout(input({ manager: true }))).toMatchObject({ sidebarOpen: false, sidePaneOpen: true })
+    expect(
+      shellLayout(input({ manager: true, windowW: 800, windowH: 600, overlaySidebarOpen: true })),
+    ).toMatchObject({ sidebarOpen: false, sidebarOverlay: true })
   })
 
   it('hides both panes in zen and assumes docking before the window is measured', () => {
@@ -527,6 +585,35 @@ describe('ui store: focus and navigation', () => {
 
   it('reports a focus target that never renders', async () => {
     await expect(ui.focusWhenRendered('[data-qd-focus="nothing"]')).resolves.toBe(false)
+  })
+
+  it('finds the reading cursor in either reading mode, else the first ayah item, else the canvas', async () => {
+    const main = document.createElement('main')
+    main.id = 'qd-main'
+    main.tabIndex = -1
+    document.body.append(main)
+    expect(readingCursor()).toBe(main)
+
+    // Translation mode: the feed's roving verse, which leaving the manager focuses too (`focusReader`).
+    const feed = document.createElement('div')
+    feed.dataset.qdView = 'translation'
+    feed.innerHTML =
+      '<article data-qd-ayah="1" tabindex="-1"></article><article data-qd-ayah="2" tabindex="0"></article>'
+    main.append(feed)
+    const verse = feed.querySelector('[tabindex="0"]')
+    expect(readingCursor()).toBe(verse)
+    await expect(ui.focusReader(null, 0)).resolves.toBe(true)
+    expect(document.activeElement).toBe(verse)
+    feed.remove()
+
+    // The Mushaf: its roving ayah item, else the first one.
+    const list = document.createElement('ol')
+    list.className = 'mp-a11y'
+    list.innerHTML = '<li tabindex="-1" data-ayah="1"></li><li tabindex="-1" data-ayah="2"></li>'
+    main.append(list)
+    expect(readingCursor()).toBe(list.firstElementChild)
+    list.lastElementChild?.setAttribute('tabindex', '0')
+    expect(readingCursor()).toBe(list.lastElementChild)
   })
 
   it('routes views itself and other targets to the newest handler, keeping unhandled ones', () => {

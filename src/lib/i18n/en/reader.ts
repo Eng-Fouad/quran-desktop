@@ -1,7 +1,8 @@
 /**
  * `reader` messages, English (§11.1). Owner: WP8e. The same keys live in `../ar/reader.ts`.
  * The Mushaf view: page and jump announcements (§8.15), page mode and reading mode (§10.1), the zoom control
- * (§8.13), the "Return to recitation" chip (§8.12) and the page error state.
+ * (§8.13), the "Aa" display button and popover of both reading modes, the "Return to recitation" chip (§8.12) and the
+ * page error state.
  */
 export const reader = {
   announce: {
@@ -31,6 +32,14 @@ export const reader = {
     /** The level button's accessible name (it contains the visible level). */
     reset: 'Zoom {pct}%, fit to window',
     announce: 'Zoom {pct}%',
+  },
+  display: {
+    /** The "Aa" button on the reading canvas, and its popover's title (owner request 2026-10-11). */
+    button: 'Display',
+    /** The popover's text size: translation mode, or the study pane's Translation tab beside the Mushaf. */
+    textSize: 'Translation text size',
+    /** The popover's footer: the Settings dialog, on the reading mode's own section. */
+    allSettings: 'All settings',
   },
   follow: {
     /** The chip in the canvas overlay slot (§8.12). */

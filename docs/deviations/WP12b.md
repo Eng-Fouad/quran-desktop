@@ -32,7 +32,8 @@ Owned and delivered:
    - Matching uses each row's label, description, option names and keywords, in the UI language and in English, so
      "theme" still works in the Arabic UI. Arabic is folded like the combobox filter (`foldForMatch`).
    - Below 880 px of view width the navigation becomes a strip above the column: title, search, then the section
-     buttons wrapping. This happens at 150 % interface size (S24) and in narrow windows.
+     buttons wrapping. This happens at 150 % interface size (S24) and in narrow windows. (Since 2026-10-11 the buttons
+     sit in one row that scrolls sideways, and at 150 % S24's dialog keeps the column layout: 11.)
    - The open section is kept for the session (Appearance on a new launch). Other packages can deep-link with
      `settingsView.open(section, rowId)`: the row scrolls into view with a brief accent wash.
 
@@ -120,6 +121,49 @@ Owned and delivered:
 9. **Ports.** Web shots and the review runs used `--serve 1772` (this package's range 1772–1775; §14.3 says 1520).
    S24 (`mode: 'both'`) also passed in the real app: `pnpm tauri build --debug --no-bundle` into `C:\qdt\WP12b`,
    then `app-driver.mjs --exe C:\qdt\WP12b\debug\quran-desktop.exe --only S24`, with Rust's webview zoom at 150 %.
+
+### Owner request 2026-10-11: Settings as a dialog over the reader
+
+10. **Shown in the shell's Settings dialog** (WP7c 22), not in the canvas. The view keeps its own headings: the
+    navigation's "Settings" (`SETTINGS_TITLE_ID`) names the dialog, the column's h2 names the section, and no header row
+    repeats either. The dialog's close button sits in the top inline-end corner; the view keeps `--qd-close-room` free
+    there (the column's end padding, and the search field's end margin in the strip). The dock reserve is no longer the
+    view's own sum: the dialog sets `--qd-dock-reserve` only in the filled frame, where the dock lies over its bottom (a
+    floating frame stays above the dock).
+
+11. **The strip is one row.** Under 880 px of view width the sections no longer wrap (2–5 rows at 150–200 %): they sit in
+    one row that scrolls sideways, edge to edge of the strip, without a scrollbar. The wheel scrolls it while it can
+    still move (then the page scrolls), ←/→ move between sections in reading order (↑/↓, Home and End as before), and
+    the open section is brought into view when it changes or the strip resizes. The view's scrollbar paints above the
+    sticky strip. At 150 % in a 1600 × 1000 window (S24) the dialog is 1019 × 579 wide enough for the column layout;
+    the strip shows at 200 % (`S24-strip`).
+
+12. **Scenario S24.** It checks the dialog over the mounted reader and the navigation beside the column at 150 % (it
+    used to assert the strip there), then at 200 % in Arabic the filled dialog and the one-row strip (new shot
+    `S24-strip`). The settings browser test adds the strip's wheel and arrow keys in both directions.
+
+### Owner request 2026-10-11: the "Aa" reading-display popover
+
+13. **`DisplayPopover`** (`src/components/settings/DisplayPopover.svelte`; the canvas's "Aa" button is WP8e 13).
+    Settings' display controls beside the page, applied live with no scrim:
+    - the theme cards (`ThemePicker compact`: three across, names only, 44 px miniatures; two across under 240 px);
+    - ink brightness on Night and Black, with Appearance's "increase contrast" note;
+    - beside the Mushaf, the style cards (`StylePicker compact`: two across, each name over one line of status in its
+      tone, with the same availability rules) and the pages (Automatic, One page, Two pages);
+    - the translation text size wherever translation text shows (translation mode, or the study pane on its
+      Translation tab).
+
+    `displayRows` (`display.ts`, unit-tested) leaves out what would not change the page: translation mode sets its
+    Arabic in Hafs in one column, so it gets no Mushaf style or pages. Ranges, units and labels come from
+    `settingsMeta`, and values save through `model.save` while a slider moves. The rules it shares with Settings live
+    in `display.ts` once, read by both: `dimsInk` and `inkNoteKey` (with `MORE_CONTRAST`) by Appearance's ink row,
+    `PAGE_MODES` by Mushaf's page-mode row.
+    - **"All settings"** (with the `Mod+,` keycaps) opens the dialog on the reading mode's own section: Mushaf beside
+      the Mushaf, Translations in translation mode. The spec named "the Appearance/Mushaf section"; Translations holds
+      the text size and translation mode's other display rows, and Appearance is one click away. The popover closes
+      and gives focus back first, so the dialog returns it there.
+    - `Mod+,` never acts over a layer (its guard), and the popover is a floating layer, so it handles the key
+      itself (`shortcuts.matches`), as the Downloads flyout does `Mod+Shift+D`.
 
 ## Requests
 

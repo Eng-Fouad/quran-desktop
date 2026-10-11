@@ -1,6 +1,7 @@
 /**
- * The Downloads manager (§9.7) in a real browser against the IPC mock: rows and their actions, the surah grid (clicks,
- * keyboard, the basmala rule, its menu), filters, the stop confirmation, Work offline and the Arabic UI.
+ * The Downloads manager (§9.7) in a real browser against the IPC mock: rows and their actions, the narrow row (its
+ * actions under the title), the surah grid (clicks, keyboard, the basmala rule, its menu), filters, the stop
+ * confirmation, Work offline and the Arabic UI. The rail flyout and the manager in the shell: `flyout.browser.test.ts`.
  */
 import { flushSync } from 'svelte'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -67,6 +68,8 @@ describe('downloads view', () => {
   it('shows the storage card, the sections and the current reciter’s surah grid', async () => {
     await mount({ query: '?mockPacks=demo' })
     expect($('h1')?.textContent).toBe('Downloads')
+    // The heading takes focus when the manager opens.
+    expect(document.activeElement).toBe($('h1'))
     expect($('[data-qd-usage] .total')?.textContent).toMatch(/used/)
     expect($$('section[data-section]').map((s) => s.dataset.section)).toEqual([
       'mushaf',
@@ -84,6 +87,18 @@ describe('downloads view', () => {
     expect(row('audio.qdc.7')?.querySelector('.sub')?.textContent).toMatch(
       /^10 of 114 surahs · .+ · 5 cached$/,
     )
+  })
+
+  it('moves a row’s badge and actions under its title below 560 px of row (container query)', async () => {
+    await mount()
+    const box = (sel: string) =>
+      (row('tr.en.saheeh')?.querySelector(sel) as HTMLElement).getBoundingClientRect()
+    expect(box('.end').top).toBeLessThan(box('.body').bottom)
+    await page.viewport(560, 900)
+    await settle(200)
+    expect(row('tr.en.saheeh')?.getBoundingClientRect().width).toBeLessThan(560)
+    expect(box('.end').top).toBeGreaterThanOrEqual(box('.body').bottom - 1)
+    expect(Math.abs(box('.end').left - box('.body').left)).toBeLessThanOrEqual(1)
   })
 
   it('downloads a pack from its row', async () => {

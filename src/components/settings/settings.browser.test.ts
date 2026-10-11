@@ -404,6 +404,36 @@ describe('settings view', () => {
     })
   }
 
+  for (const uiLanguage of ['en', 'ar'] as const) {
+    it(`folds the navigation into one row under 880 px that the wheel scrolls sideways (${uiLanguage})`, async () => {
+      await mount({ settings: { uiLanguage } })
+      await page.viewport(640, 700)
+      await settle(120)
+      const strip = $('ul.sections') as HTMLElement
+      const buttons = $$('ul.sections button[data-section]')
+      expect(new Set(buttons.map((b) => Math.round(b.getBoundingClientRect().top))).size).toBe(1)
+      expect(strip.scrollWidth).toBeGreaterThan(strip.clientWidth)
+      const wheel = (deltaY: number) => {
+        const e = new WheelEvent('wheel', { deltaY, bubbles: true, cancelable: true })
+        strip.dispatchEvent(e)
+        return e
+      }
+      // Down moves towards the end of the row: right in English, left in Arabic (scrollLeft below 0).
+      expect(wheel(120).defaultPrevented).toBe(true)
+      await settle(0)
+      expect(uiLanguage === 'ar' ? strip.scrollLeft < 0 : strip.scrollLeft > 0).toBe(true)
+      // At the end the wheel goes on to the page.
+      strip.scrollTo({ left: uiLanguage === 'ar' ? -strip.scrollWidth : strip.scrollWidth })
+      await settle(0)
+      expect(wheel(120).defaultPrevented).toBe(false)
+      expect(wheel(-120).defaultPrevented).toBe(true)
+      // The arrow keys follow the reading direction.
+      buttons[0]?.focus()
+      await userEvent.keyboard(uiLanguage === 'ar' ? '{ArrowLeft}' : '{ArrowRight}')
+      expect(document.activeElement).toBe(buttons[1])
+    })
+  }
+
   it('mirrors in the Arabic UI and keeps every label translated', async () => {
     await mount({ settings: { uiLanguage: 'ar' } })
     expect(document.documentElement.dir).toBe('rtl')

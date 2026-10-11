@@ -171,6 +171,119 @@ Tests:
     geometry, the Arabic-Indic breadcrumb and the unmirrored Mushaf (odd page on the right), and writes `S26.png` and
     `S26-dock.png` (the dock region's child).
 
+### Owner request 2026-10-11: Settings as a dialog over the reader
+
+The owner asked to show the Settings and Downloads panels "in a different way" and approved the plan ("Do all, with
+your recommendations"). The shell's part of Settings:
+
+22. **The Settings dialog** (`src/components/shell/SettingsDialog.svelte`, `settingsDialog.ts`). `App` keeps the reader
+    mounted while `ui.view` is `settings` or `about` (`inDialog`) and hosts both views in one dialog. `ui.view` stays the
+    source of truth, so the Rust `AppView`, deep links, the tray, the palette, `Mod+,` and the offline badge are
+    unchanged. It is not a `ui.overlays` kind: `OverlayHost` renders only the top overlay, and every confirmation would
+    unmount Settings.
+    - `Dialog` gains `layer="view"` (drawn at `--z-dialog − 1`, no floating or modal registration, no body lock),
+      `variant="plain"`, `insetTop` / `scrimTop`, `insetBottom`, `height`, `fill`, `labelledBy` and
+      `onInteractOutside`.
+    - Frame: 1040 × 760 at most, 24 px margins, centred between the title bar and the player dock (8 px above the
+      dock's top: `insetBottom` is the dock's reach plus 8 px, less the margin) on the faint scrim. Centred in the
+      whole room, the 150 % frame (S24) reached 60 px under the lifted dock, which covered the theme cards'
+      captions; now the dock never lies over a floating frame, in zen too, where the dock slides in like the bar.
+      Under 880 × 560 CSS px
+      of room it fills the room edge to edge (`settingsFrame`, from `ui.windowSize`, so the browser mock's CSS zoom and
+      the app's webview zoom agree). In zen the frame stays below the title bar's band too: the band is the bar's
+      reveal zone, so a frame reaching into it would hide the bar that slides in (and its caption buttons, whose Snap
+      Layouts target stays live) or, moving with it, run from the pointer reaching for the X. The scrim covers the band
+      only while the bar is hidden, and the dialog never moves.
+    - It opens only while no overlay, dialog or sheet is up. bits-ui's escape, outside-click and focus stacks follow
+      registration order, so a dialog registered under a visible confirmation would take its keys and focus; a deep
+      link that asks for Settings during a confirmation waits for it instead.
+    - As it opens it closes the context menu and every popover, menu or listbox left open (`ui.dismissFloating`, which
+      `trackFloating` relays to the `ui` wrappers that pass a closer; dialogs and sheets pass none). The reader's
+      popovers used to unmount with the reader; now the reader stays, and `App`'s modal layer would lift one above the
+      dialog, where the dialog, registered last, would take its clicks and Escape.
+    - The dock stays usable: `.dock-region.lifted` sits at `--z-dialog` (above the dialog, under every overlay), and
+      `App` gives the chrome's floating content the dialog's modal layer while it is open (`setModalLayer` now takes
+      `null` for "none"), so the dock's popovers stack above it. Clicks on the title bar (`data-qd-region="titlebar"`),
+      the dock and toasts are not outside clicks. In the filled frame, where the dock lies over the dialog's bottom, the
+      views keep `--qd-dock-reserve` free at their end; and `--qd-close-room` in their top inline-end corner for the X.
+    - Focus: "Search settings" (About: "Copy diagnostics") on open and when the view swaps inside the dialog; back to
+      the opener on close, except when the view moved on (Downloads): then the close auto-focus is prevented and the
+      canvas holds focus until the destination takes it.
+
+23. **Keys while it is open** (`SETTINGS_ALLOWED`, `allowedInSettings` in `app.ts`; the store's step 7). Only the audio
+    group, `app.palette`, `app.search`, `app.escape`, `app.settings`, `app.downloads`, `view.theme`, `view.uiScale*`
+    and `view.fullscreen` run; any other global match is consumed without running (`Mod+B`, `Mod+1…7`, F6, `?`, and
+    `Mod+G`, which would otherwise reach the webview's find). Reader-scoped definitions (`Mod+I`, the page keys) never
+    match outside the reader (step 4), so they are not consumed. `view.fullscreen` is an addition to the approved
+    list: it acts on the window only.
+    - `Mod+F` focuses "Search settings" (`FOCUS_TARGETS.settingsSearch`). About has no such field, so there it turns
+      the dialog back to Settings first; a palette or Go to on top closes first, as `ui.focusSearch` does.
+    - `Mod+,` is `allowInInput` and toggles the dialog (from About too). Its `when` keeps it from acting over another
+      layer, except the palette when it is the only one (`paletteAlone`: its own dialog is one floating and one modal
+      layer): there the key, or the palette's "Settings" row, closes the palette first (as `Mod+F` does). The row runs
+      after the palette has closed and checks `when` again, so the palette offers it only where it will act: not over
+      a popover or sheet left under the palette, nor while the dialog shows. A plain `!layerOpen` guard would also
+      have hidden "Settings" from the palette, which is itself a layer while it lists commands.
+    - The theme and UI-scale chords are `allowInInput` (they type nothing), so they work from "Search settings",
+      where the dialog opens, and the rows that show these keys hold true.
+    - The palette's `runShortcut` returns to the reader first for a command off the list (the sidebar toggles), as it
+      already did for reader commands.
+
+24. **NavRail.** The pill and the 3 px indicator follow `data-active` instead of `[aria-pressed]`. The tabs keep
+    `aria-pressed`; Settings is a dialog trigger (`aria-haspopup="dialog"`, `aria-expanded`, no `aria-pressed`) and
+    closes the dialog when it shows (`toggleSettings`). Downloads is the flyout's trigger (26).
+
+25. **Tests and scenarios.** `SettingsDialog.browser.test.ts` (14 tests, among them `Mod+F` from About and over the
+    palette, the palette's "Settings" row alone and over the Downloads flyout, the flyout and the context menu closing
+    as the dialog opens, and zen at 1600 × 1000 and 900 × 540 with the title bar's buttons on top),
+    `settingsDialog.test.ts`, a `layer="view"` test in `Dialog.browser.test.ts`, the allow-list, `Mod+F` and `Mod+,`
+    (over a popover and over a sheet too) in `shortcuts.test.ts`, the palette's return and its "Settings" row in
+    `palette-providers.test.ts`, `dismissFloating` in `ui.test.ts`. `shortcuts.browser.test.ts` finds the Settings
+    search field in the dialog. Not done:
+    a macOS App-menu "Settings… ⌘," (Rust; not in this change). If it is added, it must go through the same guarded
+    toggle, and the native accelerator and the JS `Mod+,` must not both fire.
+
+### Owner request 2026-10-11: the rail's Downloads flyout and the manager
+
+The shell's part of the Downloads change (WP12a 12–15):
+
+26. **NavRail's Downloads button** is the trigger of `DownloadsFlyout`: `aria-haspopup="dialog"` and `aria-expanded`
+    from the popover, `aria-current="page"` and the pill (`data-active`) while the manager shows, no `aria-pressed`.
+    Where the click navigates instead (the manager shows, or the window is under 480 × 400) it drops the popup
+    attributes, so it never announces a dialog it will not open.
+    - Its own handler runs before the popover's: while the manager shows it returns to the reader, and in a window
+      under 480 × 400 CSS px it opens the manager; either way it cancels the popover's toggle (`preventDefault`, which
+      bits-ui's composed handlers honour), for the click and for Enter and Space.
+    - The pulsing dot became marks on a disc of the app surface: a 16 px `Progress` ring of the running jobs' aggregate
+      progress at the bottom inline-end corner, else the number of downloads waiting for a connection; a red mark at
+      the top inline-end corner when one failed. A bottom mark moves the icon 3 px towards the other corner. The ring
+      has no eased steps (progress arrives at 10 Hz).
+    - Tooltip and accessible name: "Downloads", then the active, waiting and failed counts. No key: `Mod+Shift+D`
+      opens the manager, and the flyout's footer names it. The tooltip is off while the flyout is open.
+    - Addition: in a window too short for every button (760 × 600 at 150–200 % UI scale: 300–400 CSS px of height)
+      the tab group scrolls (no scrollbar) and Downloads and Settings stay at the foot. They were cut off before, so
+      the small-window fallback could not be reached by the pointer. The buttons are `flex: none`: as flex items of the
+      shrinkable group they would otherwise squash to their 20 px icon (a 40 × 20 pill, under the 24 px target size)
+      before the group overflowed.
+
+27. **The manager in the shell.**
+    - `shellLayout` takes `manager` (`ui.view === 'downloads'`): the sidebar is hidden, docked or floating, and its
+      preference kept. `openSidebar` sets the view to the reader first, so `toggleSidebar` (a rail tab, `Mod+1…7`,
+      `Mod+B`) and `focusSearch` (`Mod+F`) lead back to the reader with that panel.
+    - `readingCursor()` (the "Skip to Quran text" target, now shared with `App`) and `ui.focusReader(from)`: the reader
+      that just came back focuses its cursor once it renders, unless focus moved on meanwhile. The manager calls it
+      from its teardown, and the store checks the view after a tick, because a teardown still reads the old state.
+      The cursor is the Mushaf's roving ayah item or translation mode's roving verse (it used to be the canvas there),
+      so the skip link, the manager's close and Escape on the "Aa" button (WP8e 13) all land on the same element.
+    - `FOCUS_TARGETS.downloads` (the manager's heading). The Settings dialog's close, when the view moved to Downloads,
+      now focuses that heading rather than only the canvas.
+    - `shortcuts.matches(id, e)`: whether an event presses a registered shortcut, for a layer that runs one itself.
+    - Tests: `shellLayout`, `openSidebar` and `readingCursor` (both reading modes) in `ui.test.ts`, the manager's keys
+      and `matches` in `shortcuts.test.ts` (the floating-sidebar Escape test now opens the sidebar from About, since
+      the manager has none), the heading focus in `SettingsDialog.browser.test.ts`, and in `flyout.browser.test.ts`
+      the rail button's attributes where it navigates and the rail's 40 px buttons with scrolling tabs at 507 × 400 and
+      380 × 300.
+
 ## Requests
 
 - **WP10a, WP10b, WP11c, WP9b (sidebar panels).** The shell draws the panel heading (deviation 2). Render the panel

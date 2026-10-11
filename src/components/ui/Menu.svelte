@@ -48,7 +48,13 @@
 
   const dir = $derived(resolveDir(dirProp))
 
-  trackFloating(() => open)
+  trackFloating(
+    () => open,
+    () => {
+      open = false
+      onOpenChange?.(false)
+    },
+  )
   const zIndex = floatingZ('menu')
 </script>
 

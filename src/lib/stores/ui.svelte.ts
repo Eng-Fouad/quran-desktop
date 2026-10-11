@@ -8,9 +8,12 @@
  *   closes resolves `false`.
  * - **Floating layers** (menus, popovers, open listboxes) are counted by the `src/components/ui` wrappers through
  *   `pushFloating()/popFloating()`; with the context menu and the overlays they make `layerOpen` (§7.7 rule 1).
+ * - **The Settings dialog** (§7.4): the `settings` and `about` views show in a dialog over the reader (`inDialog`),
+ *   whose host registers `settingsOpen` (the shortcut allow-list of §7.7) instead of a floating layer, and closes the
+ *   floating layers still open as it opens (`dismissFloating`).
  * - **Panes** (§9.6): `sidebarOpen`, `sidePaneOpen`, `paneDocked` and `paneWidthPx` come from the settings and the
  *   window size through `shellLayout()` (side-pane docking with sidebar auto-collapse, then pane shrinking, then the
- *   overlay sheet).
+ *   overlay sheet). The Downloads manager hides the sidebar; opening it (`openSidebar`) returns to the reader.
  * - **Toasts** pass through to svelte-sonner (rendered by the shell's `Toaster`) with the §9.5 durations: 5 s, or at
  *   least 10 s with an action. `toastError(e)` shows the localised `errors.<kind>` message (never the raw developer
  *   message); `toastUndo(message, undo)` is the undo toast of every library change (one at a time). The overlays at
@@ -60,7 +63,39 @@ const TOAST_HISTORY = 20
 export const FOCUS_TARGETS = {
   /** The sidebar search input (WP10b): `Mod+F` focuses and selects it. */
   search: '[data-qd-focus="search"]',
+  /** "Search settings" (WP12b): `Mod+F` focuses it while the Settings dialog is open. */
+  settingsSearch: '[data-settings-search]',
+  /** The Downloads manager's heading (WP12a): it takes focus when the manager opens. */
+  downloads: '[data-qd-focus="downloads"]',
 } as const
+
+/**
+ * The reading cursor's roving tab stop (§8.15): the Mushaf's accessible ayah item (`.mp-a11y`), or translation mode's
+ * verse row (TranslationView). Only one reader body is mounted at a time.
+ */
+const CURSOR_TAB_STOP =
+  '.mp-a11y li[tabindex="0"], [data-qd-view="translation"] article[data-qd-ayah][tabindex="0"]'
+
+/**
+ * "Skip to Quran text" (§8.15), and every other "back to the reading cursor" (the Downloads manager closing, Escape
+ * on the canvas's "Aa" button): the reading cursor's roving item (`CURSOR_TAB_STOP`), else the Mushaf's first ayah
+ * item, else the canvas.
+ */
+export function readingCursor(): HTMLElement | null {
+  return (
+    document.querySelector<HTMLElement>(CURSOR_TAB_STOP) ??
+    document.querySelector<HTMLElement>('.mp-a11y li') ??
+    document.getElementById('qd-main')
+  )
+}
+
+/**
+ * Views shown in the shell's Settings dialog over the reader, which stays mounted under it (§7.4; owner request
+ * 2026-10-11), rather than in place of the canvas: Settings, and About in the same frame.
+ */
+export function inDialog(view: AppView): boolean {
+  return view === 'settings' || view === 'about'
+}
 
 /** A toast as queued (rendered by the toaster, WP7c). */
 export interface ToastEntry extends ToastOptions {
@@ -83,6 +118,11 @@ export interface ShellInput {
    * narrow window never starts with the page covered; `sidebar.open` is the docked preference. Default `false`.
    */
   overlaySidebarOpen?: boolean
+  /**
+   * The Downloads manager shows (`ui.view === 'downloads'`): it takes the canvas without the sidebar, whose preference
+   * is kept for the reader (owner request 2026-10-11). Default `false`.
+   */
+  manager?: boolean
 }
 
 export interface ShellLayout {
@@ -106,13 +146,14 @@ function widestDockingPane(canvasW: number, canvasH: number, min: number, max: n
 /**
  * §9.6 shell layout. The side pane docks when the canvas keeps room for a single page beside it (`paneCanDock`).
  * Otherwise, in order: (1) collapse an open sidebar if that lets the pane dock (`sidePane.autoCollapseSidebar`),
- * (2) shrink the pane down to 320 px, (3) overlay the pane as a sheet. Zen hides both panes. Before the window size is
- * known (0 × 0) the pane is assumed to dock.
+ * (2) shrink the pane down to 320 px, (3) overlay the pane as a sheet. Zen hides both panes, the Downloads manager the
+ * sidebar. Before the window size is known (0 × 0) the pane is assumed to dock.
  */
 export function shellLayout(input: ShellInput): ShellLayout {
   const { windowW, windowH, zen, sidebar, sidePane } = input
   const sidebarOverlay = windowW > 0 && windowW < SIDEBAR_OVERLAY_BELOW
-  const sidebarWanted = (sidebarOverlay ? input.overlaySidebarOpen === true : sidebar.open) && !zen
+  const sidebarWanted =
+    (sidebarOverlay ? input.overlaySidebarOpen === true : sidebar.open) && !zen && input.manager !== true
   const sidePaneOpen = sidePane.open && !zen
   const layout: ShellLayout = {
     sidebarOpen: sidebarWanted,
@@ -209,6 +250,13 @@ class UiStore implements Store {
   floating = $state(0)
   /** Open modal layers (dialogs and sheets), whose backdrop covers the whole window, the title bar included. */
   modals = $state(0)
+  /**
+   * The Settings dialog is open (`SettingsDialog`, §7.4). It is neither a floating nor a modal layer: the title bar and
+   * the player dock stay usable beside it, and while it is open only its allow-list of shortcuts runs (§7.7).
+   */
+  settingsOpen = $state(false)
+  /** Bumped by `dismissFloating()`: every open floating layer that can close itself does (`trackFloating`). */
+  floatingDismissals = $state(0)
   contextMenu = $state.raw<ContextMenuTarget | null>(null)
   zen = $state(false)
   fullscreen = $state(false)
@@ -249,6 +297,7 @@ class UiStore implements Store {
     sidePane: settings.value.sidePane,
     sidebarForced: this.#sidebarForced,
     overlaySidebarOpen: this.#overlaySidebarOpen,
+    manager: this.view === 'downloads',
   })
   readonly #shell: ShellLayout = $derived(shellLayout(this.#shellInput))
   readonly sidebarOpen = $derived(this.#shell.sidebarOpen)
@@ -381,6 +430,21 @@ class UiStore implements Store {
     untrack(() => (this.modals = Math.max(0, this.modals - 1)))
   }
 
+  /** The Settings dialog opened or closed (registered by its host only). */
+  setSettingsOpen(open: boolean): void {
+    this.settingsOpen = open
+  }
+
+  /**
+   * Closes the context menu and every open floating layer (popovers, menus, open listboxes): the Settings dialog does
+   * as it opens (§7.4), so nothing left open over the reader or the sidebar stays up, lifted above it with the chrome's
+   * floating content, while the dialog takes the keys and the clicks. Untracked like `pushFloating`.
+   */
+  dismissFloating(): void {
+    this.contextMenu = null
+    untrack(() => (this.floatingDismissals += 1))
+  }
+
   /**
    * Opens the ayah context menu (§10.3) at a point for an ayah (or word). User-facing openers call `openAyahMenu`
    * (interactions.ts), which selects the ayah first: this store cannot see the reader (§7.2).
@@ -413,7 +477,10 @@ class UiStore implements Store {
 
   // --- view, zen, full screen ----------------------------------------------------------------------------------------
 
-  /** Switches the canvas view (§7.4); the player dock stays in every view. */
+  /**
+   * Switches the view (§7.4): the reader or Downloads in the canvas, Settings and About in the dialog over the reader.
+   * The player dock stays in every view.
+   */
   setView(view: AppView): void {
     if (view === this.view) return
     this.view = view
@@ -514,12 +581,14 @@ class UiStore implements Store {
   }
 
   /**
-   * Shows the sidebar on a tab, leaving zen; if the side pane had collapsed it, it stays open from now on. In a narrow
-   * window (overlay sidebar) the shown state is session-only and only the tab is persisted.
+   * Shows the sidebar on a tab, leaving zen, and the Downloads manager (which hides the sidebar) for the reader: a rail
+   * tab, `Mod+1…7`, `Mod+B` and `Mod+F` all lead there. If the side pane had collapsed the sidebar, it stays open from
+   * now on. In a narrow window (overlay sidebar) the shown state is session-only and only the tab is persisted.
    */
   openSidebar(tab?: SidebarTab): void {
     const current = settings.value.sidebar
     this.setZen(false)
+    if (this.view === 'downloads') this.setView('reader')
     const next = tab ?? current.tab
     if (this.sidebarOverlay) {
       this.#overlaySidebarOpen = true
@@ -602,6 +671,31 @@ class UiStore implements Store {
         el.focus({ preventScroll: true })
         if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) el.select()
         if (document.activeElement === el || frame === frames) return document.activeElement === el
+      }
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+    }
+    return false
+  }
+
+  /**
+   * Back in the reader from another view (the Downloads manager closing by Escape, the title bar or the rail): focus
+   * the reading cursor (`readingCursor`) once the reader has rendered it, waiting up to `frames` frames for its roving
+   * item (the Mushaf's ayah list, or translation mode's verses). It gives up as soon as focus has moved on by itself:
+   * anywhere but `from` (where it was when the view changed), the body or the canvas. Resolves whether it moved focus.
+   */
+  async focusReader(from: Element | null, frames = 30): Promise<boolean> {
+    const free = (): boolean => {
+      const active = document.activeElement
+      return active === null || active === document.body || active === from || active.id === 'qd-main'
+    }
+    await tick()
+    for (let frame = 0; frame <= frames; frame++) {
+      if (!free() || this.view !== 'reader') return false
+      const cursor = document.querySelector<HTMLElement>(CURSOR_TAB_STOP)
+      if (cursor !== null || frame === frames) {
+        const target = cursor ?? readingCursor()
+        target?.focus({ preventScroll: true })
+        return target !== null && document.activeElement === target
       }
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
     }
@@ -810,6 +904,7 @@ class UiStore implements Store {
     this.overlays = []
     this.floating = 0
     this.modals = 0
+    this.settingsOpen = false
     this.contextMenu = null
     this.zen = false
     this.fullscreen = false

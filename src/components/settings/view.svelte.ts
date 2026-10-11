@@ -5,6 +5,9 @@
  */
 import { searchRows, type RowId, type SettingsSection, SETTINGS_SECTIONS } from './meta'
 
+/** The id of the view's "Settings" heading, which names the Settings dialog (§7.4). */
+export const SETTINGS_TITLE_ID = 'settings-title'
+
 class SettingsViewState {
   section = $state<SettingsSection>('appearance')
   query = $state('')

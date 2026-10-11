@@ -3315,15 +3315,15 @@ src/
 │  └─ util/       lru.ts, debounce.ts, raf.ts, platform.ts, format.ts, binsearch.ts                         (WP7c)
 ├─ components/
 │  ├─ ui/         design-system primitives §9.5 (WP7b); SafeHtml.svelte (WP0C, frozen; §7.6)
-│  ├─ shell/      TitleBar, WindowControls, NavRail, Sidebar, PaneLayout, OverlayHost, LiveRegion, OfflineBadge,
-│  │              FatalScreen, StartupBanner (WP7c)
+│  ├─ shell/      TitleBar, WindowControls, NavRail, Sidebar, PaneLayout, OverlayHost, SettingsDialog, LiveRegion,
+│  │              OfflineBadge, FatalScreen, StartupBanner (WP7c)
 │  ├─ dialogs/    ShortcutSheet, ShortcutTable, ConfirmDialog (WP7c); GoToDialog (WP10a); NoteEditorDialog (WP11d);
 │  │              SelfTestDialog (WP9b)
 │  ├─ mushaf/     MushafPage, GlyphLayer (WP8a) · RenditionStack (WP8b) · PageFrame, SurahCartouche, HeaderLine, BasmalaLine,
 │  │              RunningHead, PageFooter, MarginMarkers, MarginMarks, OpeningMedallion, SurahInfoPopover (WP8c) ·
 │  │              HighlightLayer, A11yLayer, WordTooltip, AyahActionBar (WP8d) · MushafView, SpreadStage, FollowChip,
-│  │              ZoomControl (WP8e) · PageTurnZones, FlipHUD, PageRail, HintChip, DivisionChip (WP8f) ·
-│  │              AyahContextMenu (WP11c)
+│  │              ZoomControl, DisplayControl, canvasControl.svelte.ts (WP8e) · PageTurnZones, FlipHUD, PageRail,
+│  │              HintChip, DivisionChip (WP8f) · AyahContextMenu (WP11c)
 │  ├─ translation/ TranslationView, VerseRow, SurahCard, FootnotePopover (WP11a)
 │  ├─ sidepane/   SidePane, AyahHeader, TranslationTab, TafsirTab, NotesTab, WordsTab (WP11b)
 │  ├─ library/    BookmarksPanel, HighlightsPanel, NotesPanel, HistoryPanel (WP11c); CollectionsPicker, TagPicker (WP11d)
@@ -3333,8 +3333,10 @@ src/
 │  ├─ player/     PlayerDock, SideDockCard, Transport, AyahScrubber, TimeReadout, RepeatPopover, SpeedPopover, ReciterPicker,
 │  │              PlayerMore (WP9a)
 │  ├─ memo/       MemoPanel, MemoToolbar, SelfTestBar, ProgressHeatmap (WP9b)
-│  ├─ downloads/  DownloadsView, PackSection, PackRow, ReciterRow, SurahGrid, DiskUsageBar (WP12a)
-│  ├─ settings/   SettingsView, sections/*.svelte, meta.ts (`settingsMeta`: labels and ranges per field) (WP12b)
+│  ├─ downloads/  DownloadsView, DownloadsFlyout, PackSection, PackRow, ReciterRow, SurahGrid, DiskUsageBar, KindTile
+│  │              (WP12a)
+│  ├─ settings/   SettingsView, sections/*.svelte, meta.ts (`settingsMeta`: labels and ranges per field),
+│  │              DisplayPopover, display.ts (the canvas's "Aa" popover) (WP12b)
 │  ├─ onboarding/ OnboardingDialog, steps/*.svelte (WP12c)
 │  └─ about/      AboutView, AttributionList (WP12c)
 └─ (tests colocated as *.test.ts; browser tests *.browser.test.ts)
@@ -3380,7 +3382,7 @@ Aliases in `vite.config.ts`, `vitest.config.ts` and `tsconfig`: `$lib → src/li
 | `search` (WP10b) | `query, scope, mode, surahFilter, juzFilter, status, results, activeIndex, history, suggestions` | `flatHits`, `count` | `setQuery(q)` (debounce 120 ms), `run()`, `openHit(h)`, `submit()`, `clearHistory()`, `move(±1)` (also F3 / Shift+F3 from the reader: opens the next/previous hit and keeps the list in sync) | `searchQuery`, `searchSuggest`, `searchHistory*` |
 | `player` (WP9a) | `snapshot`, `tick`, `tickAt`, `positionMs` (rAF-interpolated), `timings: Map` + `version`, `reciters`, `abPending: number\|null`, `muted` | `isPlaying, isActive, currentAyahId, currentRef, activeWord {ayahId, wordId, pos}\|null, ayahProgress, timingsForCurrent, resumeCandidate` (§7.8) | `init(b)`, `playFrom(target, opts?)`, `playRange(from,to,{ayahRepeat,rangeRepeat,gap})`, `resume()` (idle: from the start of the resume candidate's ayah), `toggle/pause/stop/next/prev()`, `seekAyah(id)`, `seekMs(ms)`, `nudge(ms)`, `setSpeed(pct)`, `speedStep(±1)`, `setVolume(pct)`, `toggleMute()`, `setRepeat(a,r)`, `cycleRepeat()`, `setGap(g)`, `abMark()`, `setReciter(id)`, `ensureTimings(r,s)` | audio commands; `audioStateChanged`, `audioAyahChanged`; Channel `AudioTick` |
 | `memo` (WP9b) | `active {from,to,mode:'hide'\|'test'}\|null`, `revealedThrough: number` (word id), `peeking`, `test: MemoTest\|null`, `progress: Map` | `isHidden(wordId)` | `startHide(from,to)`, `stop()`, `revealNextWord()`, `revealNextAyah()`, `peek(on)`, `startTest(from,to)`, `finishTest(rating)`, `rate(from,to,r)`, `setStatus(from,to,s)`, `loadProgress(from,to)`, `applyPreset(p)` | `memo*`, `loopPreset*` |
-| `packs` (WP12a) | `list: PackInfo[]`, `jobs: Map<packId, JobSnapshot>`, `items: Map<packId, PackItemState[]>`, `usage`, `updates`, `filter` | `byKind`, `installedTranslations`, `installedTafsir`, `starterSet` (§2.5.4, exact), `activeJobs` | `init(b)`, `refresh()`, `install(id, scope?)`, `pause/resume/cancel/remove(id)`, `retry(id)` (= resume), `update(id)` (= install All), `loadItems(id)`, `removeItems(id, items)`, `loadUsage()`, `checkUpdates()`, `clearStreamCache()`, `clearCache()` | `packs*`, `cacheClear`; Channel `DownloadEvent`; `packsChanged` |
+| `packs` (WP12a) | `list: PackInfo[]`, `jobs: Map<packId, JobSnapshot>`, `items: Map<packId, PackItemState[]>`, `usage`, `updates`, `filter`, `recent` (the last 5 jobs that completed; the rail flyout) | `byKind`, `installedTranslations`, `installedTafsir`, `starterSet` (§2.5.4, exact), `activeJobs`, `waitingIds`, `failedJobs` | `init(b)`, `refresh()`, `install(id, scope?)`, `pause/resume/cancel/remove(id)`, `retry(id)` (= resume), `update(id)` (= install All), `loadItems(id)`, `removeItems(id, items)`, `loadUsage()`, `checkUpdates()`, `clearStreamCache()`, `clearCache()` | `packs*`, `cacheClear`; Channel `DownloadEvent`; `packsChanged` |
 
 `PlayerStore.positionMs` interpolation runs while `isPlaying && document.visibilityState === 'visible'`:
 `positionMs = clamp(tick.fileMs + (now − tickAt) × tick.speedPct / 100, tick.fileMs, snapshot.ayahToMs + 250)`.
@@ -3395,15 +3397,57 @@ note delete, collection membership and tag changes. Before `setHighlight`, the s
 needed. `Mod+Z` / `Mod+Shift+Z` (§10.1) and every toast's Undo action call `undo()`/`redo()`.
 
 ### 7.4 View and overlay model (no router)
-- `ui.view ∈ {reader, downloads, settings, about}` replaces the canvas content. Esc or the back button returns to `reader`.
-  The player dock stays visible in every view.
+- `ui.view ∈ {reader, downloads, settings, about}`. `reader` and `downloads` fill the canvas; `settings` and `about` show
+  in the **Settings dialog** over the reader, which stays mounted under it (owner request 2026-10-11, below). Esc, the
+  back button or the dialog's close button returns to `reader`. The player dock stays visible and usable in every view.
+- **Downloads** (owner request 2026-10-11) has two tiers: the rail button's **activity flyout** (`DownloadsFlyout`, a
+  floating layer, below) and the full **manager** (`ui.view === 'downloads'`, still the target of `Mod+Shift+D`, the
+  palette and the contextual links). The manager takes the canvas **without the sidebar** (`shellLayout`'s `manager`
+  term; the sidebar preference is kept): `ui.openSidebar` returns to the reader first, so a rail tab, `Mod+1…7`, `Mod+B`
+  and `Mod+F` from the manager show the reader with that panel. Focus: the manager's "Downloads" heading on open
+  (`FOCUS_TARGETS.downloads`); back in the reader (Escape, the title bar, the rail button) the reading cursor, as "Skip to
+  Quran text" does (`ui.focusReader`), unless focus went to a rail tab.
+- **Settings dialog** (`SettingsDialog`, hosted once by `App`; WP7c). `ui.view` stays the source of truth (the Rust
+  `AppView`, deep links, the tray, the palette, `Mod+,`, the offline badge are unchanged), and it is **not** a
+  `ui.overlays` kind: `OverlayHost` renders only the top overlay, so every confirmation would unmount Settings.
+  - Frame: centred in the room under the 40 px title bar, `min(1040px, 100% − 48px)` × `min(760px, 100% − 48px)`,
+    radius-lg, shadow-3, on the onboarding's faint scrim (`rgb(0 0 0 / .18)`). Under 880 × 560 CSS px of room (after
+    the UI zoom) it fills the room edge to edge (no margin, radius or shadow). The scrim starts below the title bar,
+    so the breadcrumb, the caption buttons and Snap Layouts stay usable. In zen the frame stays below the title bar's
+    band too, which is the bar's reveal zone (`ZEN_TOP_ZONE_PX`): the bar slides in uncovered, and reaching for the
+    close button never brings it; the scrim covers the band only while the bar is hidden. Enters with a 200 ms fade and
+    scale from .98 (none under reduced motion).
+  - Layers: it is `Dialog layer="view"`, drawn at `calc(var(--z-dialog) − 1)`, so every overlay (confirmation, shortcut
+    sheet, onboarding, palette, note editor) paints above it; a confirmation opened from it (Storage › Clear cache)
+    leaves it mounted. It opens only while no overlay, dialog or sheet is up: Settings asked for during one (a tray
+    link) waits for it, so the dialog never sits under a layer that bits-ui would no longer treat as the top one. As
+    it opens it closes the context menu and every popover, menu or listbox still open (`ui.dismissFloating`; the
+    `ui` wrappers close themselves through `trackFloating`): a tray link or the palette's About would otherwise leave
+    one up, lifted above the dialog with the chrome's floating content, while the dialog takes the keys and clicks. It
+    registers `ui.settingsOpen` instead of a floating or modal layer (no body lock, `ui.captionVisible` stays true), and
+    while it is open the shortcut listener runs only its allow-list (§7.7).
+  - The player dock stays usable (§9.7): `App` lifts `.dock-region` to `--z-dialog` (above the dialog, under every
+    other dialog) and gives the chrome's floating content (the dock's popovers) the dialog's modal layer while it is
+    open. A click on the title bar, the dock or a toast (`[data-sonner-toaster]`) is not "outside"; any other click
+    outside closes the dialog (→ `reader`). The floating frame is centred between the title bar and the dock, 8 px
+    above the dock's top (`Dialog insetBottom`), so the dock never lies over it; in the filled frame the dock lies over
+    its bottom, and its views keep that band free at their end (`--qd-dock-reserve`).
+  - Focus: "Search settings" on open (About: "Copy diagnostics"); on close back to the opener (the rail button, the
+    reading cursor), except when the view moved elsewhere (Settings › Storage "Open downloads", Settings ›
+    Translations "Get translations"): then the destination takes focus (the manager's heading) and the canvas holds it
+    meanwhile.
+  - About (Settings › About › Credits, the palette) shows in the same frame, named "About Quran for Desktop"; Escape or
+    the X returns to the reader. The rail's Settings button is a dialog trigger (`aria-haspopup="dialog"`,
+    `aria-expanded`) and closes the dialog when it shows.
 - `settings.readingMode ∈ {mushaf, translation}` picks the reader body. `T` toggles it, and the reading position is kept by ayah.
 - **Overlays** form a stack in `ui.overlays`: `palette`, `goto`, `shortcuts`, `onboarding`, `confirm`, `note-editor`,
   `self-test`. Each is a bits-ui `Dialog` with focus trap. `OverlayHost` renders only the top-most interactive overlay. Opening
   `palette` while it is already open closes it (toggle).
-- **Floating layers** (context menu, popovers such as Repeat/Speed/ReciterPicker, open Select/Combobox listboxes, dropdown
-  menus, the AyahActionBar's swatch popover) register through `ui.pushFloating()/popFloating()` in the `src/components/ui`
-  wrappers. For shortcut purposes they count as overlays (§7.7 rule 1).
+- **Floating layers** (context menu, popovers such as Repeat/Speed/ReciterPicker, the rail's Downloads flyout and the
+  reading canvas's "Aa" display popover, open Select/Combobox listboxes, dropdown menus, the AyahActionBar's swatch
+  popover) register through
+  `ui.pushFloating()/popFloating()` in the `src/components/ui` wrappers. For shortcut purposes they count as overlays
+  (§7.7 rule 1). The Settings dialog is not one of them (it registers `ui.settingsOpen`).
 - **Context menu:** one `AyahContextMenu` instance (WP11c), opened by `ui.contextMenu = {…}` (right-click or `Shift+F10`/
   `ContextMenu` on the focused ayah). (v1.2) Its openers call `openAyahMenu`, which selects the ayah first unless the
   selection holds it (§10.3).
@@ -3419,14 +3463,15 @@ App (WP7c)
 ├─ TitleBar ─ [mac: 78px traffic-light inset] AppIcon · Breadcrumb(surah · juz · page or "ص ٢٦١–٢٦٢" in a spread) · SearchButton(Ctrl+K) · OfflineBadge · WindowControls[win]
 ├─ StartupBanner (user.db recovered, §9.8)
 ├─ .app-body (grid)
-│  ├─ <nav aria-label="Sections"> NavRail ─ IndexBtn · SearchBtn · BookmarksBtn · HighlightsBtn · NotesBtn · HistoryBtn · MemorizeBtn ─ spacer ─ DownloadsBtn · SettingsBtn
+│  ├─ <nav aria-label="Sections"> NavRail ─ IndexBtn · SearchBtn · BookmarksBtn · HighlightsBtn · NotesBtn · HistoryBtn · MemorizeBtn ─ spacer ─ DownloadsBtn (flyout trigger → DownloadsFlyout) · SettingsBtn (dialog trigger)
 │  ├─ <aside> Sidebar (PaneLayout) ─ IndexPanel | SearchPanel | BookmarksPanel | HighlightsPanel | NotesPanel | HistoryPanel | MemoPanel
 │  ├─ <main class="canvas">
-│  │  ├─ reader:  MushafView (WP8e)  |  TranslationView (WP11a)
-│  │  ├─ downloads: DownloadsView (WP12a) · settings: SettingsView (WP12b) · about: AboutView (WP12c)
+│  │  ├─ reader (also under the Settings dialog):  MushafView (WP8e)  |  TranslationView (WP11a)
+│  │  ├─ downloads: DownloadsView (WP12a; the sidebar hides)
 │  │  ├─ FatalScreen (app.fatal)
 │  │  └─ <div role="region" aria-label="Recitation player"> PlayerDock | SideDockCard (WP9a; placement from reader.dock)
 │  └─ <aside> SidePane (WP11b) ─ AyahHeader · Tabs[TranslationTab | TafsirTab | NotesTab | WordsTab]
+├─ SettingsDialog (WP7c; Dialog layer="view") ─ CloseButton · settings: SettingsView (WP12b) | about: AboutView (WP12c)
 ├─ OverlayHost ─ CommandPalette (WP10c) | GoToDialog (WP10a) | ShortcutSheet (WP7c) | OnboardingDialog (WP12c)
 │               | ConfirmDialog (WP7c) | NoteEditorDialog (WP11d) | SelfTestDialog (WP9b)
 ├─ AyahContextMenu (WP11c) · Toaster (svelte-sonner) · LiveRegion
@@ -3434,13 +3479,24 @@ App (WP7c)
 - `MushafView` (WP8e):
   `SpreadStage → MushafPage×{1,2} → {PageFrame, RunningHead, mp-block{HighlightLayer, RenditionStack{GlyphLayer×{1,2}},
   A11yLayer}, MarginMarkers, MarginMarks, PageFooter}`, plus `PageTurnZones`, `FlipHUD`, `PageRail`, `ZoomControl`
-  (top inline-end corner, §8.13), `WordTooltip`, `AyahActionBar`, `SurahInfoPopover`, and an **overlay slot**
+  (top inline-end corner, §8.13) with `DisplayControl` under it ("Aa" → `DisplayPopover`, §8.13, §9.7),
+  `WordTooltip`, `AyahActionBar`, `SurahInfoPopover`, and an **overlay slot**
   (bottom-centre of the canvas) that renders, in order, `FollowChip` ("Return to recitation", WP8e), `MemoToolbar` +
   `SelfTestBar` (WP9b), `DivisionChip` and `HintChip` (WP8f).
-- `TranslationView` (WP11a): `VList → (SurahCard | VerseRow{KeyBadge, ActionBar, ArabicText, TranslationBlock×n{FootnotePopover}})`.
+- `TranslationView` (WP11a): `VList → (SurahCard | VerseRow{KeyBadge, ActionBar, ArabicText, TranslationBlock×n{FootnotePopover}})`,
+  plus `DisplayControl` (WP8e) in the top inline-end corner.
+- `DisplayPopover` (WP12b; owner request 2026-10-11): `Popover(role=dialog, arrowless) → heading "Display" ·
+  ScrollArea(Theme{ThemePicker compact} · Ink brightness{Slider} on Night and Black · beside the Mushaf: Mushaf
+  style{StylePicker compact}, Pages{Segmented} · Translation text size{Slider} where translation text shows) ·
+  foot(All settings + Kbd)`.
 - `DownloadsView` (WP12a): `DiskUsageBar · Filters · PackSection(mushaf) · PackSection(recitations → ReciterRow{SurahGrid}) ·
   PackSection(translations by language) · PackSection(tafsir) · PackSection(wbw)`.
-- `SettingsView` (WP12b): `SectionNav · {Appearance, Mushaf, Translations, Audio, Memorization, Language, Keyboard, Storage, System, About}`.
+- `DownloadsFlyout` (WP12a; owner request 2026-10-11): `Popover(role=dialog) → head(title · total · DiskUsageBar strip;
+  offline note; updates line) · ScrollArea(job rows{KindTile, name, Progress, amount | reason, actions} · waiting rows ·
+  idle{Nothing downloading, Get content links} · Recently finished) · foot(Manage downloads + Kbd)`; `div`s, not
+  `header` / `footer`, which in the portalled popover would be page landmarks.
+- `SettingsView` (WP12b): `SectionNav (a column, or under 880 px a strip: title · search, then the sections in one row that
+  scrolls sideways) · {Appearance, Mushaf, Translations, Audio, Memorization, Language, Keyboard, Storage, System, About}`.
 
 ### 7.6 HTML rendering rule
 Only `TranslationText.html`, `Footnote.html`, `TafsirEntry.html` and `SearchHit.snippet` may be rendered as HTML, and only
@@ -3466,7 +3522,7 @@ export interface ShortcutDef {
   labelKey: I18nKey;                  // shortcuts.* keys only (frozen dictionary, §11.1)
   scope: 'global' | 'reader' | 'mushaf' | 'translation';
   capture?: boolean;                  // runs in the capture-phase listener (only the defs listed below)
-  allowInInput?: boolean;             // default false (Escape, Mod+K, Mod+F are true)
+  allowInInput?: boolean;             // default false (Escape, Mod+K, Mod+F, Mod+Comma, theme and UI scale are true)
   repeat?: boolean;                   // allow key auto-repeat (page turns: true, throttled by reader.flip; zoom: true)
   when?: () => boolean;
   run: (e: KeyboardEvent) => void;
@@ -3491,7 +3547,17 @@ export interface ShortcutDef {
   2. **Bubble phase** on `window`: everything else, skipped when `e.defaultPrevented || e.isComposing`, so bits-ui widgets
      that handle a key (Space on a Button, arrows in a Slider/Tabs/Menu, typeahead in a Select) win.
 - **Rules, in order (bubble listener):**
-  1. If an overlay **or a floating layer** is open (`ui.layerOpen`), only `allowInInput` defs run.
+  1. If an overlay **or a floating layer** is open (`ui.layerOpen`), only `allowInInput` defs run. While the **Settings
+     dialog** is open (`ui.settingsOpen`, §7.4) only its allow-list runs: the audio group, `app.palette`, `app.search`
+     (focuses "Search settings", turning About back to Settings, after closing a palette or Go to on top),
+     `app.escape`, `app.settings` (closes it, from its search field too), `app.downloads`, `view.theme`, `view.uiScale*`
+     and `view.fullscreen`. Any other global def that matches (`Mod+B`, `Mod+1…7`, F6, `?`, Go to) is consumed without
+     running; reader-scoped ones (`Mod+I`, the page keys) never match outside the reader (rule 4), so they pass. `Mod+,`
+     never acts while another layer is open, except the palette when it is the only one (outside the dialog), which it
+     closes first; over the open dialog it does nothing, and the palette offers its "Settings" row only where the key
+     would act. The palette leaves the dialog for a command off the list. The Downloads flyout is a
+     floating layer, so `Mod+Shift+D` pauses there too; the flyout handles that key itself (`shortcuts.matches`), as its
+     footer names it. Likewise the canvas's "Aa" display popover handles `Mod+,` (its "All settings" footer).
   2. If the target is editable (`input`, `textarea`, `select`, `[contenteditable]`), only `allowInInput` defs run.
   3. **Widget guard.** A def without `Mod` or `Alt` (plain or Shift-only keys: Space, Enter, arrows, Home/End, PageUp/
      PageDown, digits, letters, punctuation) does nothing when `e.target.closest('button, a[href], input, textarea, select,
@@ -4016,6 +4082,21 @@ html[data-turn="prev"] { --qd-out: qd-out-left;  --qd-in: qd-in-right; }
     cursor (consumed: the selection stays). A pointer press never takes focus (← → keep turning pages). A plain wheel
     over it scrolls a zoomed canvas (`forwardWheel`) and turns the page while it fits; `Mod`+wheel zooms at the
     pointer. It replaces WP8e's transient top-centre zoom indicator.
+  - The look, the yield and zen are `CanvasControl`'s (`canvasControl.svelte.ts`), shared with the display button.
+- **Display button (`DisplayControl`; owner request 2026-10-11).** An "Aa" glass capsule (40 × 40 px, the zoom
+  control's glass) that opens the reading-display popover (`DisplayPopover`, §9.7): theme, ink brightness, Mushaf
+  style, pages and translation text size, changed live on the page, with no scrim. Beside the Mushaf it sits 8 px under
+  the zoom control (116 px from the top, on the same inline-end edge, so at the fit it is as clear of the page); in
+  translation mode, which has no zoom control, it takes that control's place (16 px down), in the gutter beside the
+  reading column.
+  - **Look.** The zoom control's rules (`CanvasControl`): 40 / 60 / 100 %, and 100 % while its popover is open. It
+    yields to the text, running heads and marks beside the Mushaf, and to the paper in translation mode (a canvas
+    narrower than the column plus 2 × 56 px), until the pointer comes within 24 px. Zen hides it until the pointer moves
+    and moves it down by `ZEN_TOP_ZONE_PX`.
+  - **Keys and pointer.** One tab stop after the zoom control (translation mode: after the feed); Enter/Space opens the
+    popover on its heading; Escape on the closed button returns focus to the reading cursor (consumed). A pointer press
+    never takes focus and the popover gives focus back to where it was, so ← → keep turning pages. The wheel over it
+    scrolls the canvas (a fitted Mushaf page turns). Name and tooltip "Display" («العرض»).
 - **Plain wheel when the page fits:**
   - Normalise `deltaMode`: lines × 16 px, pages × canvas height.
   - A **gesture** ends after 160 ms with no wheel events; one gesture turns **at most one page** (touchpad and free-spin
@@ -4085,7 +4166,9 @@ html[data-turn="prev"] { --qd-out: qd-out-left;  --qd-in: qd-in-right; }
   and announce "Al-Baqarah 2:255, page 42" (§7.4).
 - **Labels and announcements.**
   - Each page `<section>` is labelled (`aria-label`, the localised "Page {n} · {surah} · Juz {j}").
-  - A "Skip to Quran text" link is the first tab stop in the app.
+  - A "Skip to Quran text" link is the first tab stop in the app. It focuses the reading cursor (`readingCursor`): the
+    Mushaf's roving ayah item or translation mode's roving verse, else the first ayah item, else the canvas. Leaving the
+    Downloads manager and Escape on the canvas's "Aa" button use the same lookup.
   - Landmarks (§7.5): `<nav aria-label="Sections">` (rail), `<aside>` (sidebar and side pane), `<main>` (canvas),
     `role=region aria-label="Recitation player"` (dock).
   - The polite live region announces "Page {n}" on page change. It announces "Reciting {ref}" on ayah change only when
@@ -4372,6 +4455,10 @@ mirror (§11.3).
 ├ NavRail 52px │ Sidebar 300px (240–420) │ Canvas (reader / views) + PlayerDock │ SidePane 400px (320–640) ┤
 └──────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
+The Settings dialog (§7.4) floats over this grid under the title bar; the rail's pill marks the shown tab, view or dialog
+(`data-active`, whatever the button's ARIA role: a toggle, a flyout trigger with `aria-current="page"` for the manager, or
+a dialog trigger). The Downloads manager hides the sidebar (§7.4). In a window too short for every rail button (760 × 600
+at 150–200 % UI scale) the tabs scroll and Downloads and Settings stay at the rail's foot.
 - Arabic UI (`dir=rtl`) mirrors the grid: rail on the right, sidebar right, side pane left. The Mushaf inside the canvas is
   unchanged.
 - **Side pane docking is a geometry rule** (`paneCanDock()` in `geometry.ts`, WP8a; applied by `PaneLayout`, WP7c). With the
@@ -4385,8 +4472,9 @@ mirror (§11.3).
   At 1366×768, 1536×864 and 1920×1080 the pane docks even with the sidebar open (S32). Below 900 px window width the sidebar
   overlays too.
 - **Zen mode** (`Z`): hides chrome except the page; the cursor auto-hides after 2.5 s idle; the dock hides and reappears when the
-  pointer enters the bottom 80 px or an audio key is pressed; `PageTurnZones` and the zoom control stay hidden until the
-  pointer moves (§8.13).
+  pointer enters the bottom 80 px or an audio key is pressed; `PageTurnZones`, the zoom control and the "Aa" display
+  button stay hidden until the pointer moves (§8.13). `Mod+,` opens the Settings dialog without leaving zen: it stays
+  below the title bar's band (the bar's reveal zone), which its scrim covers except while the bar slides in.
 - **Chrome effect owner:** the frontend only. `settings.applyEffects()` calls `window_set_chrome` whenever the resolved theme or
   `chromeEffect` changes; Rust's `window::apply_settings` never touches chrome (it can't know what `system` resolved to).
 - **Windows:** `decorations:false, transparent:true, windowEffects:["mica"]`.
@@ -4495,6 +4583,8 @@ mirror (§11.3).
   except for surahs 1 and 9.
 - Playing ayah: `--hl-audio` row background plus a 3 px accent bar at the inline start. Auto-scroll keeps it at 30 % from the
   top, pauses for 4 s after a manual scroll, and offers the same "Return to recitation" chip.
+- The "Aa" display button (§8.13) sits in the canvas's top inline-end corner, in the gutter beside the column; its
+  popover offers the theme, ink brightness (Night, Black) and the text size (below).
 - Scenario S36 (translation mode at 1920×1080).
 
 **Side pane (`SidePane`, WP11b).**
@@ -4512,13 +4602,41 @@ mirror (§11.3).
 muted); the Arabic name at the inline end (sura-names glyph or Naskh 18 px); meta "Meccan · 286 · p 2" (text-2xs, locale digits);
 the current surah marked by an accent bar; a small dot when the current reciter's surah is downloaded (from `packs_items`).
 
+**Downloads flyout (WP12a; owner request 2026-10-11).** The rail's Downloads button opens a compact activity flyout,
+the glance before the manager; it never opens by itself.
+- Arrowless, like the other chrome-button popovers (Repeat, Speed, ReciterPicker): beside the rail on its inline-end side
+  (`side` right, or left in the Arabic UI), `align="end"` (its bottom edge on the button's, so it grows upward),
+  `min(380px, the room)` wide, at most 60 % of the window tall but never under 440 px (so under ~500 px of height only
+  the room caps it). Header and footer stay; the body scrolls.
+- Header: "Downloads", the storage total ("291 MB used", `usageTotal`, as the manager's card says it) and a thin usage
+  bar (`DiskUsageBar variant="strip"`) on one row; the offline or Work offline note; "N updates available · Update all"
+  (`updateAll`, shared with the manager). Header and footer are `div`s: portalled to the body, `header` and `footer`
+  would be page landmarks.
+- Body: the live jobs, running first, then queued, paused and failed (`flyoutJobs`), each with its kind tile, name, a
+  `Progress` bar and "8.2 of 45.7 MB" (`jobAmount`), one action (Pause, Resume or Retry) and Stop; a failed row says why in
+  one line. Requests that wait for a connection (`packs.waitingIds`) read "Waits for a connection" with Cancel. With
+  none: "Nothing downloading" and "Get content" links that open the manager on a kind (`openManager(tab)`). Then
+  "Recently finished": the last five jobs that completed this session (`packs.recent`).
+- Footer: "Manage downloads" with `Kbd` `Mod+Shift+D`.
+- Light dismiss (outside click, Escape) returns focus to the rail button; it opens on its heading. Closing for the
+  manager hands focus to the manager's heading. Below 480 × 400 CSS px of window (760 × 600 at 200 %) the button opens the
+  manager directly; while the manager shows, it returns to the reader.
+- The rail button: `aria-haspopup="dialog"` and `aria-expanded` for the flyout, but neither where the click navigates
+  instead (the manager shows, or the window is under 480 × 400); `aria-current="page"` and the pill while the manager
+  shows. Its icon carries a 16 px `Progress` ring of the running jobs' aggregate progress, else the number of
+  downloads that wait for a connection, and a red mark when one failed; the tooltip and the accessible name count them
+  ("Downloads · 1 download in progress · 1 failed"), without a key (the flyout's footer names it).
+
 **Downloads manager (WP12a).**
+- The canvas without the sidebar (§7.4); a rail tab, `Mod+1…7`, `Mod+B` or `Mod+F` returns to the reader with that panel.
+  The "Downloads" heading takes focus on open; leaving for the reader focuses the reading cursor. The column's end keeps
+  the dock's height free, so the last row scrolls above it.
 - Header: `DiskUsageBar` (stacked segments per kind with a legend and totals) plus "Clear streaming cache"
   (`packs_clear_stream_cache`) and "Open folder".
 - Filters: kind tabs, language select, search.
 - Rows (56 px): kind icon, title and subtitle ("Saheeh International · English · 0.5 MB"), state `Badge`, and actions on the end
   side: Download / Pause / Resume / Cancel / Remove / Update (= `packs_install(id, All)` on `UpdateAvailable`) / Retry
-  (= `packs_resume` on `Failed`).
+  (= `packs_resume` on `Failed`). Below 560 px of row width (a container query) the badge and actions wrap under the title.
 - While downloading: a 4 px `Progress` under the subtitle and "12.4 of 93.2 MB · 2.1 MB/s · 0:42 left".
 - Recitation rows expand to a 114-cell `SurahGrid` of 28 px cells driven by `packs_items`: filled accent when pinned, half-tone
   when stream-cached, an outline ring when queued. Clicking a cell downloads (`packs_install(id, Items[n])`) or removes
@@ -4554,8 +4672,13 @@ there.
 5. Keys: teaches `Ctrl+K`/`⌘K`, `Space` and `?` with `Kbd`. Finish sets `onboardingDone = true`.
 
 **Settings (WP12b).**
+- A large in-window dialog over the reader (§7.4; owner request 2026-10-11): at most 1040 × 760 under the title bar on a
+  faint scrim, or filling the room under 880 × 560 CSS px. The navigation's "Settings" heading names it; a close button
+  ("Close · Esc") sits in its top inline-end corner; the section's title is the column's own heading (never repeated).
 - Layout: 200 px section nav, content max-width 720, rows of 56 px (label text-md 500, description text-sm muted, control on the end
-  side). Every `Settings` field is bound to a control; labels and ranges come from `settingsMeta` (`meta.ts`).
+  side). Under 880 px of dialog width the nav becomes a strip above the column: title and search, then the sections in one
+  row that scrolls sideways (wheel, ←/→ in reading order) and keeps the open section in view. Every `Settings` field is
+  bound to a control; labels and ranges come from `settingsMeta` (`meta.ts`).
 - Appearance has a live preview card (`MushafPage interactive={false}` in the current theme and style, plus a translation line),
   the theme with `lightVariant`/`darkVariant` pickers for "Match system", UI scale 80–200 % (step 10), and ink brightness 65–100 %.
 - The Keyboard section embeds `ShortcutTable` (WP7c).
@@ -4563,7 +4686,29 @@ there.
   to Downloads.
 - Destructive actions use `ConfirmDialog`.
 
+**Reading display popover (`DisplayPopover`, WP12b; owner request 2026-10-11).** The canvas's "Aa" button
+(`DisplayControl`, §8.13) opens Settings' display controls beside the page, so a theme or ink change is judged on the
+real, unscrimmed page (Apple Books' and Kindle's "Aa", Quran.com's drawer).
+- An arrowless popover (`role="dialog"`, "Display"), like the app's other chrome-button popovers, 8 px beside the
+  button toward the canvas (left in the English UI, right in the Arabic UI), top edges aligned; 340 px wide (or the
+  room), the heading and footer fixed and the rows in a `ScrollArea` when the window is short. A floating layer; Escape
+  or a click outside closes it, and so does the view leaving the reader. It opens on its heading.
+- Rows, only those that change what is on screen (`displayRows`, `display.ts`): **Theme** (`ThemePicker compact`: the
+  six cards three across, names only, 44 px miniatures); **Ink brightness** 65–100 % on Night and Black, as Settings ›
+  Appearance (with its "increase contrast" note; both read `dimsInk` and `inkNoteKey`); beside the Mushaf, **Mushaf
+  style** (`StylePicker compact`: two across, each name over one line of status in its tone, the same availability
+  rules, Tajweed `aria-disabled` where the colour fonts fail) and **Pages** (Automatic | One page | Two pages,
+  `PAGE_MODES`, as Settings › Mushaf); **Translation text size** 80–200 % wherever translation text shows (translation
+  mode, or the study pane on its Translation tab). Every change saves at once (sliders while dragging) and shows on the
+  page under it.
+- Footer: "All settings" with the `Mod+,` keycaps, which closes the popover and opens the Settings dialog on the reading
+  mode's section (Mushaf, or Translations). The popover gives focus back first, so the dialog returns it there when it
+  closes (the button, if the keyboard opened the popover). `Mod+,` works inside the popover too (it handles the key
+  itself, as the Downloads flyout does its own).
+- Scenario S39.
+
 **About and attribution (WP12c).**
+- Shown in the Settings dialog's frame (§7.4), named "About Quran for Desktop".
 - Header: the app icon (64 px, §9.9), the full name ("Quran for Desktop" / "قرآن لسطح المكتب"), version, build line
   ("core.db: qul · 2026-10-10 · schema 1"), and "Copy diagnostics" (app info JSON).
 - `AttributionList` groups, each entry with licence and link:
@@ -4658,21 +4803,21 @@ keys by name. "reader" scope means the reader view is active; "mushaf" means Mus
 | navigation | `Mod+g` **C** | Go to… dialog | global | navigation.ts |
 | navigation | `F3` / `Shift+F3` | Next / previous search hit (`search.move`, keeps the results list in sync) | reader | navigation.ts |
 | app | `Mod+k` **C** | Command palette (toggle) | global, in inputs | app.ts (WP7c) |
-| app | `Mod+f` **C** | Search (sidebar Search tab, focus input) | global, in inputs | app.ts |
+| app | `Mod+f` **C** | Search (sidebar Search tab, focus input; "Search settings" while the Settings dialog is open) | global, in inputs | app.ts |
 | app | `?` | Shortcut sheet | global | app.ts |
-| app | `Mod+,` **C** | Settings | global | app.ts |
-| app | `Mod+Shift+d` **C** | Downloads | global | app.ts |
+| app | `Mod+,` **C** | Settings dialog (toggle; not over another layer, but closes the palette first when it is the only one, outside the dialog) | global, in inputs | app.ts |
+| app | `Mod+Shift+d` **C** | Downloads manager (also from inside the rail's Downloads flyout) | global | app.ts |
 | app | `Escape` **C** | Close the top overlay/floating layer → else clear selection/search hit → else exit zen. In the note editor: closes; asks "Discard note?" only if the unsaved body is non-empty (drafts autosave to the ui store) | global, in inputs | app.ts |
 | app | `F6`, `Mod+Shift+u` | Move focus to the toast region (actions such as Undo) | global | app.ts |
 | app | `Mod+z` / `Mod+Shift+z` | Undo / redo the last library change (§7.3) | reader (not in inputs) | study.ts (WP11c) |
 | view | `t` | Toggle Mushaf / Translation mode | reader | view.ts (WP8e) |
 | view | `d` | Cycle page mode auto → single → spread | mushaf | view.ts |
 | view | `Mod+=` / `Mod+-` / `Mod+Digit0` | Mushaf zoom in / out / fit (repeat allowed) | mushaf | view.ts |
-| view | `Mod+Shift+=` / `Mod+Shift+-` / `Mod+Shift+Digit0` | UI scale up / down / reset (80–200 %, step 10; D27) | global | app.ts |
+| view | `Mod+Shift+=` / `Mod+Shift+-` / `Mod+Shift+Digit0` | UI scale up / down / reset (80–200 %, step 10; D27) | global, in inputs | app.ts |
 | view | `Mod+b` | Toggle sidebar | global | app.ts |
 | view | `Mod+i` | Toggle side pane | reader | app.ts |
 | view | `Mod+Digit1` … `Mod+Digit7` | Sidebar tab: Index, Search, Bookmarks, Highlights, Notes, History, Memorize | global | app.ts |
-| view | `Mod+Shift+l` | Cycle theme paper → sepia → night → black | global | app.ts |
+| view | `Mod+Shift+l` | Cycle theme paper → sepia → night → black | global, in inputs | app.ts |
 | view | `F11` **C** (Win/Linux), `Mod+Ctrl+f` **C** (macOS) | Fullscreen | global | app.ts |
 | view | `z` | Zen mode (hide chrome except the page) | reader | view.ts |
 | audio | `Space` | Play/pause. When idle: resume candidate (§7.8), else the selection, else the first ayah of the visible page | global | audio.ts (WP9a) |
@@ -4714,6 +4859,7 @@ every row above into the frozen `shortcuts.ts` dictionaries (en + ar, §11.1).
 | drag (zoom > 100 %) | Mushaf page and margins | pan the canvas (§8.13) |
 | click a page-turn zone chevron | Mushaf canvas edges | left zone = next page, right zone = previous (§8.11) |
 | click + / the level / − | Mushaf canvas, top inline-end corner | zoom in / back to the fit / zoom out, around the canvas centre (§8.13) |
+| click "Aa" | reading canvas, top inline-end corner (under the zoom control beside the Mushaf) | open the reading-display popover (§8.13, §9.7) |
 | hover under the pages' frame (the page-number strip and below) or the bottom 24 px of the canvas | Mushaf canvas, not the dock or the overlay slot | reveal the page rail; drag previews, release turns (§8.11) |
 | hover / click / Shift+click / double-click / Mod+click / right-click | ayah words | §8.17 (click also shows the action bar) |
 | click empty paper or canvas | Mushaf | clear the selection |
@@ -4971,7 +5117,7 @@ evidence.
 | S20 | Command palette "2:255" | WP10c |
 | S21 | Translation mode, surah 1, two translations, footnote popover open | WP11a |
 | S22 | Tafsir tab, Arabic (muyassar), RTL | WP11b |
-| S23 | Downloads manager with paused and failed jobs and an expanded SurahGrid | WP12a |
+| S23 | Downloads manager with paused and failed jobs and an expanded SurahGrid, and the rail flyout | WP12a |
 | S24 | Settings › Appearance, high_contrast, UI scale 150 % | WP12b |
 | S25 | About / attribution | WP12c |
 | S26 | Arabic UI (mirrored chrome), pages 261–262 spread, plus a dock close-up | WP7c |
@@ -4986,6 +5132,7 @@ evidence.
 | S35 | Relaunch (mock: reload) restores page 297 and shows the resume pill | WP8f |
 | S36 | Translation mode at 1920×1080 (column, SurahCard, playing row) | WP11a |
 | S37 | Side pane, Tafsir tab with a range entry and the stale footer | WP11b |
+| S39 | The "Aa" display popover: beside the Mushaf in night (theme, ink, style, pages; a card applied live), then translation mode in Arabic (owner request 2026-10-11) | WP8e |
 
 - **Integration checkpoints** (real app, Windows; each is the acceptance of the named package):
   - **IC1** (WP6a, needs 1a + 2b + 6a): `pnpm tauri build --debug --no-bundle && node scripts/qa/app-driver.mjs --scenario

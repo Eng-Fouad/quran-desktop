@@ -1,7 +1,7 @@
 /**
- * What the Downloads manager's buttons and menus do (§9.7, §10.3 "pack row" and "SurahGrid cell"). Owner: WP12a.
- * Every action reports its failure as a toast (`ui.toastError`); destructive ones ask first (`ui.confirm`, §9.7
- * "Destructive actions use ConfirmDialog").
+ * What the Downloads manager's and the rail flyout's buttons and menus do (§9.7, §10.3 "pack row" and "SurahGrid
+ * cell"). Owner: WP12a. Every action reports its failure as a toast (`ui.toastError`); destructive ones ask first
+ * (`ui.confirm`, §9.7 "Destructive actions use ConfirmDialog").
  */
 import type { LucideIcon } from '@lucide/svelte'
 import Download from '@lucide/svelte/icons/download'
@@ -13,7 +13,7 @@ import Trash from '@lucide/svelte/icons/trash'
 import X from '@lucide/svelte/icons/x'
 import CircleArrowUp from '@lucide/svelte/icons/circle-arrow-up'
 import type { MenuEntry } from '$components/ui'
-import type { InstallScope, JobSnapshot, PackInfo } from '$lib/ipc/bindings'
+import type { InstallScope, JobSnapshot, PackInfo, PackKind } from '$lib/ipc/bindings'
 import { app, i18n, packs, player, quran, settings, ui } from '$lib/stores'
 import { hasContent, isActivePhase, isInstalled } from '$lib/stores/packs.svelte'
 
@@ -73,6 +73,27 @@ export function retry(p: PackInfo): void {
 
 export function update(p: PackInfo): void {
   packs.update(p.id).catch(report)
+}
+
+/** "Update all" (the manager's updates banner, the rail flyout): every pack with an update. */
+export function updateAll(): void {
+  for (const p of packs.updatable) update(p)
+}
+
+/** A kind tab of the manager (`packs.filter`): `mushaf_fonts` also shows the ornament packs. */
+export type ManagerTab = PackKind | 'all'
+
+/**
+ * Shows the Downloads manager (`ui.view = 'downloads'`). With a `tab` (the rail flyout's "Get content" links) it opens
+ * on that kind, with the language and search filters cleared so the tab is never empty for a stale query.
+ */
+export function openManager(tab?: ManagerTab): void {
+  if (tab !== undefined) {
+    packs.filter = tab
+    packs.language = 'all'
+    packs.query = ''
+  }
+  ui.setView('downloads')
 }
 
 /** KiB of the pack on this computer (what removing it frees). */

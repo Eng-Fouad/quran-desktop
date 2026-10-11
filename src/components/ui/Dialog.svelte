@@ -11,6 +11,13 @@
     (never the close button). Pass `onOpenAutoFocus` / `onCloseAutoFocus` and call `preventDefault()` to take over
     (e.g. a jump that moves focus to the target ayah instead of restoring it, §7.4).
   - While open it counts as a layer for shortcuts (§7.7 rule 1).
+  - `layer="view"` is an in-window view (the Settings dialog, §7.4): drawn just under `--z-dialog`, so every other
+    dialog paints above it; it counts as no layer (its host registers its own) and leaves the page outside it live
+    (no body lock), so the title bar and the player dock stay usable. With it: `variant="plain"` (no chrome; the
+    content paints the surface and names the dialog through `labelledBy`), `insetTop` / `scrimTop` (a band at the top,
+    the title bar, left uncovered), `insetBottom` (a band at the bottom, the player dock's, the dialog stays above),
+    `height` (a fixed height, whatever the content), `fill` (edge to edge: no margin, radius or shadow) and
+    `onInteractOutside` (`preventDefault()` keeps it open for a click on chrome that stays usable).
 -->
 <script lang="ts">
   import X from '@lucide/svelte/icons/x'
@@ -31,12 +38,28 @@
     size?: 'sm' | 'md' | 'lg'
     /** Width in px, overriding `size`. */
     width?: number
+    /** Height in px (at most the room there is): the dialog keeps this size whatever it shows. */
+    height?: number
     /** `top` sits at 14 vh (palette, Go to); `center` centres in the window. */
     placement?: 'center' | 'top'
-    variant?: 'default' | 'bare'
+    /** `plain`: no chrome, an opaque surface the content paints itself. */
+    variant?: 'default' | 'bare' | 'plain'
     backdrop?: 'dim' | 'faint'
-    /** Stacking layer: dialogs, or the command palette above them (§9.4 z-index). */
-    layer?: 'dialog' | 'palette'
+    /**
+     * Stacking layer: dialogs, the command palette above them (§9.4 z-index), or an in-window view just under the
+     * dialogs (see the header).
+     */
+    layer?: 'dialog' | 'palette' | 'view'
+    /** A band at the top (px) the dialog stays below, and the backdrop too unless `scrimTop` says otherwise. */
+    insetTop?: number
+    /** The band at the top (px) the backdrop leaves uncovered (default `insetTop`). */
+    scrimTop?: number
+    /** A band at the bottom (px) the dialog stays above; the backdrop still covers it. */
+    insetBottom?: number
+    /** Fill the room edge to edge, without margin, radius or shadow. */
+    fill?: boolean
+    /** The id(s) of a heading inside that names the dialog, instead of `title` (`bare` and `plain`). */
+    labelledBy?: string
     /** Show the header close button (default chrome only). */
     closeButton?: boolean
     /** `false`: Escape and outside clicks do not close it (a step that must be answered). */
@@ -47,6 +70,7 @@
     onOpenAutoFocus?: (e: Event) => void
     onCloseAutoFocus?: (e: Event) => void
     onEscapeKeydown?: (e: KeyboardEvent) => void
+    onInteractOutside?: (e: PointerEvent) => void
     class?: string
     dir?: Dir
     children: Snippet
@@ -59,10 +83,16 @@
     description,
     size = 'md',
     width,
+    height,
     placement = 'center',
     variant = 'default',
     backdrop = 'dim',
     layer = 'dialog',
+    insetTop = 0,
+    scrimTop,
+    insetBottom = 0,
+    fill = false,
+    labelledBy,
     closeButton = true,
     dismissible = true,
     header,
@@ -71,6 +101,7 @@
     onOpenAutoFocus,
     onCloseAutoFocus,
     onEscapeKeydown,
+    onInteractOutside,
     class: className,
     dir: dirProp,
     children,
@@ -83,9 +114,10 @@
   let body: HTMLElement | null = $state(null)
   let foot: HTMLElement | null = $state(null)
 
-  trackFloating(() => open)
-  trackModal(() => open)
-  setModalLayer(() => layer)
+  // A view dialog is no layer of its own (its host registers one); what opens inside it stacks as over a dialog.
+  trackFloating(() => open && layer !== 'view')
+  trackModal(() => open && layer !== 'view')
+  setModalLayer(() => (layer === 'view' ? 'dialog' : layer))
 
   function handleOpenAutoFocus(e: Event): void {
     onOpenAutoFocus?.(e)
@@ -106,7 +138,11 @@
   <Dialog.Portal>
     <Dialog.Overlay>
       {#snippet child({ props })}
-        <div {...props} class={['backdrop', `backdrop-${backdrop}`, `layer-${layer}`]}></div>
+        <div
+          {...props}
+          class={['backdrop', `backdrop-${backdrop}`, `layer-${layer}`]}
+          style:inset-block-start="{scrimTop ?? insetTop}px"
+        ></div>
       {/snippet}
     </Dialog.Overlay>
     <Dialog.Content
@@ -114,23 +150,33 @@
       onOpenAutoFocus={handleOpenAutoFocus}
       {onCloseAutoFocus}
       {onEscapeKeydown}
+      {onInteractOutside}
       escapeKeydownBehavior={dismissible ? 'close' : 'ignore'}
       interactOutsideBehavior={dismissible ? 'close' : 'ignore'}
+      preventScroll={layer !== 'view'}
     >
       {#snippet child({ props })}
-        <div class={['positioner', `at-${placement}`, `layer-${layer}`]}>
+        <div
+          class={['positioner', `at-${placement}`, `layer-${layer}`, { fill }]}
+          style:inset-block-start="{insetTop}px"
+          style:inset-block-end="{insetBottom}px"
+        >
           <div
             {...props}
-            class={['dialog', `variant-${variant}`, className]}
+            aria-labelledby={labelledBy ?? (props['aria-labelledby'] as string | undefined)}
+            class={['dialog', `variant-${variant}`, { sized: height !== undefined }, className]}
             style:--_w="{width ?? WIDTHS[size]}px"
+            style:--_h={height === undefined ? undefined : `${height}px`}
             {dir}
           >
-            {#if variant === 'bare'}
-              <Dialog.Title>
-                {#snippet child({ props: titleProps })}
-                  <h2 {...titleProps} class="sr-only">{title}</h2>
-                {/snippet}
-              </Dialog.Title>
+            {#if variant === 'bare' || variant === 'plain'}
+              {#if labelledBy === undefined}
+                <Dialog.Title>
+                  {#snippet child({ props: titleProps })}
+                    <h2 {...titleProps} class="sr-only">{title}</h2>
+                  {/snippet}
+                </Dialog.Title>
+              {/if}
               {#if description}
                 <Dialog.Description>
                   {#snippet child({ props: descriptionProps })}
@@ -229,6 +275,26 @@
     z-index: var(--z-palette);
   }
 
+  /* Under every other dialog (later in the document at --z-dialog), above the page and its floating chrome. */
+  .layer-view {
+    z-index: calc(var(--z-dialog) - 1);
+  }
+
+  /* In zen the uncovered band follows the title bar sliding in (`scrimTop`). */
+  .backdrop.layer-view {
+    transition:
+      opacity var(--dur-normal) var(--ease-decelerate),
+      inset-block-start var(--dur-normal) var(--ease-standard);
+  }
+
+  .positioner.layer-view {
+    padding: var(--space-6);
+  }
+
+  .positioner.fill {
+    padding: 0;
+  }
+
   .at-top {
     align-items: flex-start;
     padding-block-start: 14vh;
@@ -255,6 +321,17 @@
     max-block-size: calc(100% - 4vh);
   }
 
+  .dialog.sized {
+    block-size: min(var(--_h), 100%);
+  }
+
+  .fill .dialog {
+    inline-size: 100%;
+    block-size: 100%;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
   .dialog[data-starting-style],
   .dialog[data-ending-style] {
     opacity: 0;
@@ -270,6 +347,11 @@
     overflow: hidden;
     background-color: var(--glass-fill);
     backdrop-filter: var(--backdrop-palette);
+  }
+
+  .variant-plain {
+    overflow: hidden;
+    background-color: var(--surface-app);
   }
 
   .header {

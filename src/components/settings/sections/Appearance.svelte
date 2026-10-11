@@ -16,16 +16,17 @@
   import SliderRow from '../controls/SliderRow.svelte'
   import SwitchRow from '../controls/SwitchRow.svelte'
   import ThemePicker from '../controls/ThemePicker.svelte'
+  import { inkNoteKey, MORE_CONTRAST } from '../display'
   import { save } from '../model'
 
   const search = settingsSearch()
-  const moreContrast = new MediaQuery('(prefers-contrast: more)', false)
+  const moreContrast = new MediaQuery(MORE_CONTRAST, false)
 
-  const dimmable = $derived(settings.resolvedTheme === 'night' || settings.resolvedTheme === 'black')
   /** Under "increase contrast" the ink stays at full brightness (tokens.css, WP7a deviation 4). */
-  const inkNote = $derived(
-    dimmable && moreContrast.current ? i18n.t('settings.appearance.inkContrast') : undefined,
-  )
+  const inkNote = $derived.by(() => {
+    const key = inkNoteKey(settings.resolvedTheme, moreContrast.current)
+    return key && i18n.t(key)
+  })
   const accentForced = $derived(settings.resolvedTheme === 'high_contrast')
 
   /** Why the translucent window is unavailable or not shown (§9.6), if it is. */

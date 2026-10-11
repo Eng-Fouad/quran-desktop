@@ -5,10 +5,15 @@
   `DiskUsageBar` (with Open folder and Clear streaming cache) · banners (offline, Work offline, updates) · filters
   (kind tabs, language select, search; sticky while scrolling) · `PackSection`s: Mushaf and fonts, recitations
   (`ReciterRow` with its `SurahGrid`), translations, tafsir and word by word, language packs ordered with the UI
-  language first. The column keeps clear of the player dock, which stays visible in every view.
+  language first. The column keeps clear of the player dock, which stays visible in every view: its end keeps the
+  dock's height free (`dockReserve`), so the last row scrolls above it.
 
   Opening the view refreshes the catalogue and the disk usage, loads the items of on-demand packs (page and surah
   counts, the grids) and checks for updates when online (at most every 6 hours).
+
+  The manager takes the canvas without the sidebar (owner request 2026-10-11, `shellLayout`): a rail tab, `Mod+1…7`,
+  `Mod+B` or `Mod+F` returns to the reader with that panel. Focus: the "Downloads" heading on open; back in the reader
+  (Escape, the title bar, the rail button) the reading cursor takes it, as "Skip to Quran text" does.
 -->
 <script lang="ts">
   import CircleArrowUp from '@lucide/svelte/icons/circle-arrow-up'
@@ -24,7 +29,8 @@
   import type { PackInfo, PackKind } from '$lib/ipc/bindings'
   import { app, i18n, packs, reader, settings, ui } from '$lib/stores'
   import { languageOf, reciterIdOf } from '$lib/stores/packs.svelte'
-  import { canDownload, openFolder, update } from './actions'
+  import { FOCUS_TARGETS } from '$lib/stores/ui.svelte'
+  import { canDownload, openFolder, updateAll, type ManagerTab } from './actions'
   import DiskUsageBar from './DiskUsageBar.svelte'
   import { languageName } from './format'
   import PackRow from './PackRow.svelte'
@@ -32,7 +38,7 @@
   import ReciterRow from './ReciterRow.svelte'
   import { downloadsView } from './view.svelte'
 
-  type Tab = PackKind | 'all'
+  type Tab = ManagerTab
   type SectionId = 'mushaf' | 'recitation' | 'translation' | 'tafsir' | 'wbw'
 
   const SECTIONS: readonly { id: SectionId; tab: Tab; kinds: readonly PackKind[] }[] = [
@@ -170,10 +176,6 @@
     }
   }
 
-  function updateAll(): void {
-    for (const p of packs.updatable) update(p)
-  }
-
   // --- loading -------------------------------------------------------------------------------------------------------
 
   /** Item lists asked for during this visit (a failed load is not retried in a loop). Not reactive on purpose. */
@@ -184,6 +186,15 @@
     packs.loadUsage().catch((e: unknown) => console.warn('[qd] downloads: disk usage', e))
     if (canDownload()) {
       packs.checkUpdates({ ifStale: true }).catch((e: unknown) => console.warn('[qd] downloads: updates', e))
+    }
+    // The manager replaces the reader, and the focus it held: the heading takes it.
+    void ui.focusWhenRendered(FOCUS_TARGETS.downloads)
+    return () => {
+      // Back to the reader (`focusReader` looks once the view has moved on: a teardown still reads the old state), the
+      // reading cursor takes focus, unless it went to a rail tab (its panel opened beside the reader).
+      const from = document.activeElement
+      if (from?.closest('.rail [data-tab]')) return
+      void ui.focusReader(from)
     }
   })
 
@@ -240,7 +251,7 @@
   <ScrollArea class="scroll">
     <div class="column">
       <header class="page-head">
-        <h1 class="title">{i18n.t('downloads.title')}</h1>
+        <h1 class="title" tabindex="-1" data-qd-focus="downloads">{i18n.t('downloads.title')}</h1>
         <p class="lede">{i18n.t('downloads.lede')}</p>
       </header>
 
@@ -414,6 +425,7 @@
 
   .title {
     margin: 0;
+    outline: none;
     color: var(--text);
     font-size: var(--text-2xl);
     font-weight: var(--weight-title);

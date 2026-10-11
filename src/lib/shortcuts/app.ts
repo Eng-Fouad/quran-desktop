@@ -7,6 +7,9 @@
  * reader's own definitions: the `Escape` here closes layers, hides a sidebar floating over a narrow window, leaves a
  * non-reader view and leaves zen; clearing the selection or the search hit is a reader-scoped `Escape` (WP8e), which
  * wins by scope precedence while it applies.
+ *
+ * While the Settings dialog is open (§7.4) only `SETTINGS_ALLOWED` and the audio group run (the `shortcuts` store
+ * consumes the other global ones), `Mod+F` focuses "Search settings", and `Mod+,` closes the dialog.
  */
 import { SETTING_LIMITS } from '$lib/contracts/settings'
 import type { ShortcutDef } from '$lib/contracts/shortcuts'
@@ -14,7 +17,7 @@ import type { ShortcutLabelKey } from '$lib/contracts/i18n'
 import type { SidebarTab, ThemeMode } from '$lib/ipc/bindings'
 import { app } from '$lib/stores/app.svelte'
 import { settings } from '$lib/stores/settings.svelte'
-import { ui } from '$lib/stores/ui.svelte'
+import { FOCUS_TARGETS, inDialog, ui } from '$lib/stores/ui.svelte'
 
 /** `Mod+Shift+L` (§10.1): paper → sepia → night → black → paper. `system` and high contrast continue from what shows. */
 export const THEME_CYCLE = ['paper', 'sepia', 'night', 'black'] as const satisfies readonly ThemeMode[]
@@ -47,9 +50,68 @@ export function stepUiScale(direction: -1 | 0 | 1): void {
   if (next !== current) void settings.update({ uiScalePct: next })
 }
 
+/**
+ * The shortcuts that run while the Settings dialog is open (`ui.settingsOpen`, §7.4), with the whole audio group. The
+ * other global ones (`Mod+B`, `Mod+1…7`, F6, `?`, `Mod+G`) are consumed and do nothing: what they act on (the sidebar
+ * and its tabs, the toasts, the reader) is under the dialog, and a chord left to the webview could open its own find
+ * bar (`Mod+G`). Reader-scoped keys (`Mod+I`, the page keys) never match outside the reader, so they are left alone.
+ */
+export const SETTINGS_ALLOWED: ReadonlySet<string> = new Set([
+  'app.palette',
+  'app.search',
+  'app.escape',
+  'app.settings',
+  'app.downloads',
+  'view.theme',
+  'view.uiScaleUp',
+  'view.uiScaleDown',
+  'view.uiScaleReset',
+  'view.fullscreen',
+])
+
+/** Whether `def` runs while the Settings dialog is open. */
+export function allowedInSettings(def: ShortcutDef): boolean {
+  return def.group === 'audio' || SETTINGS_ALLOWED.has(def.id)
+}
+
 /** A sidebar floating over the canvas (narrow window, §9.6) is open: Escape hides it before anything else in the shell. */
 function overlaySidebarShown(): boolean {
   return ui.sidebarOverlay && ui.sidebarOpen
+}
+
+/** `Mod+,` and the rail button: open Settings, or close the dialog (Settings or About) when it shows. */
+export function toggleSettings(): void {
+  ui.setView(inDialog(ui.view) ? 'reader' : 'settings')
+}
+
+/**
+ * The palette is the one layer up (its own dialog counts as one floating and one modal layer; a popover, menu or sheet
+ * under it adds another): once it closes nothing is left, so `Mod+,`, or the palette's "Settings" row, which runs after
+ * the palette has closed, can show the dialog.
+ */
+function paletteAlone(): boolean {
+  return (
+    ui.isTop('palette') &&
+    ui.overlays.length === 1 &&
+    ui.floating <= 1 &&
+    ui.modals <= 1 &&
+    ui.contextMenu === null
+  )
+}
+
+/**
+ * `Mod+F` (§10.1): "Search settings" while the Settings dialog is open (About turns back to Settings for it), else the
+ * sidebar's Search tab. Either way a palette or Go to on top closes first.
+ */
+function search(): void {
+  if (!ui.settingsOpen) {
+    ui.focusSearch()
+    return
+  }
+  const top = ui.topOverlay?.kind
+  if (top === 'palette' || top === 'goto') ui.close(top)
+  if (ui.view === 'about') ui.setView('settings')
+  void ui.focusWhenRendered(FOCUS_TARGETS.settingsSearch)
 }
 
 /**
@@ -82,7 +144,7 @@ export const appShortcuts: readonly ShortcutDef[] = [
     scope: 'global',
     capture: true,
     allowInInput: true,
-    run: () => ui.focusSearch(),
+    run: search,
   },
   {
     id: 'app.shortcutSheet',
@@ -99,7 +161,16 @@ export const appShortcuts: readonly ShortcutDef[] = [
     labelKey: 'shortcuts.app.settings',
     scope: 'global',
     capture: true,
-    run: () => ui.setView('settings'),
+    // It closes the dialog from "Search settings" too, yet never acts over another layer (a confirmation, the note
+    // editor, the onboarding, an open listbox or popover, a sheet): the dialog sits under every overlay. The palette
+    // alone is the exception, as for Mod+F: the key (or its "Settings" row) closes it first. The palette offers that
+    // row only where it would run: not over another layer, nor while the dialog shows.
+    allowInInput: true,
+    when: () => !ui.layerOpen || (paletteAlone() && !inDialog(ui.view)),
+    run: () => {
+      if (ui.isTop('palette')) ui.close('palette')
+      toggleSettings()
+    },
   },
   {
     id: 'app.downloads',
@@ -135,6 +206,9 @@ export const appShortcuts: readonly ShortcutDef[] = [
     group: 'view',
     labelKey: 'shortcuts.view.uiScaleUp',
     scope: 'global',
+    // The UI scale and theme chords type nothing, so they also run from a field or over a layer: Settings opens on
+    // "Search settings", and its rows name these keys.
+    allowInInput: true,
     repeat: true,
     run: () => stepUiScale(1),
   },
@@ -144,6 +218,7 @@ export const appShortcuts: readonly ShortcutDef[] = [
     group: 'view',
     labelKey: 'shortcuts.view.uiScaleDown',
     scope: 'global',
+    allowInInput: true,
     repeat: true,
     run: () => stepUiScale(-1),
   },
@@ -153,6 +228,7 @@ export const appShortcuts: readonly ShortcutDef[] = [
     group: 'view',
     labelKey: 'shortcuts.view.uiScaleReset',
     scope: 'global',
+    allowInInput: true,
     run: () => stepUiScale(0),
   },
   {
@@ -185,6 +261,7 @@ export const appShortcuts: readonly ShortcutDef[] = [
     group: 'view',
     labelKey: 'shortcuts.view.theme',
     scope: 'global',
+    allowInInput: true,
     run: () => void settings.update({ theme: nextTheme() }),
   },
   {

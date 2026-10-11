@@ -213,7 +213,7 @@ describe('rules', () => {
     input.addEventListener('keydown', (e) => e.stopPropagation())
     press(K.question, input)
     expect(ui.overlays).toEqual([])
-    press({ key: ',', code: 'Comma', ctrlKey: true }, input)
+    press({ key: 'D', code: 'KeyD', ctrlKey: true, shiftKey: true }, input)
     expect(ui.view).toBe('reader')
     press(K.ctrlK, input)
     expect(ui.isOpen('palette')).toBe(true)
@@ -389,17 +389,24 @@ describe('Escape (§10.1)', () => {
     expect(press(K.escape).defaultPrevented).toBe(false)
   })
 
-  it('hides a sidebar floating over a narrow window before leaving a view', () => {
+  it('hides a sidebar floating over a narrow window before leaving a view or zen', () => {
     const original = Object.getOwnPropertyDescriptor(window, 'innerWidth')
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 800 })
     window.dispatchEvent(new Event('resize'))
     try {
+      // The Downloads manager hides the sidebar: a tab there returns to the reader, floating sidebar shown.
       ui.setView('downloads')
       ui.openSidebar('index')
+      expect(ui.view).toBe('reader')
       expect(ui.sidebarOverlay && ui.sidebarOpen).toBe(true)
+      ui.setZen(true)
+      ui.openSidebar('index')
+      expect(ui.zen).toBe(false)
+      ui.setView('about')
+      expect(ui.sidebarOpen).toBe(true)
       press(K.escape)
       expect(ui.sidebarOpen).toBe(false)
-      expect(ui.view).toBe('downloads')
+      expect(ui.view).toBe('about')
       press(K.escape)
       expect(ui.view).toBe('reader')
     } finally {
@@ -431,6 +438,143 @@ describe('Escape (§10.1)', () => {
     press(K.escape)
     expect(ui.overlays).toEqual([])
     expect(clear.run).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('the Settings dialog (§7.4)', () => {
+  /** The dialog as its host leaves it: the view, and the registered layer. */
+  function openSettings(view: 'settings' | 'about' = 'settings'): void {
+    ui.setView(view)
+    ui.setSettingsOpen(true)
+  }
+
+  it('runs only its allow-list (and the audio group); the rest is consumed and does nothing', () => {
+    const toggle = def({ id: 'audio.toggle', keys: ['Space'], group: 'audio' })
+    const goTo = def({ id: 'nav.goTo', keys: ['Mod+g'], group: 'navigation', capture: true })
+    shortcuts.register([toggle, goTo])
+    openSettings()
+    const sidebar = { ...settings.value.sidebar }
+    expect(press({ key: 'b', code: 'KeyB', ctrlKey: true }).defaultPrevented).toBe(true)
+    expect(press({ key: '2', code: 'Digit2', ctrlKey: true }).defaultPrevented).toBe(true)
+    expect(press({ key: 'i', code: 'KeyI', ctrlKey: true }).defaultPrevented).toBe(false)
+    expect(settings.value.sidebar).toEqual(sidebar)
+    expect(ui.sidePaneOpen).toBe(false)
+    expect(press({ key: 'g', code: 'KeyG', ctrlKey: true }).defaultPrevented).toBe(true)
+    expect(goTo.run).not.toHaveBeenCalled()
+    const toast = el('li', { 'data-sonner-toast': '', tabindex: '0' })
+    press({ key: 'F6', code: 'F6' })
+    expect(document.activeElement).not.toBe(toast)
+    press(K.question)
+    expect(ui.overlays).toEqual([])
+    // The allowed ones: audio, theme, UI scale, the palette, Downloads.
+    press(K.space)
+    expect(toggle.run).toHaveBeenCalledTimes(1)
+    press({ key: 'L', code: 'KeyL', ctrlKey: true, shiftKey: true })
+    expect(settings.value.theme).toBe('sepia')
+    press({ key: '+', code: 'Equal', ctrlKey: true, shiftKey: true })
+    expect(settings.value.uiScalePct).toBe(110)
+    press(K.ctrlK)
+    expect(ui.topOverlay?.kind).toBe('palette')
+    ui.close()
+    press({ key: 'D', code: 'KeyD', ctrlKey: true, shiftKey: true })
+    expect(ui.view).toBe('downloads')
+    // Closed again, everything runs as before.
+    ui.setSettingsOpen(false)
+    ui.setView('reader')
+    press({ key: 'b', code: 'KeyB', ctrlKey: true })
+    expect(ui.sidebarOpen).toBe(!sidebar.open)
+  })
+
+  it('Mod+F focuses "Search settings" while it is open, from its field too', () => {
+    const field = el('input', { type: 'search', 'data-settings-search': '' })
+    openSettings()
+    press({ key: 'f', code: 'KeyF', ctrlKey: true }, field)
+    expect(settings.value.sidebar.tab).toBe('index')
+    return vi.waitFor(() => expect(document.activeElement).toBe(field))
+  })
+
+  it('Mod+F turns About back to Settings for its search, and closes a palette over the dialog first', async () => {
+    openSettings('about')
+    press({ key: 'f', code: 'KeyF', ctrlKey: true })
+    expect(ui.view).toBe('settings')
+    expect(ui.settingsOpen).toBe(true)
+    expect(settings.value.sidebar.tab).toBe('index')
+    const field = el('input', { type: 'search', 'data-settings-search': '' })
+    await vi.waitFor(() => expect(document.activeElement).toBe(field))
+
+    field.blur()
+    ui.open('palette', {})
+    press({ key: 'f', code: 'KeyF', ctrlKey: true }, el('input'))
+    expect(ui.overlays).toEqual([])
+    expect(ui.view).toBe('settings')
+    await vi.waitFor(() => expect(document.activeElement).toBe(field))
+  })
+
+  it('the theme and UI scale keys also run from a field and over a layer (they type nothing)', () => {
+    const input = el('input')
+    press({ key: 'L', code: 'KeyL', ctrlKey: true, shiftKey: true }, input)
+    expect(settings.value.theme).toBe('sepia')
+    ui.open('goto', {})
+    press({ key: '+', code: 'Equal', ctrlKey: true, shiftKey: true }, input)
+    expect(settings.value.uiScalePct).toBe(110)
+    press({ key: ')', code: 'Digit0', ctrlKey: true, shiftKey: true }, input)
+    expect(settings.value.uiScalePct).toBe(100)
+  })
+
+  it('Mod+, toggles it, from its search field too, and closes About', () => {
+    const comma = { key: ',', code: 'Comma', ctrlKey: true }
+    press(comma)
+    expect(ui.view).toBe('settings')
+    ui.setSettingsOpen(true)
+    press(comma, el('input', { type: 'search', 'data-settings-search': '' }))
+    expect(ui.view).toBe('reader')
+    openSettings('about')
+    press(comma)
+    expect(ui.view).toBe('reader')
+  })
+
+  it('Mod+, never acts over another layer, except the palette alone, which it closes first', () => {
+    const comma = { key: ',', code: 'Comma', ctrlKey: true }
+    for (const open of [
+      () => void ui.confirm({ title: 'Delete note?', body: '', confirmLabel: 'Delete' }),
+      () => ui.open('note-editor', { fromAyahId: 1, toAyahId: 1 }),
+      () => ui.open('onboarding', {}),
+      () => ui.pushFloating(),
+      () => ui.openContextMenu({ x: 0, y: 0, ayahId: 1 }),
+      // The palette over a popover, then over a sheet (its own dialog is one floating and one modal layer, and each of
+      // those adds its own): closing it would still leave a layer up, so neither the key nor its "Settings" row acts.
+      () => {
+        ui.pushFloating()
+        ui.open('palette', {})
+        ui.pushFloating()
+      },
+      () => {
+        ui.pushFloating()
+        ui.pushModal()
+        ui.open('palette', {})
+        ui.pushFloating()
+        ui.pushModal()
+      },
+    ]) {
+      open()
+      expect(press(comma).defaultPrevented).toBe(false)
+      expect(ui.view).toBe('reader')
+      ui.reset()
+      ui.init(bootstrap)
+    }
+    ui.open('palette', {})
+    // Its own dialog registers one floating and one modal layer.
+    ui.pushFloating()
+    ui.pushModal()
+    press(comma, el('input'))
+    expect(ui.overlays).toEqual([])
+    expect(ui.view).toBe('settings')
+    // Over the open dialog the palette leaves both alone.
+    ui.setSettingsOpen(true)
+    ui.open('palette', {})
+    expect(press(comma).defaultPrevented).toBe(false)
+    expect(ui.topOverlay?.kind).toBe('palette')
+    expect(ui.view).toBe('settings')
   })
 })
 
@@ -479,6 +623,36 @@ describe('app shortcuts (app.ts)', () => {
     expect(ui.sidebarOpen).toBe(true)
     press({ key: 'i', code: 'KeyI', ctrlKey: true })
     expect(ui.sidePaneOpen).toBe(true)
+  })
+
+  it('leaves the Downloads manager for the reader with Mod+1…7, Mod+B and Mod+F (it hides the sidebar)', () => {
+    ui.setView('downloads')
+    expect(ui.sidebarOpen).toBe(false)
+    press({ key: '3', code: 'Digit3', ctrlKey: true })
+    expect(ui.view).toBe('reader')
+    expect(settings.value.sidebar).toMatchObject({ open: true, tab: 'bookmarks' })
+    ui.setView('downloads')
+    press({ key: 'b', code: 'KeyB', ctrlKey: true })
+    expect(ui.view).toBe('reader')
+    expect(ui.sidebarOpen).toBe(true)
+    ui.setView('downloads')
+    press({ key: 'f', code: 'KeyF', ctrlKey: true }, el('input'))
+    expect(ui.view).toBe('reader')
+    expect(settings.value.sidebar.tab).toBe('search')
+  })
+
+  it('tells whether an event presses a registered shortcut (a layer that runs its action itself)', () => {
+    const e = (init: KeyboardEventInit) => new KeyboardEvent('keydown', init)
+    expect(
+      shortcuts.matches('app.downloads', e({ key: 'D', code: 'KeyD', ctrlKey: true, shiftKey: true })),
+    ).toBe(true)
+    expect(shortcuts.matches('app.downloads', e({ key: 'd', code: 'KeyD', ctrlKey: true }))).toBe(false)
+    expect(
+      shortcuts.matches('app.downloads', e({ key: 'Control', code: 'ControlLeft', ctrlKey: true })),
+    ).toBe(false)
+    expect(
+      shortcuts.matches('app.nothing', e({ key: 'D', code: 'KeyD', ctrlKey: true, shiftKey: true })),
+    ).toBe(false)
   })
 
   it('steps the UI scale (held keys repeat) and resets it', () => {

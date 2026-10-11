@@ -1,6 +1,7 @@
 // @ts-check
 // S25 (§12.6, §9.7; WP12c): About and attribution.
 //
+// About shows in the Settings dialog over the reader (owner request 2026-10-11), named "About Quran for Desktop".
 // Browser mock with a lived-in library (`?mockPacks=demo`: two installed translations, Al-Muyassar, the ornaments), so
 // the attribution lists installed packs with their versions. Checks: the header (64 px app icon, name, version, the
 // "core.db: … · schema 1" build line, Copy diagnostics), every §9.7 group in order (the app itself: its
@@ -52,6 +53,21 @@ export default async function s25(ctx) {
     },
   )
   await qd.waitIdle()
+
+  // In the Settings dialog's frame, the reader still mounted under it.
+  const dialog = page.locator(`[role="dialog"]:has(${VIEW})`)
+  equal(await dialog.count(), 1, 'About in the Settings dialog')
+  equal(
+    await dialog.evaluate((el) =>
+      (el.getAttribute('aria-labelledby') ?? '')
+        .split(' ')
+        .map((id) => document.getElementById(id)?.textContent?.trim())
+        .join(' '),
+    ),
+    'About Quran for Desktop',
+    'the dialog name',
+  )
+  check((await page.locator('[data-qd-view="mushaf"]').count()) === 1, 'the reader stays mounted')
 
   const report = await page.evaluate(inspect, VIEW)
   ctx.log(JSON.stringify(report))

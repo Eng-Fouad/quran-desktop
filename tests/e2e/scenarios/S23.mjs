@@ -1,5 +1,6 @@
 // @ts-check
-// S23 (§12.6, §9.7; WP12a): the Downloads manager with a paused and a failed job and an expanded SurahGrid.
+// S23 (§12.6, §9.7; WP12a): the Downloads manager with a paused and a failed job and an expanded SurahGrid, then the
+// rail's Downloads flyout over the reader (owner request 2026-10-11).
 //
 // Browser mock: a lived-in state (`?mockPacks=demo`: ornaments, translations with an update, Al-Muyassar, Alafasy
 // with downloaded and stream-cached surahs, on-demand Mushaf pages), then real clicks drive the jobs:
@@ -7,8 +8,10 @@
 // - "Download all" of the Tajweed Mushaf, made to fail once (`?mockPackFail=mushaf.v4:integrity@20`) → Failed + Retry;
 // - in Alafasy's surah grid (open on the first visit: the current reciter), surah 108 downloaded with a click, then
 //   Al-Baqarah started and paused, so its cell shows the queued ring.
+// - The manager takes the canvas without the sidebar; Escape returns to the reader, and the rail button opens the
+//   arrowless flyout beside it: the update line, the paused and failed jobs, "Recently finished" (surah 108).
 // Shots: S23.png (paused + failed rows above the expanded grid), S23-top (storage card and banners), S23-grid (the
-// reciter row), S23-ar (Arabic UI) and S23-night (night theme).
+// reciter row), S23-ar (Arabic UI), S23-night (night theme), S23-flyout and S23-flyout-ar (the rail flyout).
 import { check, equal, waitUntil } from '../lib/index.mjs'
 
 /** @type {import('../lib/types').ScenarioMeta} */
@@ -17,11 +20,14 @@ export const meta = {
   ui: 'en',
   theme: 'paper',
   mode: 'web',
-  description: 'Downloads manager with paused and failed jobs and an expanded SurahGrid',
+  description: 'Downloads manager with paused and failed jobs and an expanded SurahGrid, and the rail flyout',
 }
 
 const ROW = (/** @type {string} */ id) => `li.pack[data-pack-id="${id}"]`
 const RECITER = 'audio.qdc.7'
+const RAIL_BUTTON = '.rail button[data-view="downloads"]'
+const FLYOUT = '[data-qd-flyout="downloads"]'
+const FLYOUT_ROW = (/** @type {string} */ id) => `${FLYOUT} ul[aria-label] > li[data-pack-id="${id}"]`
 
 /** @param {import('../lib/types').ScenarioContext} ctx */
 export default async function s23(ctx) {
@@ -42,6 +48,12 @@ export default async function s23(ctx) {
   await qd.waitIdle()
 
   equal(await page.locator('h1').first().textContent(), 'Downloads', 'view title')
+  equal(await page.locator('#qd-pane-sidebar').count(), 0, 'the manager hides the sidebar')
+  equal(
+    await page.locator(RAIL_BUTTON).getAttribute('aria-current'),
+    'page',
+    'the rail button marks the manager',
+  )
   equal(
     await page.locator(`${ROW('tr.en.hilali_khan')}`).getAttribute('data-state'),
     'update_available',
@@ -114,6 +126,34 @@ export default async function s23(ctx) {
   await qd.waitIdle()
   await scrollTo(ctx, '[data-section="mushaf"]')
   await ctx.shot('night')
+
+  // The rail flyout: back in the reader (Escape), the same jobs at a glance.
+  await qd.setSettings({ theme: 'paper' })
+  await page.keyboard.press('Escape')
+  await qd.waitIdle()
+  equal(await page.locator('[data-qd-view="downloads"]').count(), 0, 'Escape returns to the reader')
+  await page.locator(RAIL_BUTTON).click()
+  await page.locator(FLYOUT).waitFor({ timeout: 5000 })
+  equal(await page.locator(RAIL_BUTTON).getAttribute('aria-expanded'), 'true', 'the rail button is expanded')
+  equal(await page.locator(`${FLYOUT_ROW('mushaf.v1')}`).getAttribute('data-job'), 'paused', 'flyout: paused')
+  equal(await page.locator(`${FLYOUT_ROW('mushaf.v4')}`).getAttribute('data-job'), 'failed', 'flyout: failed')
+  const reason = (await page.locator(`${FLYOUT_ROW('mushaf.v4')} .error`).textContent())?.trim() ?? ''
+  check(reason.includes('damaged'), `flyout: the failure reason ("${reason}")`)
+  check((await page.locator(`${FLYOUT} [data-qd-updates]`).count()) === 1, 'flyout: the update line')
+  const finished =
+    (await page.locator(`${FLYOUT} .recent li[data-pack-id="${RECITER}"] .line`).textContent()) ?? ''
+  check(finished.includes('Al-Kawthar'), `flyout: surah 108 finished ("${finished.trim()}")`)
+  check(
+    (await page.locator(`${RAIL_BUTTON} [data-badge="failed"]`).count()) === 1,
+    'the rail marks the failure',
+  )
+  await qd.waitIdle()
+  await ctx.shot('flyout')
+
+  await qd.setSettings({ uiLanguage: 'ar' })
+  await qd.waitIdle()
+  equal((await page.locator(`${FLYOUT} h2`).textContent())?.trim(), 'التنزيلات', 'flyout title in Arabic')
+  await ctx.shot('flyout-ar')
 }
 
 /**

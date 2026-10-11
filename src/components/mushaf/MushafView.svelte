@@ -6,7 +6,8 @@
                  ─ PageTurnZones · FlipHUD · PageRail (WP8f)
                  ─ overlay slot (bottom centre): FollowChip · DivisionChip · HintChip, then MemoToolbar · SelfTestBar
                    (WP9b) at its foot
-                 ─ ZoomControl (top inline-end corner) · WordTooltip · AyahActionBar (WP8d) · SurahInfoPopover (WP8c)
+                 ─ ZoomControl (top inline-end corner) · DisplayControl ("Aa", under it) · WordTooltip · AyahActionBar
+                   (WP8d) · SurahInfoPopover (WP8c)
 
   - Measures the canvas for the reader's fit (`reader.setViewport`), loads the visible pages (`pages.ensure`) and shows
     each slot's page; a style change keeps showing the old style's page until the new style's data arrives, so the
@@ -22,7 +23,8 @@
     on the book itself so the stage padding and centring cancel out. A new page on a scrolled canvas starts at its
     top, on the reading side (right). Cursor moves and jumps scroll their ayah into view (`reader.revealRequest`).
   - Zoom control (§8.13, `ZoomControl`): + / the level (back to the fit) / − in the canvas's top inline-end corner,
-    outside the scroll viewport; it is also the zoom readout, woken for 0.9 s by any zoom.
+    outside the scroll viewport; it is also the zoom readout, woken for 0.9 s by any zoom. Under it, the "Aa" display
+    button (`DisplayControl`) opens the reading-display popover: theme, ink, style, pages, live on the page.
   - Drag (§8.13, `use:pan`): at the fit or below (≤ 100 %) a horizontal drag turns one page on release (right = next,
     book order, in both UI languages; a vertical one pans while the canvas still scrolls at `QFS_MIN`); zoomed past the
     fit the canvas follows the pointer (grab / grabbing cursor). A press that does not travel stays a click, and the
@@ -58,6 +60,7 @@
   import { wheel } from '$lib/mushaf/wheel'
   import { fonts, i18n, pages, quran, reader, settings, ui } from '$lib/stores'
   import AyahActionBar from './AyahActionBar.svelte'
+  import DisplayControl from './DisplayControl.svelte'
   import DivisionChip from './DivisionChip.svelte'
   import FlipHUD from './FlipHUD.svelte'
   import FollowChip from './FollowChip.svelte'
@@ -378,8 +381,9 @@
     </div>
   </div>
 
-  <!-- Outside the scroll viewport (no drag starts on it), after the slot in tab order. -->
+  <!-- Outside the scroll viewport (no drag starts on them), after the slot in tab order. -->
   <ZoomControl />
+  <DisplayControl />
 
   <WordTooltip />
   <AyahActionBar />

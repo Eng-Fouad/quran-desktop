@@ -14,7 +14,7 @@ import type { Settings } from '$lib/ipc/bindings'
 import { reader, settings, shortcuts, ui } from '$lib/stores'
 import { A11Y_TAB_STOP } from '$lib/stores/reader.svelte'
 import { ZEN_TOP_ZONE_PX } from '$lib/stores/ui.svelte'
-import { REACH_PX } from './ZoomControl.svelte'
+import { REACH_PX } from './canvasControl.svelte'
 
 const $ = <T extends Element = HTMLElement>(selector: string) => document.querySelector<T>(selector)
 const rect = (selector: string) => $(selector)?.getBoundingClientRect() ?? new DOMRect()

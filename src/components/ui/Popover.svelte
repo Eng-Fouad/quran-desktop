@@ -5,7 +5,8 @@
   built on it.
 
   While open it is a floating layer (§7.4): shortcuts other than `allowInInput` ones pause, so keys typed into it
-  never reach the reader. Escape and outside clicks close it; focus returns to the trigger.
+  never reach the reader. Escape and outside clicks close it; focus returns to the trigger. `role="dialog"` names a
+  panel of controls as the dialog its trigger announces (`aria-haspopup="dialog"`): the rail's Downloads flyout.
 -->
 <script lang="ts">
   import { Popover } from 'bits-ui'
@@ -25,6 +26,8 @@
     arrow?: boolean
     /** Accessible name when the content has no visible heading. */
     label?: string
+    /** The content's role: `dialog` for a panel of controls its trigger announces as one (`aria-haspopup="dialog"`). */
+    role?: 'dialog'
     /** Fixed width in px (content otherwise sizes itself, up to the available width). */
     width?: number
     padding?: 'none' | 'sm' | 'md'
@@ -47,6 +50,7 @@
     sideOffset,
     arrow = false,
     label,
+    role,
     width,
     padding = 'md',
     trapFocus = true,
@@ -67,7 +71,13 @@
     return { getBoundingClientRect: () => DOMRect.fromRect({ x, y, width: 0, height: 0 }) }
   })
 
-  trackFloating(() => open)
+  trackFloating(
+    () => open,
+    () => {
+      open = false
+      onOpenChange?.(false)
+    },
+  )
   const zIndex = floatingZ('popover')
 </script>
 
@@ -99,6 +109,7 @@
             style:inline-size={width === undefined ? undefined : `${width}px`}
             style:z-index={zIndex()}
             aria-label={label}
+            {role}
             {dir}
           >
             <div class={['inner', `pad-${padding}`]}>

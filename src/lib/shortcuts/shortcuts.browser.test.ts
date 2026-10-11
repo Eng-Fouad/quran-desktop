@@ -187,12 +187,16 @@ describe('Escape (§10.1)', () => {
     expect(ui.zen).toBe(false)
   })
 
-  it('a view’s search field clears on the first Escape; the next one leaves the view', async () => {
+  it('a view’s search field clears on the first Escape; the next one leaves the view (or closes Settings)', async () => {
     await bootApp()
+    const fields = {
+      settings: '[role="dialog"] input[data-settings-search]',
+      downloads: 'main.canvas input[type="search"]',
+    } as const
     for (const view of ['settings', 'downloads'] as const) {
       ui.setView(view)
       await settle(300)
-      const field = document.querySelector<HTMLInputElement>('main.canvas input[type="search"]')
+      const field = document.querySelector<HTMLInputElement>(fields[view])
       expect(field, view).not.toBeNull()
       await userEvent.click(field as HTMLInputElement)
       await userEvent.keyboard('the')

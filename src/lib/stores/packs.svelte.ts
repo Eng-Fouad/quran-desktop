@@ -16,6 +16,8 @@
  *   downloads can run. A job started that way that still fails for being offline waits again, without a failure toast.
  * - **Errors.** Commands reject with `IpcError`; callers show them (`ui.toastError`). Job outcomes toast here (with
  *   Retry on a failure), except while the Downloads view shows them in place.
+ * - **The rail's flyout** (owner request 2026-10-11) reads `waitingIds` (what waits for a connection), `failedJobs`
+ *   and `recent`: the last jobs that completed this session, newest first (a completed job leaves `jobs`).
  */
 import { Channel } from '@tauri-apps/api/core'
 import { untrack } from 'svelte'
@@ -44,7 +46,7 @@ import { quran } from './quran.svelte'
 import { settings } from './settings.svelte'
 import { ui } from './ui.svelte'
 
-/** Phases of a job that is queued or doing work (the NavRail's activity dot). */
+/** Phases of a job that is queued or doing work (the NavRail's progress ring). */
 export const ACTIVE_PHASES: readonly JobPhase[] = ['queued', 'downloading', 'verifying', 'installing']
 
 export function isActivePhase(phase: JobPhase): boolean {
@@ -118,6 +120,23 @@ export interface StarterSet {
   items: StarterItem[]
   nowKib: number
 }
+
+/** A job that completed this session (the Downloads flyout's "Recently finished"). */
+export interface FinishedJob {
+  packId: string
+  jobId: number
+  /** KiB the job downloaded (its last total; 0 when unknown). */
+  kib: number
+  /** It installed a newer version of an installed pack. */
+  update: boolean
+  /** The items it downloaded (a surah, pages), or null for the whole pack. */
+  items: number[] | null
+  /** When it completed (ms). */
+  at: number
+}
+
+/** How many finished jobs `recent` keeps. */
+export const RECENT_KEPT = 5
 
 /** What onboarding chose (§9.7 steps 1–3). */
 export interface StarterChoices {
@@ -196,6 +215,8 @@ class PacksStore implements Store {
   waiting = new SvelteMap<string, InstallScope>()
   /** When `packs_check_updates` last answered (ms), or null. */
   updatesCheckedAt = $state<number | null>(null)
+  /** Jobs that completed this session, newest first, one per pack, at most `RECENT_KEPT`. */
+  recent = $state.raw<FinishedJob[]>([])
 
   readonly byId: ReadonlyMap<string, PackInfo> = $derived(new Map(this.list.map((p) => [p.id, p] as const)))
   readonly byKind = $derived.by(() => {
@@ -225,6 +246,21 @@ class PacksStore implements Store {
   readonly activeJobs = $derived([...this.jobs.values()].filter((j) => isActivePhase(j.phase)))
   /** Packs whose installed version has an update. */
   readonly updatable = $derived(this.list.filter((p) => p.state.type === 'update_available'))
+  /**
+   * Packs that wait for a connection (`isWaiting`): downloads asked for while offline, then jobs the connection broke
+   * while the app still is. They start by themselves, so they are neither active nor failed.
+   */
+  readonly waitingIds: readonly string[] = $derived.by(() => {
+    const ids = [...this.waiting.keys()]
+    for (const job of this.jobs.values()) {
+      if (!ids.includes(job.packId) && this.isWaiting(job.packId)) ids.push(job.packId)
+    }
+    return ids
+  })
+  /** Jobs that failed and do not merely wait for a connection (they offer Retry). */
+  readonly failedJobs = $derived(
+    [...this.jobs.values()].filter((j) => j.phase === 'failed' && !this.isWaiting(j.packId)),
+  )
 
   /** Words per surah from the index (and their sum): the weights of per-surah size estimates. */
   readonly #weights = $derived.by(() => {
@@ -634,6 +670,7 @@ class PacksStore implements Store {
     this.usage = null
     this.updates = []
     this.updatesCheckedAt = null
+    this.recent = []
     this.filter = 'all'
     this.language = 'all'
     this.query = ''
@@ -704,6 +741,7 @@ class PacksStore implements Store {
         this.#endJob(packId, jobId)
         this.#afterChange([packId])
         this.#adopt(packId)
+        this.#noteFinished(packId, jobId, base.totalKib)
         this.#toastDone(packId)
         this.#flushPending(packId)
         break
@@ -780,6 +818,21 @@ class PacksStore implements Store {
             (PHASE_RANK[job.phase] === PHASE_RANK[prev.phase] && job.receivedKib > prev.receivedKib)))
       if (newer) this.#noteJob(job)
     }
+  }
+
+  /** Records a completed job in `recent` (what `install()` asked for names it: an update, some items). */
+  #noteFinished(packId: string, jobId: number, kib: number): void {
+    const asked = this.#asked.get(packId)
+    const entry: FinishedJob = {
+      packId,
+      jobId,
+      kib: Math.max(0, kib),
+      update: asked?.update ?? false,
+      items: asked?.scope.type === 'items' ? asked.scope.data.items : null,
+      at: Date.now(),
+    }
+    const rest = untrack(() => this.recent).filter((f) => f.packId !== packId)
+    this.recent = [entry, ...rest].slice(0, RECENT_KEPT)
   }
 
   #addPending(id: string, scope: InstallScope): void {

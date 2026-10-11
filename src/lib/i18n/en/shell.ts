@@ -30,6 +30,9 @@ export const shell = {
   },
   rail: {
     downloadsActive: { one: '{count} download in progress', other: '{count} downloads in progress' },
+    /** Downloads that wait for a connection (the rail button's status, after the active count). */
+    downloadsWaiting: { one: '{count} waiting for a connection', other: '{count} waiting for a connection' },
+    downloadsFailed: { one: '{count} failed', other: '{count} failed' },
   },
   titleBar: {
     /** The command-centre button that opens the palette. */
