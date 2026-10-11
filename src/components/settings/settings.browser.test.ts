@@ -335,6 +335,44 @@ describe('settings view', () => {
     expect($('section[data-section] h2')?.textContent).toBe('System')
   })
 
+  for (const [lang, names] of [
+    ['en', ['Automatic', 'Western Arabic numbers', 'Eastern Arabic numbers']],
+    ['ar', ['تلقائي', 'الأرقام العربية الغربية', 'الأرقام العربية الشرقية']],
+  ] as const) {
+    it(`names the digit systems in full in the Numbers select, nothing clipped (${lang})`, async () => {
+      await mount({ settings: { uiLanguage: lang } })
+      await open('language')
+      const row = $('[data-row="digits"]') as HTMLElement
+      const trigger = row.querySelector<HTMLElement>('[role="combobox"]')
+      if (!trigger) throw new Error('the Numbers row is not a select')
+      expect(row.querySelector('.segmented')).toBeNull()
+      const whole = (el: Element | null | undefined) => {
+        if (!(el instanceof HTMLElement)) throw new Error('no text')
+        expect(el.scrollWidth, el.textContent ?? '').toBeLessThanOrEqual(el.clientWidth)
+      }
+      await userEvent.click(page.elementLocator(trigger))
+      await settle(80)
+      const options = $$('[role="option"]')
+      expect(options.map((o) => o.querySelector('.label')?.textContent)).toEqual([...names])
+      for (const o of options) whole(o.querySelector('.label'))
+      await userEvent.click(page.getByRole('option', { name: names[2] }))
+      await saved((s) => s.digits === 'arabic_indic')
+      expect(trigger.querySelector('.value')?.textContent).toBe(names[2])
+      // From the default window down to the 760 px minimum, the select shows the longer name whole and leaves the
+      // row's title and description a readable column.
+      for (const [w, h] of [
+        [1400, 900],
+        [900, 700],
+        [760, 600],
+      ] as const) {
+        await page.viewport(w, h)
+        await settle(60)
+        whole(trigger.querySelector('.value'))
+        expect(row.querySelector('.text')?.getBoundingClientRect().width, `${w} px`).toBeGreaterThan(200)
+      }
+    })
+  }
+
   it('mirrors in the Arabic UI and keeps every label translated', async () => {
     await mount({ settings: { uiLanguage: 'ar' } })
     expect(document.documentElement.dir).toBe('rtl')

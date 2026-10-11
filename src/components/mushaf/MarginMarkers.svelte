@@ -6,13 +6,18 @@
     measured ink, not their em (۞ has only 0.45 em of ink): 0.75·qfs tall (≥ 13 px), the decor ornaments 1.45·qfs
     (U+FC22) and a line, 1.75·qfs (the slender U+FC23; `markerGlyphBox`). An ornament's hairlines are thickened
     (`-webkit-text-stroke`, `decorStroke`) so it reads at 3:1 like the solid ۞, and its empty frame holds the
-    division (the hizb number, or ¼ ½ ¾: `markerInset`);
+    number of the hizb it opens or divides (`markerInset`; a quarter's words do not fit a frame);
   - a rub start whose first word already carries the ۞ inline (LEAD 17, ≈198 quarters): the label alone, centred on
     the line, never a second ۞ beside the inline one; not drawn while labels are hidden (the running head names the
     quarter then);
   - a sajda: ۩ beside the line where its ayah ends;
-  - under each glyph its Arabic label (الجزء ١٤ · الحزب ٢٧ · ¾ الحزب ٢٧ · سجدة · سجدة واجبة) at max(0.36·qfs, 11px),
-    only while 0.36·qfs ≥ 10 (qfs ≥ 28); smaller pages draw the glyph alone and the running head carries the quarter.
+  - under each glyph its Arabic label (الجزء ١٤ · الحزب ٢٧ · سجدة · سجدة واجبة) at max(0.36·qfs, 11px), only while
+    0.36·qfs ≥ 10 (qfs ≥ 28); smaller pages draw the glyph alone and the running head carries the quarter. A quarter
+    is written in words on two lines, ربع / نصف / ثلاثة أرباع over الحزب ٢٧ (`rubLabelLines`): on one line it is wider
+    than the margin.
+
+  The furniture is Arabic in every UI language, so the column carries `dir="rtl" lang="ar"` itself, as the running
+  head does: inside a settings or onboarding preview no `.spread` gives it a direction.
 
   Markers on the same line stack 0.2·qfs apart, centred on the line. On an interactive page each marker is a pointer
   target: its tooltip shows the full label and a description in the UI language, a click selects the ayah. The
@@ -98,6 +103,8 @@
   <div
     class="mp-margin mp-markers"
     aria-hidden="true"
+    dir="rtl"
+    lang="ar"
     data-labels={labels ? '' : undefined}
     data-decor={ornaments ? '' : undefined}
     style:--mk-label="{round2(labelSize(qfs))}px"
@@ -138,7 +145,7 @@
             {/if}
           {/if}
           {#if labels}
-            <span class="mk-label">{item.label}</span>
+            <span class="mk-label">{item.lines.join('\n')}</span>
           {/if}
         </button>
       {/snippet}

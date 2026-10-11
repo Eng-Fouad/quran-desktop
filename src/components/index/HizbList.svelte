@@ -1,7 +1,8 @@
 <!--
   HizbList (BRIEF §1.1 #4): the 60 hizb grouped under their juz. Each 48 px row shows the hizb number in a rosette,
-  "Hizb 30" with its first ayah and page beneath, and three quarter chips (¼ ½ ¾, the rub' starts the Mushaf marks
-  with ۞) at the inline end. The hizb and quarter on screen are highlighted.
+  "Hizb 30" with its first ayah and page beneath, and three quarter chips (the rub' starts the Mushaf marks with ۞) at
+  the inline end, in UI digits like every number here (`i18n.fraction`): ¼ ½ ¾ with Western Arabic numbers,
+  ١/٤ ١/٢ ٣/٤ with Eastern Arabic numbers. The hizb and quarter on screen are highlighted.
 
   Keyboard: one Tab stop; ArrowUp/ArrowDown, Home/End and PageUp/PageDown move between hizb rows; the inline-end arrow
   enters a row's quarter chips and moves along them, the inline-start arrow moves back towards the row.
@@ -16,7 +17,12 @@
   import Rosette from './Rosette.svelte'
   import { centerInView, keepInView, rovingKeydown } from './roving'
 
-  const QUARTERS = ['¼', '½', '¾'] as const
+  /** The three quarter chips as fractions of the hizb. */
+  const QUARTERS = [
+    [1, 4],
+    [1, 2],
+    [3, 4],
+  ] as const
   const QUARTER_KEYS = [
     'navigation.hizb.quarter1',
     'navigation.hizb.quarter2',
@@ -192,6 +198,7 @@
             >
               {#each h.quarters as q, i (q.rub)}
                 {@const key = QUARTER_KEYS[i] ?? QUARTER_KEYS[0]}
+                {@const [numerator, denominator] = QUARTERS[i] ?? QUARTERS[0]}
                 <button
                   type="button"
                   class={['q', { on: q.rub === currentRub }]}
@@ -204,7 +211,7 @@
                     openTarget({ type: 'ayah', surah: r.surah, ayah: r.ayah })
                   }}
                 >
-                  {QUARTERS[i]}
+                  {i18n.fraction(numerator, denominator)}
                 </button>
               {/each}
             </div>
@@ -339,6 +346,10 @@
     gap: 2px;
   }
 
+  /*
+   * No `diagonal-fractions`: ¼ ½ ¾ are precomposed, and a font's `frac` feature could shrink the solidus of ١/٤ into a
+   * fraction slash between full-size Eastern Arabic digits.
+   */
   .q {
     display: grid;
     place-items: center;
@@ -351,7 +362,6 @@
     color: var(--text-muted);
     font: inherit;
     font-size: var(--text-sm);
-    font-variant-numeric: diagonal-fractions;
     line-height: 1;
     cursor: pointer;
     transition:

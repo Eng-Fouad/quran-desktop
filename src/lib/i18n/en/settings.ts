@@ -93,8 +93,8 @@ export const settings = {
     },
     digits: {
       label: 'Numbers',
-      description: 'How numbers are written in the app. The Mushaf always uses Arabic-Indic numerals.',
-      keywords: 'digits numerals indic western',
+      description: 'How numbers are written in the app. The Mushaf always uses Eastern Arabic numbers.',
+      keywords: 'digits numerals numbers eastern western arabic',
     },
     uiScalePct: {
       label: 'Interface size',
@@ -459,7 +459,7 @@ export const settings = {
       amber: 'Amber',
     },
     motion: { system: 'Match system', reduce: 'Reduced', full: 'Full' },
-    digits: { auto: 'Automatic', latin: 'Western', arabic_indic: 'Arabic-Indic' },
+    digits: { auto: 'Automatic', latin: 'Western Arabic numbers', arabic_indic: 'Eastern Arabic numbers' },
     /** The example line under the Numbers row. */
     digitsSample: 'Page {page} · {ref} · {size}',
     mushafStyle: {

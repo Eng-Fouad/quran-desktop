@@ -44,7 +44,7 @@ calibrate against screenshots (§12.6), and record in the single file named for 
 | Threads | A plain `#[tauri::command] fn` runs on the main thread. Every command that touches SQLite, disk or network MUST be `async` and do the work in `tauri::async_runtime::spawn_blocking` (blocking IO) or `async` (reqwest). **Never call `Handle::block_on`/`block_on` from a command, an `async fn`, or any tokio worker thread** (tokio panics there, which aborts the process). The only allowed `block_on` sites are the `TimingsSource`/`SourceProvider` impls running on the `qd-audio-ctl` thread (§2.3.2), each guarded by `debug_assert!(tokio::runtime::Handle::try_current().is_err())`. |
 | Logging | The `log` crate everywhere (tauri-plugin-log collects it). No `println!`. Never log user note bodies or file paths that contain a user name at info level. |
 | Paths | All app data lives under `app_local_data_dir()` (§2.8.3). Paths sent to JS are `dunce::simplified` (no `\\?\` prefix). |
-| Digits | Mushaf furniture always uses Arabic-Indic digits (`ar-u-nu-arab`). UI numbers follow the UI language (§11). |
+| Digits | Mushaf furniture always uses Eastern Arabic numbers (`ar-u-nu-arab`). UI numbers follow the UI language (§11). **(v1.2)** The two systems are called Western Arabic and Eastern Arabic numbers, never "Indic" (IMPLEMENTATION_NOTES §13). |
 | Text direction | The Mushaf is always `lang="ar" dir="rtl"`. The UI follows the UI language. |
 
 ### 0.3 Decisions made here, beyond BRIEF (with reasons)
@@ -1663,7 +1663,9 @@ build is 12.5 MB (≈ 2.2 MB under NSIS's LZMA).
 - Margin label (renderer, §8.9):
   - bit2 → `الجزء {juz}`
   - else bit1 → `الحزب {hizb}`
-  - else rub position within the hizb: `(rub − 1) % 4` = 1 → `¼ الحزب {hizb}`, 2 → `½ الحزب {hizb}`, 3 → `¾ الحزب {hizb}`.
+  - else rub position within the hizb, **(v1.2)** in words: `(rub − 1) % 4` = 1 → `ربع الحزب {hizb}`,
+    2 → `نصف الحزب {hizb}`, 3 → `ثلاثة أرباع الحزب {hizb}` (the vulgar fractions ¼ ½ ¾ exist only in Western Arabic
+    numbers).
 - `surah.header_cp` comes from `xtask/data/qcf_surah_header_cmap.json`, copied from research evidence
   (`mushaf-fonts/qul_ligatures_surah_header_QCF_SurahHeader_COLOR.json`): `surah-N` → its first code point, e.g. surah-1 =
   U+FC45 and surah-114 = U+FBEB (non-contiguous).
@@ -3838,7 +3840,7 @@ export function wordPill(box: WordBox, qfs: number, lh: number): Rect;
   - right: `سورة {name_ar of info.headSurah}`
   - left: juz. With decor: `qd-quran-common` U+E900 + (juz − 1) (juz-name calligraphy). Without: `الجزء {mushafNum(juz)}`.
   - At `qfs < 20` the heads drop the `سورة` / `الجزء` prefixes. When margin labels are glyph-only (below), the quarter of a
-    rub starting on the page is appended (e.g. `الجزء ١٤ · ¾ الحزب ٢٧`).
+    rub starting on the page is appended on the same line (e.g. `الجزء ١٤ · ثلاثة أرباع الحزب ٢٧`, v1.2).
   - Hidden when `showRunningHeads = false`.
 - **Footer:** the page number in Eastern Arabic numbers (`Intl.NumberFormat('ar-u-nu-arab')`), centred in a 1.1·qfs
   medallion (**v1.2:** a 12-lobed SVG rosette whose whole interior carries the 10 % `--frame-gold` tint: the fill of the
@@ -3849,11 +3851,13 @@ export function wordPill(box: WordBox, qfs: number, lh: number): Rect;
     U+FC23 (hizb start) / U+FC22 (other quarters) when decor is installed.
   - **(v1.2, LEAD 17)** A quarter whose first word carries the printed inline ۞ (§4.2; 199 of 240, every one except ayah 1
     of a surah) draws its **label alone**, centred on the line, and nothing below qfs 28: never a second ۞ beside the
-    inline one. Ornaments are drawn only with their labels, with the hizb number or fraction inside the frame; markers
-    are sized by ink height (0.75·qfs) and sajda markers sit on the line where the ayah ends (IMPLEMENTATION_NOTES §10.4).
+    inline one. Ornaments are drawn only with their labels, with the hizb number inside the frame (v1.2: a quarter's
+    too); markers are sized by ink height (0.75·qfs) and sajda markers sit on the line where the ayah ends
+    (IMPLEMENTATION_NOTES §10.4).
   - Label underneath, `font-size: max(0.36·qfs, 11px)`, **only when `0.36·qfs ≥ 10` (qfs ≥ 28)**: juz start → `الجزء N`;
-    hizb start → `الحزب N`; else `¼`/`½`/`¾ الحزب N`. Below that size the glyph is drawn alone; the label goes into its tooltip,
-    the a11y text and the running head.
+    hizb start → `الحزب N`; else **(v1.2)** the quarter in words on two lines, `ربع`/`نصف`/`ثلاثة أرباع` over `الحزب N`
+    (on one line it is wider than the margin; the tooltip keeps one line). Below that size the glyph is drawn alone; the
+    label goes into its tooltip, the a11y text and the running head.
   - sajda: ۩ U+06E9 plus `سجدة`, plus ` واجبة` for obligatory ones (same size rules).
   - Vertical centre = block top + (line − 1)·LH + LH/2. Markers on the same line stack with 0.2·qfs spacing.
   - Hidden when `showMarginMarkers = false`. Pointer cursor; click selects the ayah; tooltip shows the full label.
@@ -4723,7 +4727,9 @@ export function tp(key: I18nKey, count: number, params?: Record<string, string |
 ### 11.2 Numbers, dates, references
 - UI numbers: `Intl.NumberFormat(arabicDigits ? 'ar-u-nu-arab' : 'en-US')`. `arabicDigits = digits === 'arabic_indic' ||
   (digits === 'auto' && uiLanguage === 'ar')` (generated camelCase names, §0.2).
-- **Mushaf furniture always uses Arabic-Indic digits** (page numbers, markers, juz labels).
+- **Mushaf furniture always uses Eastern Arabic numbers** (page numbers, markers, juz labels; the quarters of a hizb are
+  words, v1.2). The setting names the systems "Western Arabic numbers" / "Eastern Arabic numbers" («الأرقام العربية
+  الغربية» / «الأرقام العربية الشرقية», v1.2); `arabic_indic` stays the serialized value.
 - References: en `2:255`; ar `٢:٢٥٥` with Arabic digits. Surah label: en `Al-Baqarah` (name_simple) with the meaning on hover; ar
   `البقرة`.
 - Dates: `Intl.DateTimeFormat(locale, { dateStyle: 'medium' })`. Relative times: `Intl.RelativeTimeFormat`. Sizes: KiB/MiB/GiB
@@ -4746,8 +4752,9 @@ export function tp(key: I18nKey, count: number, params?: Record<string, string |
   direction.
 - **bits-ui direction:** every `src/components/ui` wrapper passes `dir={i18n.dir}` (§9.5).
 - **Kbd:** content wrapped in `<bdi dir="ltr">` so "Ctrl+K" never becomes "K+Ctrl".
-- **References are explicitly isolated, never `auto`:** Latin digits `<bdi dir="ltr">2:255–257</bdi>`; Arabic-Indic digits
-  `<bdi dir="rtl">٢:٢٥٥–٢٥٧</bdi>` (`i18n.ref()` returns them wrapped). Vectors in the i18n tests cover both.
+- **References are explicitly isolated, never `auto`:** Western Arabic numbers `<bdi dir="ltr">2:255–257</bdi>`;
+  Eastern Arabic numbers `<bdi dir="rtl">٢:٢٥٥–٢٥٧</bdi>` (`i18n.ref()` returns them wrapped). Vectors in the i18n tests
+  cover both.
 - **Sliders:** value sliders (speed, ink brightness, UI scale) mirror with the UI direction; the media scrubber and the page rail
   never mirror (the rail always has page 1 on the right, book order).
 - Mirror directional icons (`.icon-dir`). **Never mirror** media transport icons. Download progress bars follow the inline

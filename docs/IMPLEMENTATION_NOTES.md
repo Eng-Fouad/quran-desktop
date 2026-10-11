@@ -559,13 +559,21 @@ is the lead's fold-in of every accepted deviation (`docs/deviations/WP*.md`), ev
   (0.75·qfs, ≥ 13 px). The juz calligraphy is `U+E001 + (juz − 1)` (the `juz001` ligatures), not U+E900 (WP8c 1).
 - **Quarter markers with an inline ۞** (199 of 240) draw the label alone, centred on the line, and nothing below qfs 28;
   never a second ۞. Ornaments appear only with their labels (qfs ≥ 28), stroked (`max(0.5px, 0.018em)`), with the hizb
-  number or the fraction inside the frame; below 28 the solid ۞ is drawn; marker ink ≥ 4.5:1 in every theme (LEAD 17,
+  number inside the frame; below 28 the solid ۞ is drawn; marker ink ≥ 4.5:1 in every theme (LEAD 17,
   INT fix 1 mushaf).
+- **Hizb quarters are words**, never the vulgar fractions ¼ ½ ¾ (which exist only in Western Arabic numbers, and which
+  qd-hafs lacks): `ربع الحزب ٢٧`, `نصف الحزب ٢٧`, `ثلاثة أرباع الحزب ٢٧` in the tooltip and on one line in the running
+  head. The margin label sets them on two lines, the words over `الحزب ٢٧` (6.6 em on one line against the 4.8 em the
+  margin holds at qfs 28), and the marker's height counts both. The U+FC22 ornament's frame holds the hizb number, as
+  U+FC23's does: the words do not fit it, and the label under it names the quarter of that hizb. Every furniture string
+  is now in qd-hafs. The Index's hizb chips are UI, not furniture: ¼ ½ ¾ with Western Arabic numbers, ١/٤ ١/٢ ٣/٤ with
+  Eastern Arabic numbers (`i18n.fraction`, also the memo presets' ×½) (owner request; WP8c 2–3, INT owner 2026-10-11).
 - Sajda markers sit on the line where the ayah ends; the opening pages carry none; each marker appears once, on the page
   that shows its sign (WP8c 2). The CSS sajda overline is dropped: both renditions already draw the printed overline
   (WP8c print-scan 1).
-- Running heads: the quarter separator is a small gold khatam (a middle dot beside Arabic-Indic digits reads as ٠); below
-  qfs 20 the juz reads `ج ١٤`; the head's calligraphy is aligned on the text's ink centre (WP8c 3, INT fix 2 mushaf).
+- Running heads: the quarter separator is a small gold khatam (a middle dot beside Eastern Arabic numbers reads as ٠);
+  below qfs 20 the juz reads `ج ١٤`; the head's calligraphy is aligned on the text's ink centre (WP8c 3, INT fix 2
+  mushaf).
   Furniture text is set in the bundled Hafs face, so a late web font never shifts it (CLS 0) (WP8c 3a). Running head and
   footer are `div`s.
 - Footer medallion: one rosette path, filled with `--frame-gold` at 10 % and stroked in it, so the tint follows the 12
@@ -723,10 +731,15 @@ is the lead's fold-in of every accepted deviation (`docs/deviations/WP*.md`), ev
 ## 13. Internationalisation (§11)
 
 - `common` adds `appName` ("Quran" / "قرآن") and `appFullName`; `errors.*` keys are the snake_case `AppError` kinds
-  (WP0C 4, INT identity). Furniture drawn on the page is always Arabic with Arabic-Indic digits and lives in
+  (WP0C 4, INT identity). Furniture drawn on the page is always Arabic with Eastern Arabic numbers and lives in
   `ornaments.ts`, not in dictionaries (WP8c 7).
-- Arabic list separators are "،" wherever a middle dot would sit beside Arabic-Indic digits (index, breadcrumb, side pane)
-  (WP10a 6, INT web). Two numbers around a separator in Arabic digits are LTR isolates (WP9a 14).
+- **Vocabulary (owner, 2026-10-11):** the digit systems are "Western Arabic numbers" (0123) and "Eastern Arabic numbers"
+  (٠١٢٣), «الأرقام العربية الغربية» / «الأرقام العربية الشرقية», in the UI, its search keywords, user docs, comments and
+  test titles. Never "Indic", "Indian" or «هندية» for them, in either language (dictionaries.test.ts checks the
+  dictionaries). Serialized and generated names stay: the setting value `arabic_indic` (`DigitStyle::ArabicIndic`), and
+  identifiers such as `arabicNum`; the Numbers row is a select, since the full names squeeze a segmented control.
+- Arabic list separators are "،" wherever a middle dot would sit beside Eastern Arabic numbers (index, breadcrumb, side
+  pane) (WP10a 6, INT web). Two numbers around a separator in Arabic digits are LTR isolates (WP9a 14).
 - The Arabic UI uses IBM Plex Sans Arabic from WOFF2 only (the WOFF 1 fallbacks are dropped at build time) (WP13b 2).
 
 ## 14. Testing and QA (§12)

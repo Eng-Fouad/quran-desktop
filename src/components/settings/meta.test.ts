@@ -201,6 +201,16 @@ describe('settings search', () => {
     expect(searchRows('volume', 'ar')).toContain('volumePct')
   })
 
+  it('finds the Numbers row by the Western and Eastern Arabic names, never by "Indic"', () => {
+    expect(searchRows('eastern arabic', 'en')).toContain('digits')
+    expect(searchRows('western', 'en')).toContain('digits')
+    expect(searchRows('شرقية', 'ar')).toContain('digits')
+    expect(searchRows('الأرقام العربية الغربية', 'ar')).toContain('digits')
+    expect(searchRows('indic', 'en')).not.toContain('digits')
+    expect(searchRows('indic', 'ar')).not.toContain('digits')
+    expect(searchRows('هندية', 'ar')).not.toContain('digits')
+  })
+
   it('is case-insensitive', () => {
     expect(searchRows('TAJWEED', 'en')).toContain('tajweedColors')
     expect(searchText('tajweedColors', 'en')).toBe(searchText('tajweedColors', 'en').toLowerCase())

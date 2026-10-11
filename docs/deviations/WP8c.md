@@ -76,14 +76,29 @@ Measured in Edge with canvas `measureText` (2026-10-10, dev-pack decor fonts):
   page are not marked on this page (each is marked once, on the page that shows its sign).
 - Marker tooltips show the Arabic label and a description in the UI language ("Three quarters of hizb 27 · 15:49"),
   plus "Click to select the ayah".
+- **A quarter is written in words** (owner request, after v1.2): `ربع الحزب ٢٧`, `نصف الحزب ٢٧`,
+  `ثلاثة أرباع الحزب ٢٧`, not §8.9's `¼`/`½`/`¾ الحزب N`. The vulgar fractions exist only in Western Arabic numbers (the
+  owner reported them as Western digits beside the Eastern `الحزب ٢٧`), and qd-hafs lacks them, so they came from a
+  Latin system face. The margin sets the label on two lines, the words over `الحزب ٢٧` (`rubLabelLines`): on one line
+  `ثلاثة أرباع الحزب ٢٧` is 6.6 em of qd-hafs, and the 1.9·qfs margin holds 4.8 em of the 11 px label at qfs 28 and
+  5.3 em from qfs 30.6; the widest line, `ثلاثة أرباع`, is 3.5 em, narrower than `سجدة واجبة` (3.9 em). The marker's
+  height counts both lines, so stacks on a line stay centred; in the real data no sajda sits on a line next to a rub
+  start, and the three quarters that share a line with a sajda are label-only (pages 309, 334, 379). The tooltip
+  label stays on one line. The U+FC22 ornament's frame, which held ¼ ½ ¾, now holds the hizb number like U+FC23's: the
+  words do not fit a frame, and an empty frame reads as unfinished; with the number, every frame names the hizb and
+  the words under it say which part of it. The column carries `dir="rtl" lang="ar"` itself, as the running head does.
+  `furniture.browser.test.ts` checks the label, its two centred lines and the frame in both UI languages and both
+  decor states, and that both lines stay inside the margin column on odd and even pages from qfs 28 to 160.
 
 ### 3. Running heads
 
-- **The quarter separator is a small gold khatam, not "·"** (§8.9 example `الجزء ١٤ · ¾ الحزب ٢٧`): a middle dot next
-  to Arabic-Indic digits reads as the digit zero ٠ ("١٤ ٠ الحزب"). The quarter is appended whenever the margin labels
-  are not drawn: below qfs 28, and also when `showMarginMarkers` is off.
-- A juz or hizb start appends `الحزب N` (a juz start is also a hizb start); quarters append `¼/½/¾ الحزب N`.
-- **Below qfs 20 the juz head reads `ج ١٤`**, not a bare `١٤`: a lone Arabic-Indic number in the head reads as a page
+- **The quarter separator is a small gold khatam, not "·"** (§8.9 example `الجزء ١٤ · ثلاثة أرباع الحزب ٢٧`): a middle
+  dot next to Eastern Arabic numbers reads as the digit zero ٠ ("١٤ ٠ الحزب"). The quarter is appended whenever the
+  margin labels are not drawn: below qfs 28, and also when `showMarginMarkers` is off.
+- A juz or hizb start appends `الحزب N` (a juz start is also a hizb start); quarters append their words on the same
+  line, `ربع`/`نصف`/`ثلاثة أرباع الحزب N` (§2). A browser test puts the widest of them beside the widest `سورة …` head
+  from qfs 18 up, with and without the decor calligraphy: one line, inside the band, never touching the surah name.
+- **Below qfs 20 the juz head reads `ج ١٤`**, not a bare `١٤`: a lone Eastern Arabic number in the head reads as a page
   number. `سورة` is dropped as specified. With decor the calligraphy is kept at every size.
 
 ### 3a. Furniture text is set in qd-hafs, not `--font-naskh`
@@ -93,7 +108,8 @@ use). That font arrives after the first paint, and the heads reflowed when it sw
 (`MushafPage.swap.browser.test.ts`) measured a layout shift of 1.2e-5 with the furniture in place, against the CLS 0 of
 §8.1. Heads, page numbers and margin labels now use `--mp-furniture-font: 'qd-hafs', system-ui, sans-serif`: the
 bundled KFGQPC Hafs face (itself a Naskh, matching the text) that `main.ts` loads before mounting, and the local system
-font for the fractions ¼ ½ ¾ that it lacks (Noto Naskh's lazily loaded latin subset would swap again). The test passes
+font for the fractions ¼ ½ ¾ that it lacks (Noto Naskh's lazily loaded latin subset would swap again; since the
+quarters became words, §2, every furniture string is in qd-hafs and the system font is only a backstop). The test passes
 with zero shift. The surah name in the cartouche and the fallback basmala were qd-hafs already (§8.8). Tooltips and
 popovers (outside the page) keep the UI and Naskh fonts.
 
@@ -170,7 +186,7 @@ are re-created. A browser test switches decor on a painted page and asserts zero
 ### 7. i18n
 
 The `furniture` domain covers only the UI around the furniture (tooltips, the two popovers, the toast). The furniture
-drawn on the page (heads, labels, numbers, سورة / الجزء / الحزب / سجدة) is always Arabic with Arabic-Indic digits
+drawn on the page (heads, labels, numbers, سورة / الجزء / الحزب / سجدة) is always Arabic with Eastern Arabic numbers
 (§0.2) and lives in `ornaments.ts`, not in the dictionaries. `ar` mirrors every `en` key.
 
 ### 8. QA runs

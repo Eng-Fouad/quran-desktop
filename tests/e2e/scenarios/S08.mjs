@@ -1,7 +1,7 @@
 // @ts-check
 // S08 (§12.6; WP8c): page 187 alone, QCF V2, paper. At-Tawbah opens on line 1 with its surah header and, alone among the
 // surahs, no basmala: line 2 is already 9:1. 9:1 also opens the half of hizb 19, marked in the outer margin with its
-// label (single page at 1600×1000: qfs ≥ 28). When the surah info popover is mounted (MushafView, WP8e), a click on the
+// label in words on two lines, نصف over الحزب ١٩ (single page at 1600×1000: qfs ≥ 28). When the surah info popover is mounted (MushafView, WP8e), a click on the
 // header opens it and it is shot too.
 import { check, equal, mushaf } from '../lib/index.mjs'
 import { arabic, expectFramedPage, furniture, waitDecor } from './_furniture.mjs'
@@ -13,7 +13,8 @@ export const meta = {
   theme: 'paper',
   mode: 'both',
   settings: { mushafStyle: 'qcf_v2', pageMode: 'single' },
-  description: 'Page 187, qcf_v2: surah 9 header with no basmala, the ½ hizb 19 marker with its label',
+  description:
+    'Page 187, qcf_v2: surah 9 header with no basmala, the half-hizb 19 marker with its worded label',
 }
 
 const PAGE = 187
@@ -41,8 +42,8 @@ export default async function s08(ctx) {
   equal(r.basmalas, [], 'At-Tawbah has no basmala')
   equal(
     r.markers.map((m) => [m.kind, m.line, m.label]),
-    [['rub', 2, `½ الحزب ${arabic(19)}`]],
-    'the half-hizb 19 marker beside 9:1, labelled',
+    [['rub', 2, `نصف\nالحزب ${arabic(19)}`]],
+    'the half-hizb 19 marker beside 9:1, labelled in words',
   )
   if (!decor) check(r.markers[0]?.glyph === '۞', 'the ۞ glyph without decor')
 

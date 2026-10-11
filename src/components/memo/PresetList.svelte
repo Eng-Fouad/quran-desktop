@@ -5,8 +5,8 @@
     ("67:1–30 · each ayah ×3 · pause ×1 · 1.25×") and a menu (Edit, Delete with an undo toast).
   - "New preset" opens the editor for the range being practised (`target`), with the repeat and pause settings as
     defaults and the name "Al-Mulk 67:1–30 ×3". The editor sets the name, each ayah ×N (1–99, ∞), the whole range ×N
-    and the pause after each ayah (none, ×½, ×1, ×2 of the ayah's length). Presets are shared with the dock's repeat
-    popover (`loop_preset_*`).
+    and the pause after each ayah (none, ×½, ×1, ×2 of the ayah's length; in UI digits, so ×١/٢, ×١, ×٢ with Eastern
+    Arabic numbers). Presets are shared with the dock's repeat popover (`loop_preset_*`).
 -->
 <script lang="ts">
   import Ellipsis from '@lucide/svelte/icons/ellipsis'
@@ -79,7 +79,7 @@
         return ''
       case 'multiplier':
         return gap.data.pct === 50
-          ? i18n.t('memo.panel.presets.gapHalf')
+          ? i18n.t('memo.panel.presets.gapHalf', { half: i18n.fraction(1, 2) })
           : i18n.t('memo.panel.presets.times', { n: i18n.num(gap.data.pct / 100) })
       case 'fixed':
         return i18n.duration(gap.data.ms)
@@ -181,7 +181,7 @@
 
   const gapOptions = $derived([
     { value: 'none', label: i18n.t('memo.panel.presets.gapNone') },
-    { value: 'half', label: i18n.t('memo.panel.presets.gapHalf') },
+    { value: 'half', label: i18n.t('memo.panel.presets.gapHalf', { half: i18n.fraction(1, 2) }) },
     { value: 'one', label: i18n.t('memo.panel.presets.times', { n: i18n.num(1) }) },
     { value: 'two', label: i18n.t('memo.panel.presets.times', { n: i18n.num(2) }) },
   ])

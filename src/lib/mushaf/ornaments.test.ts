@@ -31,6 +31,7 @@ import {
   INSET_TEXT,
   isDecorInk,
   khatam,
+  LABEL_GAP,
   LABEL_LEADING,
   labelSize,
   lineCenterY,
@@ -59,6 +60,7 @@ import {
   round2,
   rubKind,
   rubLabel,
+  rubLabelLines,
   rubQuarter,
   rubShortLabel,
   RUB_SIGN,
@@ -473,17 +475,44 @@ describe('division labels (§3.1.2, §8.9)', () => {
     expect(rubKind({ flags: 1, rub: 71 })).toBe('quarter')
   })
 
-  it('writes the Arabic margin labels with Arabic-Indic digits', () => {
+  it('writes the Arabic margin labels in Eastern Arabic numbers, the quarters in words', () => {
     expect(rubLabel({ flags: 7, rub: 105, juz: 14, hizb: 27 })).toBe('الجزء ١٤')
     expect(rubLabel({ flags: 3, rub: 109, juz: 14, hizb: 28 })).toBe('الحزب ٢٨')
-    expect(rubLabel({ flags: 1, rub: 70, juz: 9, hizb: 18 })).toBe('¼ الحزب ١٨')
-    expect(rubLabel({ flags: 1, rub: 71, juz: 9, hizb: 18 })).toBe('½ الحزب ١٨')
-    expect(rubLabel({ flags: 1, rub: 72, juz: 9, hizb: 18 })).toBe('¾ الحزب ١٨')
+    expect(rubLabel({ flags: 1, rub: 70, juz: 9, hizb: 18 })).toBe('ربع الحزب ١٨')
+    expect(rubLabel({ flags: 1, rub: 71, juz: 9, hizb: 18 })).toBe('نصف الحزب ١٨')
+    expect(rubLabel({ flags: 1, rub: 72, juz: 9, hizb: 18 })).toBe('ثلاثة أرباع الحزب ١٨')
+    // The margin sets a quarter on two lines: its words over its hizb.
+    expect(rubLabelLines({ flags: 1, rub: 108, juz: 14, hizb: 27 })).toEqual(['ثلاثة أرباع', 'الحزب ٢٧'])
+    expect(rubLabelLines({ flags: 1, rub: 106, juz: 14, hizb: 27 })).toEqual(['ربع', 'الحزب ٢٧'])
+    expect(rubLabelLines({ flags: 7, rub: 105, juz: 14, hizb: 27 })).toEqual(['الجزء ١٤'])
+    expect(rubLabelLines({ flags: 3, rub: 109, juz: 14, hizb: 28 })).toEqual(['الحزب ٢٨'])
+    // The running head keeps one line.
     expect(rubShortLabel({ rub: 105, hizb: 27 })).toBe('الحزب ٢٧')
-    expect(rubShortLabel({ rub: 108, hizb: 27 })).toBe('¾ الحزب ٢٧')
+    expect(rubShortLabel({ rub: 106, hizb: 27 })).toBe('ربع الحزب ٢٧')
+    expect(rubShortLabel({ rub: 107, hizb: 27 })).toBe('نصف الحزب ٢٧')
+    expect(rubShortLabel({ rub: 108, hizb: 27 })).toBe('ثلاثة أرباع الحزب ٢٧')
     expect(sajdaLabel('recommended')).toBe('سجدة')
     expect(sajdaLabel('obligatory')).toBe('سجدة واجبة')
     expect(arabicNum(1234)).toBe('١٢٣٤')
+  })
+
+  it('never writes a Western Arabic digit or a vulgar fraction in any of the 240 rub labels', () => {
+    const quarter = '(?:(?:ربع|نصف|ثلاثة أرباع) )?'
+    const label = new RegExp(`^${quarter}الحزب [٠-٩]+$|^الجزء [٠-٩]+$`, 'u')
+    const line = /^(?:ربع|نصف|ثلاثة أرباع|الحزب [٠-٩]+|الجزء [٠-٩]+)$/u
+    for (let rub = 1; rub <= 240; rub++) {
+      const hizb = Math.ceil(rub / 4)
+      const juz = Math.ceil(rub / 8)
+      for (const flags of [1, 3, 7]) {
+        const a = { flags, rub, juz, hizb }
+        const lines = rubLabelLines(a)
+        expect(rubLabel(a), `rub ${rub} flags ${flags}`).toMatch(label)
+        expect(rubLabel(a)).not.toMatch(/[0-9¼½¾/]/u)
+        expect(lines.length).toBe(rubKind(a) === 'quarter' ? 2 : 1)
+        for (const l of lines) expect(l).toMatch(line)
+      }
+      expect(rubShortLabel({ rub, hizb })).toMatch(new RegExp(`^${quarter}الحزب [٠-٩]+$`, 'u'))
+    }
   })
 
   it('picks the juz calligraphy "الجزء …" (U+E001 + juz − 1), clamped to 1–30', () => {
@@ -504,9 +533,9 @@ describe('pageMarkers (§8.9)', () => {
       ayah({ id: 1160, line: 14, sajda: 'recommended', lastWordId: 1506 }),
     ])
     const markers = pageMarkers(data)
-    expect(markers.map((m) => [m.kind, m.line, m.label])).toEqual([
-      ['rub', 4, '½ الحزب ١٨'],
-      ['sajda', 15, 'سجدة'],
+    expect(markers.map((m) => [m.kind, m.line, m.label, m.lines])).toEqual([
+      ['rub', 4, 'نصف الحزب ١٨', ['نصف', 'الحزب ١٨']],
+      ['sajda', 15, 'سجدة', ['سجدة']],
     ])
     expect(markers[0]?.rub).toEqual({ kind: 'quarter', quarter: 2, hizb: 18, juz: 9 })
   })
@@ -674,44 +703,102 @@ describe('marker sizes (§8.9)', () => {
     expect(isDecorInk(INK.rub)).toBe(false)
   })
 
-  it('fills an ornament’s frame with the hizb number or the quarter, fitted and centred', () => {
+  it('fills an ornament’s frame with the number of the hizb it opens or divides, fitted and centred', () => {
     const quarter = { rub: { kind: 'quarter' as const, quarter: 2 as const, hizb: 19, juz: 10 } }
     const hizb = { rub: { kind: 'juz' as const, quarter: 0 as const, hizb: 27, juz: 14 } }
-    expect(markerInset(quarter, INK.decorQuarter)).toBe('½')
+    // A quarter's words do not fit its frame: the frame holds its hizb, the label under it names the quarter.
+    expect(markerInset(quarter, INK.decorQuarter)).toBe('١٩')
     expect(markerInset(hizb, INK.decorHizb)).toBe('٢٧')
     expect(markerInset(hizb, INK.rub)).toBeNull()
     expect(markerInset({ rub: null }, INK.decorHizb)).toBeNull()
+    // The qd-hafs advances of the digits (em): ٣٨ is the widest hizb number.
+    const widthEm: Record<string, number> = { '٤٨': 0.864, '٢٧': 0.794, '٣٨': 0.945 }
     for (const q of [28, 32, 40, 60]) {
       for (const [ink, text] of [
         [INK.decorHizb, '٤٨'],
         [INK.decorHizb, '٢٧'],
-        [INK.decorQuarter, '¾'],
+        [INK.decorQuarter, '٣٨'],
+        [INK.decorQuarter, '٢٧'],
       ] as const) {
         const box = insetBox(q, ink, text)
         if (!box) throw new Error('an ornament has a frame')
         const glyph = markerGlyphBox(q, ink)
         // Never larger than 0.34·qfs, and never wider than the frame's inner width less the thickening.
         expect(box.fontSize).toBeLessThanOrEqual(INSET_TEXT * q + 1e-9)
-        const widthEm = text === '¾' ? 0.75 : 0.864
-        expect(box.fontSize * widthEm).toBeLessThan(
+        expect(box.fontSize * (widthEm[text] ?? 1)).toBeLessThan(
           (ink.hollow?.w ?? 0) * glyph.fontSize - decorStroke(glyph.fontSize),
         )
-        // Inside the glyph box, at the frame's height.
+        // Inside the glyph box, the digits' ink (0.52 em, its middle 0.53 em below the box top) on the frame's centre.
         expect(box.top).toBeGreaterThan(0)
         expect(box.top + box.fontSize).toBeLessThan(glyph.height)
+        const frameCy = (ink.top - (ink.hollow?.cy ?? 0)) * glyph.fontSize
+        expect(box.top + 0.53 * box.fontSize).toBeCloseTo(frameCy, 6)
       }
     }
-    // The quarter frame is wide enough for the full 0.34·qfs; the hizb frame centres its number on the ink's middle.
-    expect(insetBox(30, INK.decorQuarter, '¾')?.fontSize).toBeCloseTo(INSET_TEXT * 30)
+    // The quarter frame is wide enough for any hizb number at the full 0.34·qfs; the hizb frame centres its number on
+    // the ink's middle.
+    expect(insetBox(30, INK.decorQuarter, '٣٨')?.fontSize).toBeCloseTo(INSET_TEXT * 30)
     const h = insetBox(30, INK.decorHizb, '٢٧')
     const g = markerGlyphBox(30, INK.decorHizb)
     expect(((h?.top ?? 0) + 0.53 * (h?.fontSize ?? 0)) / g.height).toBeCloseTo(0.5, 1)
     expect(insetBox(30, INK.rub, '٢٧')).toBeNull()
   })
 
-  it('adds the label to the height only when labels are drawn', () => {
+  it('adds the label to the height only when labels are drawn, a line per label line', () => {
     expect(markerHeight(30, INK.rub, true)).toBeGreaterThan(markerHeight(30, INK.rub, false))
     expect(markerHeight(30, INK.rub, false)).toBeCloseTo(MARKER_INK * 30)
+    expect(markerHeight(30, INK.rub, true)).toBeCloseTo(
+      MARKER_INK * 30 + LABEL_GAP * 30 + labelSize(30) * LABEL_LEADING,
+    )
+    expect(markerHeight(30, INK.rub, true, 2) - markerHeight(30, INK.rub, true)).toBeCloseTo(
+      labelSize(30) * LABEL_LEADING,
+    )
+    expect(markerHeight(20, INK.rub, false, 2)).toBeCloseTo(markerHeight(20, INK.rub, false))
+  })
+
+  it('gives a quarter’s two label lines their height, label-only or under its ornament', () => {
+    // 54:9 (page 529) opens the third quarter of hizb 53 with an inline ۞; 8:1 (page 177) the half of hizb 18 without.
+    const inline = page(529, [
+      ayah({
+        id: 4855,
+        surah: 54,
+        ayah: 9,
+        line: 2,
+        flags: 1,
+        rub: 212,
+        juz: 27,
+        hizb: 53,
+        firstWordId: 200,
+      }),
+    ])
+    const line2 = inline.lines[1]
+    if (!line2) throw new Error('line 2')
+    line2.words = line2.words.map((w) =>
+      w.id === 200 ? { ...w, ayahId: 4855, position: 1, text: '۞ كَذَّبَتۡ' } : w,
+    )
+    const [third] = pageMarkers(inline)
+    expect(third).toMatchObject({
+      inline: true,
+      label: 'ثلاثة أرباع الحزب ٥٣',
+      lines: ['ثلاثة أرباع', 'الحزب ٥٣'],
+    })
+    expect(markerBoxHeight(third as MarginMarker, 30, true)).toBeCloseTo(2 * labelSize(30) * LABEL_LEADING)
+    const [placed] = placeMarkers(pageMarkers(inline), 30, true).placed
+    expect((placed?.top ?? 0) + (placed?.height ?? 0) / 2).toBeCloseTo(lineCenterY(30, 2))
+
+    const ornate = page(177, [
+      ayah({ id: 1161, surah: 8, ayah: 1, line: 3, flags: 9, rub: 71, juz: 9, hizb: 18, firstWordId: 302 }),
+    ])
+    const [half] = pageMarkers(ornate)
+    expect(half?.lines).toEqual(['نصف', 'الحزب ١٨'])
+    const glyph = markerGlyphBox(30, INK.decorQuarter).height
+    expect(markerBoxHeight(half as MarginMarker, 30, true, true)).toBeCloseTo(
+      glyph + LABEL_GAP * 30 + 2 * labelSize(30) * LABEL_LEADING,
+    )
+    // Glyph-only pages draw no label, so the second line adds nothing there.
+    expect(markerBoxHeight(half as MarginMarker, 20, false, true)).toBeCloseTo(
+      markerGlyphBox(20, INK.rub).height,
+    )
   })
 })
 

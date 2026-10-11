@@ -243,7 +243,7 @@ export const memo = {
       rangeRepeat: 'المقطع كاملًا',
       gap: 'وقفة بعد كل آية',
       gapNone: 'بلا',
-      gapHalf: '×½',
+      gapHalf: '×{half}',
       gapHint: 'وقفة بطول الآية أو نصفه أو ضعفه',
       speed: 'السرعة',
       times: '×{n}',

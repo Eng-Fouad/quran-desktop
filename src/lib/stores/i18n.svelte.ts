@@ -6,9 +6,11 @@
  *   live (§11.1); `html[lang][dir]` follow through `settings.applyEffects()`.
  * - UI numbers use the digits the settings ask for (`settings.arabicDigits`, §11.2); numeric `t`/`tp` parameters are
  *   formatted with them, so `t('common.pageNumber', { page: 262 })` reads "صفحة ٢٦٢" in the Arabic UI.
- * - Mushaf furniture always uses Arabic-Indic digits (`mushafNum`, §0.2).
- * - References are bidi-isolated strings (§11.3): Latin digits inside LRI…PDI (`<bdi dir="ltr">`), Arabic-Indic digits
- *   inside RLI…PDI (`<bdi dir="rtl">`), so "2:255–257" never reorders inside Arabic text and vice versa.
+ * - Mushaf furniture always uses Eastern Arabic numbers (`mushafNum`, §0.2).
+ * - References are bidi-isolated strings (§11.3): Western Arabic numbers inside LRI…PDI (`<bdi dir="ltr">`), Eastern
+ *   Arabic numbers inside RLI…PDI (`<bdi dir="rtl">`), so "2:255–257" never reorders inside Arabic text and vice versa.
+ * - The digit systems are named "Western Arabic numbers" and "Eastern Arabic numbers" (IMPLEMENTATION_NOTES §13); the
+ *   setting's value `arabic_indic` is a serialized name only.
  */
 import type { I18nParams, Locale, PluralKey, TextKey } from '$lib/contracts/i18n'
 import type { Store } from '$lib/contracts/stores'
@@ -23,6 +25,9 @@ export const PDI = String.fromCodePoint(0x2069)
 
 /** En dash between the ends of a range ("2:255–257"). */
 const RANGE_DASH = '–'
+
+/** The precomposed vulgar fractions `fraction()` uses, by "numerator/denominator": they exist only in Western digits. */
+const VULGAR: Readonly<Record<string, string>> = { '1/4': '¼', '1/2': '½', '3/4': '¾' }
 
 const mushafDigits = new Intl.NumberFormat('ar-u-nu-arab', { useGrouping: false })
 
@@ -87,14 +92,29 @@ class I18nStore implements Store {
     return this.#numbers.format(n)
   }
 
-  /** Mushaf furniture digits: always Arabic-Indic, never grouped (§0.2). */
+  /** Mushaf furniture digits: always Eastern Arabic numbers, never grouped (§0.2). */
   mushafNum(n: number): string {
     return mushafDigits.format(n)
   }
 
   /**
+   * A simple fraction in UI digits (§11.2): with Western Arabic numbers the precomposed ¼ ½ ¾ (else `n/d`); with
+   * Eastern Arabic numbers, which have no precomposed fractions, `١/٤`. The solidus between two Eastern Arabic digits
+   * joins them into one left-to-right number in either paragraph direction (UAX #9 W4), so no isolate is needed and
+   * `×١/٢` reads like `×١` in the Arabic UI. Never reverse the digits or add marks to "fix" the order.
+   */
+  fraction(numerator: number, denominator: number): string {
+    const d = (n: number) => this.#plain.format(n)
+    if (!settings.arabicDigits) {
+      const vulgar = VULGAR[`${numerator}/${denominator}`]
+      if (vulgar !== undefined) return vulgar
+    }
+    return `${d(numerator)}/${d(denominator)}`
+  }
+
+  /**
    * A bidi-isolated reference (§11.2, §11.3): `2:255`, `2:255–257`, or across surahs `2:286–3:2`; `٢:٢٥٥` with
-   * Arabic-Indic digits.
+   * Eastern Arabic numbers.
    */
   ref(surah: number, ayah: number, toAyah?: number, toSurah?: number): string {
     const d = (n: number) => this.#plain.format(n)

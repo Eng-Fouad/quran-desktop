@@ -567,10 +567,10 @@ export function footerMedallion(qfs: number): { size: number; rosette: PathData;
 // ---------------------------------------------------------------------------------------------------------------------
 // Margin markers and marks (§8.9)
 
-/** Arabic-Indic digits, never grouped (§0.2: Mushaf furniture always uses them). */
+/** Eastern Arabic numbers, never grouped (§0.2: Mushaf furniture always uses them). */
 const ARABIC_DIGITS = new Intl.NumberFormat('ar-u-nu-arab', { useGrouping: false })
 
-/** `n` in Arabic-Indic digits. */
+/** `n` in Eastern Arabic numbers. */
 export function arabicNum(n: number): string {
   return ARABIC_DIGITS.format(n)
 }
@@ -581,13 +581,18 @@ export const FLAG_HIZB_START = 2
 export const FLAG_JUZ_START = 4
 export const FLAG_SURAH_START = 8
 
-/** The quarter of a hizb a rub opens: 0 (the hizb itself), 1 ¼, 2 ½, 3 ¾. */
+/** The quarter of a hizb a rub opens: 0 (the hizb itself), 1 a quarter, 2 a half, 3 three quarters. */
 export function rubQuarter(rub: number): 0 | 1 | 2 | 3 {
   const q = (((rub - 1) % 4) + 4) % 4
   return q as 0 | 1 | 2 | 3
 }
 
-const QUARTER_GLYPH = ['', '¼', '½', '¾'] as const
+/**
+ * A quarter of a hizb in words, as the furniture writes it (§8.9, owner 2026-10-11): ربع, نصف, ثلاثة أرباع; '' for 0
+ * (the hizb itself). Never the vulgar fractions ¼ ½ ¾: they exist only in Western Arabic numbers (and qd-hafs lacks
+ * them, so they fell back to a Latin system face).
+ */
+const QUARTER_WORDS = ['', 'ربع', 'نصف', 'ثلاثة أرباع'] as const
 
 /** The kind of division a rub-start ayah opens (§3.1.2): a juz, a hizb, or a quarter of a hizb. */
 export type RubKind = 'juz' | 'hizb' | 'quarter'
@@ -599,18 +604,29 @@ export function rubKind(a: Pick<PageAyah, 'flags' | 'rub'>): RubKind {
   return 'quarter'
 }
 
-/** The Arabic margin label of a rub start (§3.1.2): `الجزء ١٤`, `الحزب ٢٧`, or `¾ الحزب ٢٧`. */
-export function rubLabel(a: Pick<PageAyah, 'flags' | 'rub' | 'juz' | 'hizb'>): string {
+/**
+ * The Arabic margin label of a rub start as the margin sets it (§3.1.2, §8.9): one line, `الجزء ١٤` or `الحزب ٢٧`, or
+ * for a quarter its words over its hizb, `ثلاثة أرباع` / `الحزب ٢٧`. On one line a quarter is wider than the margin
+ * (`ثلاثة أرباع الحزب ٢٧` is 6.6 em of qd-hafs, the margin 1.9·qfs holds 4.8 em of the 11 px label at qfs 28 and
+ * 5.3 em from qfs 30.6); each line is at most 3.5 em, narrower than `سجدة واجبة` (3.9 em).
+ */
+export function rubLabelLines(a: Pick<PageAyah, 'flags' | 'rub' | 'juz' | 'hizb'>): readonly string[] {
   const kind = rubKind(a)
-  if (kind === 'juz') return `الجزء ${arabicNum(a.juz)}`
-  if (kind === 'hizb') return `الحزب ${arabicNum(a.hizb)}`
-  return `${QUARTER_GLYPH[rubQuarter(a.rub)]} الحزب ${arabicNum(a.hizb)}`
+  if (kind === 'juz') return [`الجزء ${arabicNum(a.juz)}`]
+  const hizb = `الحزب ${arabicNum(a.hizb)}`
+  return kind === 'hizb' ? [hizb] : [QUARTER_WORDS[rubQuarter(a.rub)], hizb]
 }
 
-/** The short hizb label of a rub start for the running head (§8.9): `الحزب ٢٧` or `¾ الحزب ٢٧`. */
+/** The Arabic label of a rub start on one line (the tooltip): `الجزء ١٤`, `الحزب ٢٧`, or `ثلاثة أرباع الحزب ٢٧`. */
+export function rubLabel(a: Pick<PageAyah, 'flags' | 'rub' | 'juz' | 'hizb'>): string {
+  return rubLabelLines(a).join(' ')
+}
+
+/** The short hizb label of a rub start for the running head (§8.9), one line: `الحزب ٢٧` or `ربع الحزب ٢٧`. */
 export function rubShortLabel(a: Pick<PageAyah, 'rub' | 'hizb'>): string {
   const quarter = rubQuarter(a.rub)
-  return quarter === 0 ? `الحزب ${arabicNum(a.hizb)}` : `${QUARTER_GLYPH[quarter]} الحزب ${arabicNum(a.hizb)}`
+  const hizb = `الحزب ${arabicNum(a.hizb)}`
+  return quarter === 0 ? hizb : `${QUARTER_WORDS[quarter]} ${hizb}`
 }
 
 /** The Arabic sajda label: `سجدة`, plus ` واجبة` for an obligatory one (§8.9). */
@@ -717,8 +733,10 @@ export interface MarginMarker {
   ayah: number
   /** The line of the ayah's first word on this page. */
   line: number
-  /** The Arabic label (always Arabic-Indic digits). */
+  /** The Arabic label on one line (always Eastern Arabic numbers): the tooltip's. */
   label: string
+  /** The label as the margin sets it: one line, or a quarter's words over its hizb (`rubLabelLines`). */
+  lines: readonly string[]
   /** Rub starts: what it opens and its numbers. */
   rub: { kind: RubKind; quarter: 0 | 1 | 2 | 3; hizb: number; juz: number } | null
   /** Sajdas: recommended or obligatory. */
@@ -750,6 +768,7 @@ export function pageMarkers(data: Pick<PageData, 'page' | 'ayahs' | 'lines'>): M
         ayah: a.ayah,
         line: a.line,
         label: rubLabel(a),
+        lines: rubLabelLines(a),
         rub: { kind: rubKind(a), quarter: rubQuarter(a.rub), hizb: a.hizb, juz: a.juz },
         sajda: null,
         inline: startsWithRubSign(data.lines, a),
@@ -764,6 +783,7 @@ export function pageMarkers(data: Pick<PageData, 'page' | 'ayahs' | 'lines'>): M
         ayah: a.ayah,
         line: lastLineOf(data.lines, a.lastWordId, a.line),
         label: sajdaLabel(a.sajda),
+        lines: [sajdaLabel(a.sajda)],
         rub: null,
         sajda: a.sajda,
         inline: false,
@@ -862,10 +882,10 @@ export function markerGlyphBox(
   return { height, fontSize: height / inkHeight(ink), shift: inkShift(ink) }
 }
 
-/** The height in px of one marker: its glyph box, plus its label when labels are visible. */
-export function markerHeight(qfs: number, ink: GlyphInk, labels: boolean): number {
+/** The height in px of one marker: its glyph box, plus its label (`lines` lines) when labels are visible. */
+export function markerHeight(qfs: number, ink: GlyphInk, labels: boolean, lines = 1): number {
   const glyph = markerGlyphBox(qfs, ink).height
-  return glyph + (labels ? LABEL_GAP * qfs + labelSize(qfs) * LABEL_LEADING : 0)
+  return glyph + (labels ? LABEL_GAP * qfs + labelSize(qfs) * LABEL_LEADING * lines : 0)
 }
 
 /**
@@ -876,15 +896,15 @@ export function markerDrawn(m: Pick<MarginMarker, 'inline'>, labels: boolean): b
   return !m.inline || labels
 }
 
-/** The height in px of a drawn marker: the label line of an `inline` rub start, else glyph plus label. */
+/** The height in px of a drawn marker: the label lines of an `inline` rub start, else glyph plus label. */
 export function markerBoxHeight(
-  m: Pick<MarginMarker, 'kind' | 'rub' | 'inline'>,
+  m: Pick<MarginMarker, 'kind' | 'rub' | 'inline' | 'lines'>,
   qfs: number,
   labels: boolean,
   decor = false,
 ): number {
-  if (m.inline) return labelSize(qfs) * LABEL_LEADING
-  return markerHeight(qfs, markerInk(m, decor, labels), labels)
+  if (m.inline) return labelSize(qfs) * LABEL_LEADING * m.lines.length
+  return markerHeight(qfs, markerInk(m, decor, labels), labels, m.lines.length)
 }
 
 /**
@@ -905,33 +925,32 @@ export const INSET_TEXT = 0.34
 export const INSET_FILL = 0.8
 
 /**
- * What an ornament's frame holds (in print it frames the division's text): the hizb number in U+FC23 (a hizb or juz
- * start: the hizb it opens), the quarter (¼ ½ ¾) in U+FC22. `null` for ۞, ۩ and a label-only marker. The full label
- * stays under the ornament and in the tooltip.
+ * What an ornament's frame holds (in print it frames the division's text): the number, in Eastern Arabic numbers, of
+ * the hizb the marker opens (U+FC23, a hizb or juz start) or divides (U+FC22, a quarter). A quarter's words
+ * (`ثلاثة أرباع`) cannot fit its frame, and its label under the ornament names the quarter of that same hizb, so every
+ * frame reads as the hizb and the words under it say which part. `null` for ۞, ۩ and a label-only marker. The full
+ * label stays under the ornament and in the tooltip.
  */
 export function markerInset(m: Pick<MarginMarker, 'rub'>, ink: GlyphInk): string | null {
   if (!ink.hollow || !m.rub) return null
-  return ink.char === DECOR_QUARTER ? QUARTER_GLYPH[m.rub.quarter] || null : arabicNum(m.rub.hizb)
+  return arabicNum(m.rub.hizb)
 }
 
 /**
- * The frame text in qd-hafs (measured with canvas `measureText`, 2026-10-10): the advance of each Arabic-Indic digit
- * ٠…٩ (no kerning between them), and the vulgar fractions' advance; the ink above the baseline of the digits (0.52 em)
- * and of the fractions (0.68 em, 0.01 below); the baseline 0.79 em below the top of a `line-height: 1` box
- * (ascent 1.17, descent 0.59).
+ * The frame text in qd-hafs (measured with canvas `measureText`, 2026-10-10): the advance of each Eastern Arabic digit
+ * ٠…٩ (no kerning between them); their ink, 0.52 em above the baseline; the baseline 0.79 em below the top of a
+ * `line-height: 1` box (ascent 1.17, descent 0.59).
  */
 const INSET_DIGIT_EM = [0.256, 0.287, 0.341, 0.466, 0.385, 0.351, 0.424, 0.453, 0.479, 0.4] as const
-const INSET_FRACTION_EM = 0.75
 const INSET_DIGIT_INK = { top: 0.52, bottom: 0 } as const
-const INSET_FRACTION_INK = { top: 0.68, bottom: 0.01 } as const
 const INSET_BASELINE_EM = 0.79
 
-/** The advance of a frame text in qd-hafs (em). */
+/** The advance of a frame text in qd-hafs (em); 0.48 em, the widest digit's, for anything else. */
 function insetWidthEm(text: string): number {
   let em = 0
   for (const ch of text) {
     const digit = (ch.codePointAt(0) ?? 0) - 0x0660
-    em += digit >= 0 && digit <= 9 ? (INSET_DIGIT_EM[digit] ?? 0.48) : INSET_FRACTION_EM
+    em += digit >= 0 && digit <= 9 ? (INSET_DIGIT_EM[digit] ?? 0.48) : 0.48
   }
   return em
 }
@@ -947,8 +966,7 @@ export function insetBox(qfs: number, ink: GlyphInk, text: string): { top: numbe
   const room = Math.max(0, ink.hollow.w * glyph - decorStroke(glyph)) * INSET_FILL
   const textEm = insetWidthEm(text)
   const fontSize = Math.min(INSET_TEXT * qfs, textEm > 0 ? room / textEm : INSET_TEXT * qfs)
-  const textInk = /[¼½¾]/u.test(text) ? INSET_FRACTION_INK : INSET_DIGIT_INK
-  const inkMid = INSET_BASELINE_EM - (textInk.top - textInk.bottom) / 2
+  const inkMid = INSET_BASELINE_EM - (INSET_DIGIT_INK.top - INSET_DIGIT_INK.bottom) / 2
   const cy = (ink.top - ink.hollow.cy) * glyph
   return { top: cy - inkMid * fontSize, fontSize }
 }

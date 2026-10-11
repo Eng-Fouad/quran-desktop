@@ -126,6 +126,31 @@ describe('dictionaries', () => {
     }
   })
 
+  it('name the digit systems Western and Eastern Arabic numbers, never Indic or Indian (IMPLEMENTATION_NOTES §13)', () => {
+    expect(en.settings.options.digits).toEqual({
+      auto: 'Automatic',
+      latin: 'Western Arabic numbers',
+      arabic_indic: 'Eastern Arabic numbers',
+    })
+    expect(ar.settings.options.digits).toEqual({
+      auto: 'تلقائي',
+      latin: 'الأرقام العربية الغربية',
+      arabic_indic: 'الأرقام العربية الشرقية',
+    })
+    const texts = (lang: 'en' | 'ar', tree: Tree, under = '') =>
+      leaves(tree)
+        .filter((p) => p.startsWith(under))
+        .flatMap((p) => {
+          const v = lookup(lang, p)
+          return (isPlural(v) ? Object.values(v) : [v]).map((t) => [p, String(t)] as const)
+        })
+    for (const [path, text] of texts('en', enTree)) expect(text, path).not.toMatch(/\bindic\b|\bindian\b/iu)
+    // Only the settings: «الهندية» names the Hindi language of a translation elsewhere, which is right.
+    for (const [path, text] of texts('ar', arTree, 'settings.')) {
+      expect(text, path).not.toMatch(/هندي|indic|indian/iu)
+    }
+  })
+
   it('keep Arabic text Arabic', () => {
     expect(ar.common.cancel).toMatch(/\p{Script=Arabic}/u)
     expect(ar.shortcuts.nav.nextPage).toMatch(/\p{Script=Arabic}/u)

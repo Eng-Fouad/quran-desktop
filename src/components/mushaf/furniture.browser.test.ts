@@ -4,16 +4,25 @@
  * pages), the footer, the surah header (cartouche and decor glyph), the surah info popover opened from a header, the
  * basmala (fallback, decor, the audio basmala highlight), the margin markers and every margin mark (loaded through the
  * library store's `user_marks` cache). The user-data IPC is faked; pages come from the exported fixtures. The footer
- * medallion's tint is checked on screenshots, pixel by pixel, in every theme (and forced colours, Chromium only).
+ * medallion's tint is checked on screenshots, pixel by pixel, in every theme (and forced colours, Chromium only). The
+ * quarters of a hizb are written in words with Eastern Arabic numbers in the margin, its tooltip and the running head,
+ * and fit there at every size, in both UI languages.
  */
 import { flushSync } from 'svelte'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
-import { cdp, page as browserPage, server } from 'vitest/browser'
+import { cdp, page as browserPage, server, userEvent } from 'vitest/browser'
 import { render } from 'vitest-browser-svelte'
 import '../../app.css'
 import type { Note, PageData, UserMarks } from '$lib/ipc/bindings'
 import { fixtures } from '$lib/ipc/mock/fixtures'
-import { FOOTER_DEPTH, FOOTER_LOBES, footerMedallion, lineCenterY } from '$lib/mushaf/ornaments'
+import {
+  FOOTER_DEPTH,
+  FOOTER_LOBES,
+  footerMedallion,
+  LABEL_LEADING,
+  labelSize,
+  lineCenterY,
+} from '$lib/mushaf/ornaments'
 import { parseColor, type Rgba } from '../../styles/token-harness'
 import { fonts, library, player, quran, reader, settings } from '$lib/stores'
 import MushafPage from './MushafPage.svelte'
@@ -746,6 +755,182 @@ describe('MarginMarkers (§8.9)', () => {
     settings.value = { ...settings.value, showMarginMarkers: true }
     const opening = await show(1)
     expect(opening.section.querySelector('.mp-markers')).toBeNull()
+  })
+})
+
+describe('Hizb quarters in words (§8.9; owner 2026-10-11)', () => {
+  /** A Western Arabic digit, a vulgar fraction or a solidus: none belongs in the furniture. */
+  const WESTERN = /[0-9¼½¾/]/u
+
+  /** The UI language: html lang/dir and the settings, both restored after the test. */
+  function uiLanguage(lang: 'en' | 'ar'): void {
+    html.lang = lang
+    html.dir = lang === 'ar' ? 'rtl' : 'ltr'
+    settings.value = { ...settings.value, uiLanguage: lang }
+    onTestFinished(() => {
+      html.lang = 'en'
+      html.dir = 'ltr'
+    })
+  }
+
+  /** The line boxes of an element's text, top to bottom (a line's bidi runs merged into one box). */
+  function lineBoxes(el: Element): { top: number; bottom: number; left: number; right: number }[] {
+    const range = document.createRange()
+    range.selectNodeContents(el)
+    const lines: { top: number; bottom: number; left: number; right: number }[] = []
+    for (const r of range.getClientRects()) {
+      if (r.width < 0.5) continue
+      const mid = (r.top + r.bottom) / 2
+      const line = lines.find((l) => mid > l.top && mid < l.bottom)
+      if (line) {
+        line.left = Math.min(line.left, r.left)
+        line.right = Math.max(line.right, r.right)
+      } else lines.push({ top: r.top, bottom: r.bottom, left: r.left, right: r.right })
+    }
+    return lines.sort((a, b) => a.top - b.top)
+  }
+
+  it('writes a quarter in words over its hizb in Eastern Arabic numbers, in both UI languages and decor states', async () => {
+    for (const lang of ['en', 'ar'] as const) {
+      uiLanguage(lang)
+      for (const decor of [false, true]) {
+        if (decor) fonts.status.set('qd-quran-common', 'ready')
+        else fonts.status.delete('qd-quran-common')
+        // 9:1 opens the half of hizb 19 on page 187's line 2.
+        const { section, screen } = await show(187, { qfs: 30 })
+        const where = `${lang}, decor ${decor}`
+        const markers = section.querySelector<HTMLElement>(':scope > .mp-markers')
+        expect(markers?.dir, where).toBe('rtl')
+        expect(markers?.lang, where).toBe('ar')
+        const mk = markers?.querySelector<HTMLElement>('.mk[data-rub="quarter"]')
+        const label = mk?.querySelector<HTMLElement>('.mk-label')
+        if (!mk || !label) throw new Error(`no quarter marker (${where})`)
+        expect(label.textContent, where).toBe('نصف\nالحزب ١٩')
+        // Two lines, each centred under the glyph, and the marker box counts both.
+        const lines = lineBoxes(label)
+        expect(lines, where).toHaveLength(2)
+        const box = label.getBoundingClientRect()
+        for (const l of lines)
+          expect(near((l.left + l.right) / 2, box.left + box.width / 2, 1), where).toBe(true)
+        expect(near(box.height, 2 * labelSize(30) * LABEL_LEADING, 1), where).toBe(true)
+        expect(mk.getBoundingClientRect().bottom, where).toBeGreaterThanOrEqual(box.bottom - 0.5)
+        // The ornament's frame holds the hizb number (the words do not fit it); the solid ۞ has no frame.
+        const inset = mk.querySelector<HTMLElement>('.mk-inset')
+        if (decor) {
+          expect(inset?.textContent, where).toBe('١٩')
+          const g = mk.querySelector('.mk-glyph')?.getBoundingClientRect()
+          const i = inset?.getBoundingClientRect()
+          if (!g || !i) throw new Error('no ornament boxes')
+          expect(i.top).toBeGreaterThan(g.top)
+          expect(i.bottom).toBeLessThan(g.bottom)
+          expect(near(i.left + i.width / 2, g.left + g.width / 2, 1), where).toBe(true)
+        } else expect(inset, where).toBeNull()
+        expect(markers?.textContent, where).not.toMatch(WESTERN)
+        expect(section.querySelector(':scope > .mp-head')?.textContent, where).not.toMatch(WESTERN)
+        screen.unmount()
+      }
+    }
+  })
+
+  it('names the quarter in words in the marker’s tooltip, the description in the UI language', async () => {
+    for (const [lang, description] of [
+      ['en', 'Half of hizb 19'],
+      ['ar', 'نصف الحزب ١٩'],
+    ] as const) {
+      uiLanguage(lang)
+      const { section, screen } = await show(187, { qfs: 30 })
+      const mk = section.querySelector<HTMLElement>('.mp-markers .mk[data-rub="quarter"]')
+      if (!mk) throw new Error('no quarter marker')
+      await userEvent.hover(mk)
+      const end = performance.now() + 3_000
+      while (!document.querySelector('.mk-tip-label') && performance.now() < end) await frames()
+      expect(document.querySelector('.mk-tip-label')?.textContent).toBe('نصف الحزب ١٩')
+      expect(document.querySelector('.mk-tip-text')?.textContent).toContain(description)
+      await userEvent.unhover(mk)
+      screen.unmount()
+    }
+  })
+
+  it('fits a quarter’s two lines in the outer margin at every size that draws labels, on both sides', async () => {
+    fonts.status.set('qd-quran-common', 'ready')
+    // The widest line, ثلاثة أرباع: label-only on page 529 (right) and 600 (left); ربع under its ornament on 594.
+    for (const [n, text] of [
+      [529, 'ثلاثة أرباع\nالحزب ٥٣'],
+      [600, 'ثلاثة أرباع\nالحزب ٦٠'],
+      [594, 'ربع\nالحزب ٦٠'],
+    ] as const) {
+      // qfs 28 is the tightest (the 11 px label floor in a 1.9·qfs margin), 160 the largest page.
+      for (const qfs of [28, 30, 31, 48, 96, 160]) {
+        const { section, screen } = await show(n, { qfs, interactive: false })
+        const where = `page ${n} at qfs ${qfs}`
+        const column = section.querySelector(':scope > .mp-markers')?.getBoundingClientRect()
+        const block = section.querySelector('.mp-block')?.getBoundingClientRect()
+        const label = section.querySelector<HTMLElement>('.mp-markers .mk[data-rub="quarter"] .mk-label')
+        if (!column || !block || !label) throw new Error(`no quarter label (${where})`)
+        expect(label.textContent, where).toBe(text)
+        const lines = lineBoxes(label)
+        expect(lines, where).toHaveLength(2)
+        for (const l of lines) {
+          // Inside the margin column (never over the frame band or past the paper's edge).
+          expect(l.left, where).toBeGreaterThanOrEqual(column.left - 0.5)
+          expect(l.right, where).toBeLessThanOrEqual(column.right + 0.5)
+          expect(l.right <= block.left || l.left >= block.right, where).toBe(true)
+        }
+        screen.unmount()
+      }
+    }
+  })
+
+  it('keeps the running head’s quarter on one line beside the widest surah name, from the smallest page up', async () => {
+    // The widest «سورة …» head in qd-hafs, to put beside the widest quarter (ثلاثة أرباع, page 529).
+    const ctx = document.createElement('canvas').getContext('2d')
+    if (!ctx) throw new Error('no canvas')
+    ctx.font = '100px "qd-hafs"'
+    let widest = 1
+    for (let id = 1, best = 0; id <= 114; id++) {
+      const w = ctx.measureText(`سورة ${quran.surah(id)?.nameAr ?? ''}`).width
+      if (w > best) [best, widest] = [w, id]
+    }
+    const data = await page(529)
+    for (const decor of [false, true]) {
+      if (decor) fonts.status.set('qd-quran-common', 'ready')
+      else fonts.status.delete('qd-quran-common')
+      // Glyph-only pages (QFS_MIN 18 to 27), and a large page with the margin markers off.
+      for (const [qfs, showMarginMarkers] of [
+        [18, true],
+        [19, true],
+        [20, true],
+        [24, true],
+        [27, true],
+        [60, false],
+      ] as const) {
+        settings.value = { ...settings.value, showMarginMarkers }
+        const screen = await render(MushafPage, {
+          data: { ...data, info: { ...data.info, headSurah: widest } },
+          qfs,
+          side: 'right',
+          interactive: false,
+        })
+        await frames()
+        const where = `qfs ${qfs}, decor ${decor}`
+        const head = screen.container.querySelector<HTMLElement>('section.mp > .mp-head')
+        const quarter = head?.querySelector<HTMLElement>('.mp-head-quarter')
+        const surah = head?.querySelector<HTMLElement>('.mp-head-surah')
+        const juz = head?.querySelector<HTMLElement>('.mp-head-juz')
+        if (!head || !quarter || !surah || !juz) throw new Error(`no running head quarter (${where})`)
+        expect(quarter.textContent, where).toBe('ثلاثة أرباع الحزب ٥٣')
+        expect(lineBoxes(quarter), where).toHaveLength(1)
+        const h = head.getBoundingClientRect()
+        const s = surah.getBoundingClientRect()
+        const j = juz.getBoundingClientRect()
+        // Inside the head band, the surah name on the right of the juz group, apart.
+        expect(j.left, where).toBeGreaterThanOrEqual(h.left - 0.5)
+        expect(s.right, where).toBeLessThanOrEqual(h.right + 0.5)
+        expect(s.left, where).toBeGreaterThan(j.right)
+        expect(head.textContent, where).not.toMatch(WESTERN)
+        screen.unmount()
+      }
+    }
   })
 })
 

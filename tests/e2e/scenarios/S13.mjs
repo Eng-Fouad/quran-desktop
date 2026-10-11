@@ -1,7 +1,7 @@
 // @ts-check
 // S13 (§12.6; WP8c): margin markers and their labels. Single pages in the hafs style on paper:
 //   - 1600×1000 (qfs ≥ 28): page 176 with the sajda of 7:206 (۩ سجدة beside the line where the ayah ends), then
-//     page 177 with the rub that 8:1 opens (۞ ½ الحزب ١٨) under its surah header and basmala; labels drawn.
+//     page 177 with the rub that 8:1 opens (۞ over نصف / الحزب ١٨) under its surah header and basmala; labels drawn.
 //   - 1366×768 (qfs < 28): the same pages with glyph-only markers; the running head carries the quarter instead.
 import { check, equal, mushaf } from '../lib/index.mjs'
 import { arabic, furniture } from './_furniture.mjs'
@@ -17,7 +17,7 @@ export const meta = {
 }
 
 const SAJDA = ['sajda', 15, 'سجدة']
-const RUB = ['rub', 3, `½ الحزب ${arabic(18)}`]
+const RUB = ['rub', 3, `نصف\nالحزب ${arabic(18)}`]
 
 /** @param {import('../lib/types').ScenarioContext} ctx */
 export default async function s13(ctx) {
@@ -64,7 +64,7 @@ export default async function s13(ctx) {
   )
   equal(
     small177.head?.juz,
-    `الجزء ${arabic(9)} ½ الحزب ${arabic(18)}`,
+    `الجزء ${arabic(9)} نصف الحزب ${arabic(18)}`,
     'page 177 at 1366×768: the running head carries the quarter',
   )
   await ctx.shot('1366')

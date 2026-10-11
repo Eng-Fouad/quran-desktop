@@ -2602,3 +2602,23 @@ the user's "Quran Preview" (`quran-desktop.exe`) was running.
   directly), so a turn in its last second would not be kept; not verifiable here (RELEASE_CHECKLIST row, LEAD 23).
 - Unchanged since the release round: the §8.18 rows and the §13.6 runtime rows (cold start, memory, playback and idle
   CPU) listed there, and everything under "What blocks a public release".
+
+## Owner feedback 2026-10-11 (Eastern Arabic numbers)
+
+Two owner requests: the hizb quarters showed Western Arabic numbers (¼ ½ ¾) beside Eastern ones, and the digit systems
+must be called "Western Arabic numbers" / "Eastern Arabic numbers", never "Indic" or "Indian", in either language.
+
+- **Mushaf furniture.** The quarters are words, `ربع` / `نصف` / `ثلاثة أرباع الحزب ٢٧` (owner decision; ١/٤ would need a
+  system-font solidus and still reads as a fraction): two lines in the margin label, one in the tooltip and the running
+  head; the U+FC22 frame holds the hizb number. Details and measurements in WP8c 2–3.
+- **UI.** The Index's hizb chips and the memo presets' half pause follow the UI digits through a new `i18n.fraction`:
+  ¼ ½ ¾ with Western Arabic numbers, ١/٤ ١/٢ ٣/٤ with Eastern Arabic numbers. The chips drop `diagonal-fractions` (a
+  font's `frac` could shrink the solidus between full-size Eastern digits). `memo.panel.presets.gapHalf` takes a
+  `{half}` parameter in both dictionaries.
+- **Naming.** Settings ▸ Language ▸ Numbers offers Automatic / Western Arabic numbers / Eastern Arabic numbers
+  (تلقائي / الأرقام العربية الغربية / الأرقام العربية الشرقية), the description says "Eastern Arabic numbers", and the
+  old term is gone from the search keywords in both languages. As a segmented control the full names left the row's
+  title and description an 88 px column at a 900 px window (English), so the row is a select; a browser test checks
+  that nothing clips in either language from 1400 px down to the 760 px minimum. The vocabulary rule is in IMPLEMENTATION_NOTES §13; README and the
+  comments of the files touched follow it. The serialized value `arabic_indic` (`DigitStyle::ArabicIndic`) and
+  identifiers such as `arabicNum` are unchanged: renaming the value would be a breaking settings and contract change.

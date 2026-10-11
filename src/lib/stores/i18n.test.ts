@@ -65,7 +65,7 @@ describe('i18n store: messages', () => {
 })
 
 describe('i18n store: numbers and references (§11.2, §11.3)', () => {
-  it('formats UI numbers per the digits setting, Mushaf numbers always Arabic-Indic', async () => {
+  it('formats UI numbers per the digits setting, Mushaf numbers always Eastern Arabic', async () => {
     await boot()
     expect(i18n.num(1234)).toBe('1,234')
     expect(i18n.mushafNum(262)).toBe('٢٦٢')
@@ -75,7 +75,7 @@ describe('i18n store: numbers and references (§11.2, §11.3)', () => {
     expect(i18n.mushafNum(262)).toBe('٢٦٢')
   })
 
-  it('isolates references: LRI…PDI for Latin digits, RLI…PDI for Arabic-Indic', async () => {
+  it('isolates references: LRI…PDI for Western Arabic numbers, RLI…PDI for Eastern Arabic', async () => {
     await boot()
     expect(i18n.ref(2, 255)).toBe(ltr('2:255'))
     expect(i18n.ref(2, 255, 257)).toBe(ltr('2:255–257'))
@@ -87,6 +87,20 @@ describe('i18n store: numbers and references (§11.2, §11.3)', () => {
     expect(i18n.ref(2, 255, 257)).toBe(rtl('٢:٢٥٥–٢٥٧'))
     await settings.update({ digits: 'latin' })
     expect(i18n.ref(2, 255)).toBe(ltr('2:255'))
+  })
+
+  it('writes fractions in UI digits: ¼ ½ ¾ with Western Arabic numbers, n/d with Eastern Arabic', async () => {
+    await boot()
+    expect([i18n.fraction(1, 4), i18n.fraction(1, 2), i18n.fraction(3, 4)]).toEqual(['¼', '½', '¾'])
+    expect(i18n.fraction(2, 3)).toBe('2/3')
+    await settings.update({ uiLanguage: 'ar' })
+    // Numerator first, no isolates or marks: the solidus joins the two digits into one left-to-right number.
+    expect([i18n.fraction(1, 4), i18n.fraction(1, 2), i18n.fraction(3, 4)]).toEqual(['١/٤', '١/٢', '٣/٤'])
+    expect(i18n.t('memo.panel.presets.gapHalf', { half: i18n.fraction(1, 2) })).toBe('×١/٢')
+    await settings.update({ digits: 'latin' })
+    expect(i18n.fraction(1, 2)).toBe('½')
+    await settings.update({ uiLanguage: 'en', digits: 'arabic_indic' })
+    expect(i18n.fraction(3, 4)).toBe('٣/٤')
   })
 
   it('formats sizes from KiB', async () => {

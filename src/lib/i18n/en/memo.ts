@@ -172,7 +172,8 @@ export const memo = {
       rangeRepeat: 'Whole range',
       gap: 'Pause after each ayah',
       gapNone: 'None',
-      gapHalf: '×½',
+      /** `{half}` is one half in UI digits (`i18n.fraction`): ½, or ١/٢ with Eastern Arabic numbers. */
+      gapHalf: '×{half}',
       gapHint: 'A pause as long as the ayah, half of it or twice it',
       speed: 'Speed',
       times: '×{n}',

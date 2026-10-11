@@ -311,6 +311,12 @@ describe('the Memorize panel', () => {
     await until(() => $('[data-qd-preset-editor]') !== null)
     const name = $('[data-qd-preset-editor] input') as HTMLInputElement
     expect(plain(name.value)).toBe('Al-Ikhlas 112:1–4 ×3')
+    // The pause choices in UI digits: the half is ½ here (١/٢ with Eastern Arabic numbers, `i18n.fraction`).
+    expect(
+      $$('[data-qd-preset-editor] .segmented .option .text > span:first-child').map((t) =>
+        plain(t.textContent),
+      ),
+    ).toEqual(['None', '×½', '×1', '×2'])
     await userEvent.click(
       $$('[data-qd-preset-editor] button').find((b) => plain(b.textContent) === 'Save preset') as HTMLElement,
     )

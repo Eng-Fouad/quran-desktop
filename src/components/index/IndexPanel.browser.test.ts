@@ -14,6 +14,7 @@ import { packs } from '$lib/stores/packs.svelte'
 import { player } from '$lib/stores/player.svelte'
 import { quran } from '$lib/stores/quran.svelte'
 import { reader } from '$lib/stores/reader.svelte'
+import { settings } from '$lib/stores/settings.svelte'
 import { ui } from '$lib/stores/ui.svelte'
 import { indexView } from './state.svelte'
 import IndexHarness from './testing/IndexHarness.svelte'
@@ -399,5 +400,38 @@ describe('Arabic UI', () => {
     expect(tab('السور')).toBeDefined()
     await type('الكهف')
     expect(surahRows().map((r) => r.dataset.surah)).toEqual(['18'])
+  })
+
+  it('writes the quarter chips in the UI digits: ١/٤ ١/٢ ٣/٤, or ¼ ½ ¾ with Western Arabic numbers', async () => {
+    await mount({ lang: 'ar', page: 262 })
+    await userEvent.click(tab('الأحزاب') as HTMLElement)
+    await settle(80)
+    const chips = () => $$('[data-hizb="1"] ~ .quarters .q')
+    expect(chips().map((c) => c.textContent?.trim())).toEqual(['١/٤', '١/٢', '٣/٤'])
+    for (const chip of chips()) {
+      // Whole inside the 28 px chip, with no fraction feature reshaping the solidus.
+      expect(chip.scrollWidth).toBeLessThanOrEqual(chip.clientWidth)
+      expect(getComputedStyle(chip).fontVariantNumeric).toBe('normal')
+      const text = [...chip.childNodes].find((n) => n.nodeType === Node.TEXT_NODE && n.textContent?.trim())
+      if (!text?.textContent) throw new Error('no chip text')
+      const box = chip.getBoundingClientRect()
+      const range = document.createRange()
+      range.selectNodeContents(text)
+      const ink = range.getBoundingClientRect()
+      expect(ink.left).toBeGreaterThanOrEqual(box.left)
+      expect(ink.right).toBeLessThanOrEqual(box.right)
+      // One left-to-right number in the RTL list: the numerator stays on the left.
+      const at = (i: number) => {
+        const r = document.createRange()
+        r.setStart(text, i)
+        r.setEnd(text, i + 1)
+        return r.getBoundingClientRect()
+      }
+      const start = text.textContent.indexOf(text.textContent.trim())
+      expect(at(start).right).toBeLessThanOrEqual(at(start + 2).left + 0.5)
+    }
+    settings.value = { ...settings.value, digits: 'latin' }
+    await settle(30)
+    expect(chips().map((c) => c.textContent?.trim())).toEqual(['¼', '½', '¾'])
   })
 })

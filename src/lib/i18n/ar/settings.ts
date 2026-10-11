@@ -94,8 +94,8 @@ export const settings = {
     },
     digits: {
       label: 'الأرقام',
-      description: 'طريقة كتابة الأرقام في التطبيق. يستخدم المصحف الأرقام الهندية دائمًا.',
-      keywords: 'أرقام هندية عربية digits numbers',
+      description: 'طريقة كتابة الأرقام في التطبيق. يستخدم المصحف الأرقام العربية الشرقية دائمًا.',
+      keywords: 'أرقام عربية شرقية غربية digits numbers numerals eastern western',
     },
     uiScalePct: {
       label: 'حجم الواجهة',
@@ -452,7 +452,7 @@ export const settings = {
       amber: 'كهرماني',
     },
     motion: { system: 'مثل النظام', reduce: 'مخفّفة', full: 'كاملة' },
-    digits: { auto: 'تلقائي', latin: 'غربية', arabic_indic: 'هندية' },
+    digits: { auto: 'تلقائي', latin: 'الأرقام العربية الغربية', arabic_indic: 'الأرقام العربية الشرقية' },
     digitsSample: 'صفحة {page}، {ref}، {size}',
     mushafStyle: {
       hafs: 'حفص',

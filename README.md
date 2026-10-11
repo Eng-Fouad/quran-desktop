@@ -40,8 +40,8 @@ port: no code is copied from it.
 
 - **The printed page, line for line.** Every page has the lines, line breaks and centred lines of the print, the page
   frame, the surah headers in their cartouches, the basmala lines, running heads (surah, juz, quarter) and the page
-  number in Arabic-Indic digits. The margin carries the juz, hizb and quarter markers with their labels, and the sajda
-  marks.
+  number in Eastern Arabic numbers. The margin carries the juz, hizb and quarter markers with their labels (the quarters
+  in words: ربع، نصف، ثلاثة أرباع الحزب), and the sajda marks.
 - **A book on a large screen.** Two-page spreads (odd page on the right) or a single page, chosen by the window size;
   fit to the window with zoom on top; a page rail to scrub through the 604 pages; held arrow keys flip through pages at
   the pace of a thumb.
@@ -130,8 +130,8 @@ page).
   brightness of night pages; interface size from 80 % to 200 %.
 - Keyboard-first with visible focus; a screen-reader layer that reads every ayah as text with its place; reduced motion,
   more contrast and forced colours honoured.
-- A complete **Arabic interface**: mirrored right to left, Arabic-Indic digits and Arabic typefaces. The Mushaf is right
-  to left in every language.
+- A complete **Arabic interface**: mirrored right to left, Eastern Arabic numbers (or Western Arabic numbers, by choice)
+  and Arabic typefaces. The Mushaf is right to left in every language.
 
 ### Offline-first, on the desktop
 
