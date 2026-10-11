@@ -27,6 +27,28 @@ const $ = <T extends Element = HTMLElement>(selector: string) => document.queryS
 const rect = (selector: string) => $(selector)?.getBoundingClientRect() ?? new DOMRect()
 const plainText = (s: string | null | undefined) => (s ?? '').replace(/[⁦-⁩]/gu, '')
 
+/**
+ * A computed `cursor`: the keyword, and on Windows the vector hand of src/assets/cursors before it (MushafView), as a
+ * file or as the data: URI Vite inlines it to.
+ */
+function expectCursorValue(value: string, keyword: 'grab' | 'grabbing'): void {
+  if (document.documentElement.dataset.platform !== 'windows') {
+    expect(value).toBe(keyword)
+    return
+  }
+  const [, src = '', fallback] = /^url\("([^"]+)"\) 17 18, (\w+)$/.exec(value) ?? []
+  expect(fallback, value).toBe(keyword)
+  if (!src.startsWith('data:')) {
+    expect(src).toMatch(new RegExp(`/${keyword}\\.svg$`))
+    return
+  }
+  const data = src.slice(src.indexOf(',') + 1)
+  const svg = src.includes(';base64,') ? atob(data) : decodeURIComponent(data)
+  expect(svg).toContain(`The Mushaf's ${keyword} cursor`)
+}
+const expectCursor = (el: Element, keyword: 'grab' | 'grabbing') =>
+  expectCursorValue(getComputedStyle(el).cursor, keyword)
+
 /** A hafs page's data from the cache (it is on screen or was). */
 function pageData(page: number): PageData {
   const data = pages.get('hafs', page)
@@ -684,20 +706,20 @@ describe('drag (§8.13)', () => {
         return c.x > v.left + 150 && c.x < v.right - 150 && c.y > v.top + 100 && c.y < v.bottom - 150
       })
       if (!w) throw new Error('no word on screen')
-      expect(getComputedStyle(vp).cursor).toBe('grab')
-      expect(getComputedStyle(w).cursor).toBe('grab')
+      expectCursor(vp, 'grab')
+      expectCursor(w, 'grab')
       const left = vp.scrollLeft
       const top = vp.scrollTop
       let cursor = ''
       await drag(w, 120, -80, { during: () => (cursor = getComputedStyle(w).cursor) })
-      expect(cursor).toBe('grabbing')
+      expectCursorValue(cursor, 'grabbing')
       // scrollBy is physical: the book moved 120 px right and 80 px up with the pointer, in either UI direction.
       expect(Math.abs(vp.scrollLeft - left + 120)).toBeLessThanOrEqual(1)
       expect(Math.abs(vp.scrollTop - top - 80)).toBeLessThanOrEqual(1)
       await settle(120)
       expect(reader.visiblePages).toEqual([49, 50])
       expect(reader.selection).toBeNull()
-      expect(getComputedStyle(vp).cursor).toBe('grab')
+      expectCursor(vp, 'grab')
     },
   )
 

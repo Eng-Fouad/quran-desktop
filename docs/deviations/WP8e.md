@@ -308,6 +308,22 @@ judged on the real page rather than behind the Settings dialog's scrim.
   (place, rows, the yield to the paper). New scenario **S39** (web; it seeds installed packs like S21): `S39`,
   `S39-popover`, `S39-sepia` and `S39-ar`.
 
+### 14. Grab cursors on Windows (owner request 2026-10-11)
+
+The owner found the hand cursor of the zoomed Mushaf low quality. WebView2 draws CSS `grab` and `grabbing` from
+Chromium's own 32 px cursor bitmaps (Windows has no system grab cursor): coarse at 100 % and scaled, so blurred, at
+every other display scale.
+
+- On Windows (`html[data-platform='windows']`) `MushafView` sets `cursor: url(grab.svg) 17 18, grab` and
+  `url(grabbing.svg) 17 18, grabbing` on the same elements as the keywords. The SVGs (`src/assets/cursors`) are 32 ×
+  32: a white hand with a 1 px black outline like the system cursors (the outer half of a 2-unit stroke under the white
+  fill, so it follows the shapes' union), edges on whole units, the same palm and hotspot in both, so the hand does not
+  jump when a drag starts. Chromium rasterises an SVG cursor at the display's scale, so it is sharp at 125–200 %; Vite
+  inlines both as data: URIs (CSP `img-src` allows `data:`).
+- macOS (NSCursor's open and closed hands) and Linux (the cursor theme's `grab` / `grabbing`) keep the keywords.
+- `MushafView.browser.test.ts` checks the cursor per platform: the keyword elsewhere, the right hand plus the keyword
+  fallback on Windows.
+
 ## Requests
 
 - **WP8a (`geometry.ts`, `fitLayout`):** when the fit falls below `QFS_MIN`, compare the candidates at the floor. A

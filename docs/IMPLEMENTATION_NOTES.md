@@ -683,7 +683,9 @@ is the lead's fold-in of every accepted deviation (`docs/deviations/WP*.md`), ev
   release's click and dblclick are swallowed at `window` for that task; Escape, a context menu, blur, a lost capture or
   a layer cancel. No rubber band (a turn is a view-transition snapshot): the grabbing cursor and the lit chevron of the
   zone the release turns to are the feedback. A drag never reveals the page rail; after the release the rail reveals
-  only once the pointer moves again.
+  only once the pointer moves again. On Windows the grab and grabbing cursors are vector hands
+  (`src/assets/cursors/*.svg`, rasterised at the display's scale) instead of Chromium's coarse 32 px bitmaps (owner
+  request 2026-10-11, WP8e 14).
 - Follow-along turns unless the user navigated in the last 4 s; otherwise the follow chip offers the way back (WP8e 6).
 - Selection: `select` pins the side pane; a cursor off screen starts from the visible pages; history ≤ 50 jumps;
   range jumps (`goToAyah(…, { selectTo })`) flash, focus and announce the first ayah (WP8e 8, INT fix 2 mushaf).

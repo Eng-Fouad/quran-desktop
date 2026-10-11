@@ -4116,7 +4116,9 @@ html[data-turn="prev"] { --qd-out: qd-out-left;  --qd-in: qd-in-right; }
     on a word still selects its ayah. No rubber band: the cursor (`grabbing`) and the lit chevron of the zone the
     release turns to (§8.11) are the feedback.
   - **> 100 %: pan.** The canvas follows the pointer on both axes (`scrollBy`, physical, one per frame, no inertia).
-    Slop 4 px. Cursor `grab` over the zoomed book, `grabbing` while dragging.
+    Slop 4 px. Cursor `grab` over the zoomed book, `grabbing` while dragging. On Windows both are the vector hands of
+    `src/assets/cursors` (hotspot 17 18, the keyword as fallback): WebView2 draws the keywords from Chromium's old
+    32 px bitmaps, coarse at 100 % and blurred above. macOS and Linux keep the system's own.
   - Pointer capture is taken only past the slop. The click (and dblclick) dispatched with a drag's release is swallowed
     at `window` for that task, so no word, header, marker, mark or blank-canvas clear takes it. Escape (consumed, so the
     reader keeps its selection), a context menu, a pointercancel, a lost capture, the window's blur or a layer opening
@@ -4205,8 +4207,8 @@ html[data-turn="prev"] { --qd-out: qd-out-left;  --qd-in: qd-in-right; }
 | drag, zoom ≤ 100 % | past 8 px it is no click; on release, ≥ 80 px horizontal (or a 30 px flick) turns one page, right = next (§8.13) |
 | drag, zoom > 100 % | past 4 px it is no click; the canvas follows the pointer (§8.13) |
 
-- **Cursor:** default over glyphs at the fit; `grab` over the zoomed book and `grabbing` during a drag; `pointer` only over end
-  markers, header lines and margin markers/marks.
+- **Cursor:** default over glyphs at the fit; `grab` over the zoomed book and `grabbing` during a drag (on Windows the vector
+  hands of `src/assets/cursors`, §8.13); `pointer` only over end markers, header lines and margin markers/marks.
 - **`WordTooltip`:** translation in UI font 14 px, transliteration italic 12 px muted, the word's `WbwEntry.text` in `qd-hafs`
   22 px (`.quran-text`), placed above the word pill (flips below near the top).
 - **`AyahActionBar.svelte`** (D26; `settings.ayahActionBar`):

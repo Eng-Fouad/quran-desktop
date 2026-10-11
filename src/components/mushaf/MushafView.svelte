@@ -424,6 +424,25 @@
     cursor: grabbing;
   }
 
+  /*
+   * Windows: WebView2 draws `grab` / `grabbing` from Chromium's old 32 px bitmaps, coarse at 100 % and blurred above.
+   * Vector hands instead, rasterised at the display's scale (src/assets/cursors, hotspot in the palm); the keyword
+   * stays as the fallback. macOS (NSCursor) and Linux (the cursor theme) keep their own, already sharp.
+   */
+  :global(:root[data-platform='windows']) .mushaf-view[data-zoomed] :global([data-scroll-area-viewport]),
+  :global(:root[data-platform='windows']) .mushaf-view[data-zoomed] :global(.mp-glyphs[data-interactive]) {
+    cursor:
+      url('../../assets/cursors/grab.svg') 17 18,
+      grab;
+  }
+
+  :global(:root[data-platform='windows']) .mushaf-view:global([data-drag]),
+  :global(:root[data-platform='windows']) .mushaf-view:global([data-drag]) :global(*) {
+    cursor:
+      url('../../assets/cursors/grabbing.svg') 17 18,
+      grabbing;
+  }
+
   /* §7.5 overlay slot: bottom centre of the page area, above the bar dock (or low beside the side card). */
   .mv-slot {
     position: absolute;
