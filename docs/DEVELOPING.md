@@ -160,7 +160,7 @@ App variables exist in **debug builds only** (D24); release builds compile them 
 | `QD_TEST=1` | app (debug) | Test mode: sets `AppInfo.testMode` and installs `window.__QD_TEST__` (the QA hooks). |
 | `QD_DATA_DIR=<dir>` | app (debug) | Replaces the data root (`app_local_data_dir()`, below): user.db, content.db, backups, packs, and also the logs (`<dir>/logs`), the window state (`<dir>/window-state.json`) and the WebView2/WebKitGTK profile with its `localStorage` (`<dir>/webview`), so a QA run never touches the user's. |
 | `QD_CORE_DB=<file>` | app (debug), `cargo test -- --ignored` | core.db path. Default `src-tauri/resources/core.db`. |
-| `QD_FONT_TRANSPORT=url\|bytes` | app (debug) | Override how QCF fonts reach the webview (default `url` on Windows and Linux, `bytes` on macOS until checked on a Mac). |
+| `QD_FONT_TRANSPORT=url\|bytes` | app (debug) | Override how QCF fonts reach the webview (default `url`; `bytes` sends them through `font_bytes`). |
 | `QD_AUDIO_SINK=null` / `wav:<path>` | app (debug), audio tests | Replace the audio device with a timer-driven null sink, or also write a WAV + marker/tick log. An unknown value means `null`, never the speakers (LEAD 9). |
 | `QD_PACKS_DIR=<dir>` | vite dev-packs plugin | Directory served at `/__packs/*` in `--mode mock`. Default `data/dev-packs`. |
 | `QD_REQUIRE_CORE=1` | `src-tauri/build.rs` | Fail the build when `resources/core.db` is missing (CI and release) instead of writing a placeholder. |

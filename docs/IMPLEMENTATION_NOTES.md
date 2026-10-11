@@ -397,8 +397,8 @@ is the lead's fold-in of every accepted deviation (`docs/deviations/WP*.md`), ev
 
 ## 8. App shell in Rust (§2.8, §6, §11.4, §13.5)
 
-- **Font transport (D30 spike):** `url` on Windows (WebView2) and Linux (WebKitGTK 2.52 applies no CORS check to scheme
-  loads); `bytes` on macOS until checked on a Mac (`QD_FONT_TRANSPORT=url|bytes` in debug builds). `fontBytes` accepts the
+- **Font transport (D30 spike):** `url` on Windows (WebView2), Linux (WebKitGTK 2.52 applies no CORS check to scheme
+  loads) and macOS (WKWebView, checked in the real app on macOS 27) (`QD_FONT_TRANSPORT=url|bytes` in debug builds). `fontBytes` accepts the
   `number[]` of Tauri's postMessage fallback; a face that fails by URL is retried once by bytes (WP6a, INT web).
 - **Startup** is split into testable parts; the first launch takes the OS locale as the UI language and stores it;
   `app_bootstrap` runs in one blocking task (≈ 4 ms) and degrades a broken pack registry to `packs: []` (WP6a 2–3, 5).

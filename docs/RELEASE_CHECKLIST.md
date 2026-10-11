@@ -151,8 +151,8 @@ Install each file from the draft release, not a local build. Use a fresh user pr
       and dark menu bars.
 - [ ] Control Center's Now Playing shows the title, reciter, album, artwork and a moving scrubber. The play/pause key
       toggles (`playbackState`), and the item disappears after stop (WP6d).
-- [ ] Font transport (WP6a): with a debug build, `QD_FONT_TRANSPORT=url` loads the QCF fonts. If it does, file the
-      switch of the macOS arm of `platform_font_transport` to `Url`.
+- [ ] Font transport (WP6a): on the oldest supported macOS (13.3) too, the QCF V4 pages and the surah headers render
+      (fonts by `url`, the default since the macOS pass; a face that fails is retried through `font_bytes`).
 - [ ] VoiceOver with the "Majed" voice reads 1:1–7, 2:255 and 38:24 sensibly (WP8d). Record the result in §12.6.
 - [ ] WKWebView has no crash hook (`window::webview2` is Windows only): kill the app's WebContent process (Activity
       Monitor) and note what the user sees. A blank window that needs a restart is a known gap; file it if worse.

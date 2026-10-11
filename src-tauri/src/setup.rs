@@ -91,13 +91,14 @@ pub enum Fatal {
 /// - Windows (WebView2 154): `url`, verified in the real app (`FontFace` from `http://quran.localhost/…`);
 /// - Linux (WebKitGTK 2.52.6): `url`, verified with wry's exact scheme registration (custom schemes registered as
 ///   secure only) from a `tauri://localhost` page;
-/// - macOS (WKWebView): `bytes`, which needs no cross-origin load at all, until a runtime check on a Mac confirms `url`
-///   (debug builds try it with `QD_FONT_TRANSPORT=url`; the release checklist covers it, §12.6).
+/// - macOS (WKWebView, WebKit 22625 on macOS 27): `url`, verified in the real app (`FontFace` from
+///   `quran://localhost/…`: every QCF V4 page and decor face, no retry as bytes).
+///
+/// Everywhere, a face that fails by URL is retried once as bytes (the frontend's `fonts` store).
 #[must_use]
 pub const fn platform_font_transport(platform: Platform) -> FontTransport {
     match platform {
-        Platform::Windows | Platform::Linux => FontTransport::Url,
-        Platform::Macos => FontTransport::Bytes,
+        Platform::Windows | Platform::Linux | Platform::Macos => FontTransport::Url,
     }
 }
 
@@ -1035,10 +1036,7 @@ pub(crate) mod tests {
             platform_font_transport(Platform::Windows),
             FontTransport::Url
         );
-        assert_eq!(
-            platform_font_transport(Platform::Macos),
-            FontTransport::Bytes
-        );
+        assert_eq!(platform_font_transport(Platform::Macos), FontTransport::Url);
         assert_eq!(platform_font_transport(Platform::Linux), FontTransport::Url);
         assert_eq!(parse_font_transport("url"), Some(FontTransport::Url));
         assert_eq!(parse_font_transport(" Bytes "), Some(FontTransport::Bytes));
