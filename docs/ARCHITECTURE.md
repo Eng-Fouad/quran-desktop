@@ -4474,8 +4474,8 @@ there.
      cached".
 4. Summary: the exact starter set (§2.5.4) with sizes and the **exact total** above the button, a "Work offline" switch
    (`networkAllowed`), and buttons "Download now" (installs the starter set) and "Start reading", both of which apply the style,
-   `ornateHeaders` and the reciter. Onboarding never bulk-downloads audio. The lede says that apart from the Mushaf preview's
-   first page nothing is fetched without asking.
+   `ornateHeaders` and the reciter. Onboarding never bulk-downloads audio. The lede says that apart from what the Mushaf
+   preview showed (its first page and, while ticked, the ornate headers) nothing is fetched without asking.
 5. Keys: teaches `Ctrl+K`/`⌘K`, `Space` and `?` with `Kbd`. Finish sets `onboardingDone = true`.
 
 **Settings (WP12b).**

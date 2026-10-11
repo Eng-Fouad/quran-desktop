@@ -136,9 +136,9 @@ setting for every style; the preview fetches while online and the Summary lede s
     Escape does nothing (the dialog's escape layer swallows it, and `ui.dismissLayer` never closes the onboarding), a
     click outside does nothing, Back stays, and `complete()` acts only on the last step (Finish, or "Open Downloads").
     `complete()` sets `app.firstRun = false`, as Rust's `first_run()` turns false once `onboarding_done` is stored. A tour
-    reopened from Settings › System ("Show the welcome tour") keeps Skip, and Escape is Skip there as before. A re-run
-    left unfinished by quitting reopens at the next launch as a first run (`first_run()` is true again, since "Show the
-    welcome tour" clears `onboardingDone`).
+    reopened from Settings › System ("Show the welcome tour") keeps Skip, and Escape is Skip there as before. "Show the
+    welcome tour" only opens the dialog and leaves `onboardingDone` set: a re-run quit halfway never makes the next
+    launch a first run, which would be mandatory and preselect the 1421 AH print over the user's style (review finding).
 23. **Five steps.** Welcome, Mushaf, Translation and recitation, Starter set, Keys. The Mushaf step stacks the three
     style cards at the inline start (the style's sentence is read with the card and shown under the preview) and puts
     the preview beside them; the reading step keeps the two pickers. Both fit 720 × 540 in English and Arabic (the fit
@@ -161,7 +161,8 @@ setting for every style; the preview fetches while online and the Summary lede s
     and, while ticked, installs `decor` once (`flow.requestOrnaments` → `decor_ensure`); the starter set then shows it as
     already downloaded. Offline it shows Hafs and fetches nothing (tested). A status line says when the page or the
     ornaments are still downloading, or that the page shows in Hafs until it downloads. The Summary lede now reads "…
-    Apart from the Mushaf preview's first page, nothing is fetched without asking."
+    Besides the preview’s page and ornaments, nothing is fetched without asking." (review finding: the ornaments are
+    fetched too; the sentence must still fit the 720 × 540 dialog).
 27. **Mock fidelity.** The mock's `decor_ensure` records the `decor` pack installed in the packs mock
     (`recordWholeInstalled`, with `packs-changed`), as Rust's `sync_decor_row` does.
 28. **Scenarios.** S01 checks "Step 1 of 5" and no Skip; S02 covers the Mushaf step (the 1421 AH print and the ornaments

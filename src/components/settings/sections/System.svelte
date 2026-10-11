@@ -22,8 +22,9 @@
     void settings.update({ closeToTray: on, closeToTrayAsked: true })
   }
 
+  /** Opens the tour again without clearing `onboardingDone`: a re-run stays skippable, and quitting it halfway never makes
+   * the next launch a first run (which must be finished and preselects the 1421 AH print). */
   function showTour(): void {
-    void settings.update({ onboardingDone: false })
     ui.open('onboarding', {})
   }
 

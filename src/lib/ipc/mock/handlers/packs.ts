@@ -927,6 +927,12 @@ export const packsHandlers: Handlers<
     if (itemized(p)) state.packs.value.items[packId] = []
     p.state = { type: 'not_installed' }
     p.installedKib = 0
+    // Rust deletes the decor files: the fonts mock must not keep reporting them installed.
+    if (packId === 'decor') {
+      state.fonts.set({
+        decor: { installed: false, surahHeaderUrl: null, quranCommonUrl: null, suraNamesUrl: null },
+      })
+    }
     syncState(p)
     persist()
     packsChanged([packId])

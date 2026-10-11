@@ -26,7 +26,9 @@
  *   with the Mushaf packs, FACT §4.2); `hafs` never does by itself (no silent network use), but turning
  *   `ornateHeaders` on asks for it in any style (an explicit choice). Off, nothing asks.
  * - Connectivity and packs: when the app comes online, `unavailable` fonts are forgotten and the displayed pages are
- *   ensured again; `PacksChanged` for `mushaf.v*` does the same for that style, and for `decor` refreshes the decor.
+ *   ensured again; `PacksChanged` for `mushaf.v*` does the same for that style. For `decor` it loads the pack when the
+ *   packs list shows it installed and unloads it otherwise, never fetching: removing it in Downloads is the user's
+ *   choice, whatever `ornateHeaders` says.
  * - `faceEpoch` is bumped whenever a face joins or leaves `document.fonts`: the shaping warm-up warms the neighbours
  *   again after such a change (warmup.ts: Chromium drops the words it shaped before it, not the glyph metrics).
  */
@@ -654,7 +656,7 @@ class FontsStore implements Store {
     for (const id of packIds) {
       if (id === 'decor') {
         this.#decorAsked = false
-        void this.ensureDecor()
+        void this.#decorChanged()
         continue
       }
       const m = /^mushaf\.(v[124])$/.exec(id)
@@ -712,6 +714,26 @@ class FontsStore implements Store {
         this.status.set(family, face ? 'ready' : 'failed')
       }),
     )
+  }
+
+  /** `PacksChanged` for `decor`: load it if the packs list shows it installed, else unload it; never fetch it here. */
+  async #decorChanged(): Promise<void> {
+    const epoch = this.#epoch
+    let installed: boolean
+    try {
+      const list = await call(api.packsList())
+      installed = list.find((p) => p.id === 'decor')?.state.type === 'installed'
+    } catch (e) {
+      console.warn('[fonts] packs_list failed', e)
+      return
+    }
+    if (epoch !== this.#epoch) return
+    if (installed) {
+      await this.ensureDecor()
+      return
+    }
+    this.decor = NO_DECOR
+    this.#unloadDecor()
   }
 
   #unloadDecor(): void {

@@ -61,6 +61,14 @@ vi.mock('$lib/ipc', async (importOriginal) => {
       )
     }),
     decorEnsure: vi.fn(async () => ipc.reply(structuredClone(ipc.decor))),
+    packsList: vi.fn(async () =>
+      ipc.reply([
+        {
+          id: 'decor',
+          state: ipc.decor.installed ? { type: 'installed', data: {} } : { type: 'not_installed' },
+        },
+      ]),
+    ),
   }
   const events = {
     ...actual.events,
@@ -509,11 +517,26 @@ describe('decor (§8.5)', () => {
     fonts.init(bootstrap(installed))
     await settle()
     ipc.decor = { installed: false, surahHeaderUrl: null, quranCommonUrl: null, suraNamesUrl: null }
+    const { api } = await import('$lib/ipc')
+    vi.mocked(api.decorEnsure).mockClear()
     ipc.packsChanged?.({ payload: { packIds: ['decor'] } })
     await settle()
     expect(fonts.decor.installed).toBe(false)
     expect(fonts.decorReady).toBe(false)
     expect(hasFace('qd-surah-header')).toBe(false)
+    // A removal is the user's choice: nothing fetches it again, even with the ornaments on.
+    expect(settings.value.ornateHeaders).toBe(true)
+    expect(api.decorEnsure).not.toHaveBeenCalled()
+  })
+
+  it('loads decor when PacksChanged reports it installed', async () => {
+    fonts.init(bootstrap())
+    await settle()
+    ipc.decor = installed
+    ipc.packsChanged?.({ payload: { packIds: ['decor'] } })
+    await settle()
+    expect(fonts.decor.installed).toBe(true)
+    expect(fonts.decorReady).toBe(true)
   })
 })
 

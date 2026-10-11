@@ -102,7 +102,7 @@ export const onboarding = {
   summary: {
     title: 'Your starter set',
     /** The Mushaf step's preview may have fetched page 1 of the chosen print (and the ticked ornaments, listed here). */
-    lede: "Exactly what downloads, and when. Apart from the Mushaf preview's first page, nothing is fetched without asking.",
+    lede: 'Exactly what downloads, and when. Besides the preview’s page and ornaments, nothing is fetched without asking.',
     listLabel: 'Starter set',
     when: {
       now: 'Downloads now',

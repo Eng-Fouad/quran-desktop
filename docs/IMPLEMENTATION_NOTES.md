@@ -717,8 +717,8 @@ is the lead's fold-in of every accepted deviation (`docs/deviations/WP*.md`), ev
   font and, while ticked, `decor` when online, and nothing offline), Translation and recitation, Starter set, Keys; both
   starter-set buttons apply the style, `ornateHeaders` and the reciter and lead to the Keys step. A first run must be
   finished: no Skip, Escape and outside clicks do nothing, Back stays, Finish is the only way out (`ui.dismissLayer`
-  never closes the onboarding); a tour reopened from Settings › System keeps Skip, and Escape is Skip there (a re-run left
-  unfinished by quitting reopens at the next launch as a first run: `first_run()` is true again). A first run preselects
+  never closes the onboarding); a tour reopened from Settings › System keeps Skip, and Escape is Skip there ("Show the
+  welcome tour" leaves `onboardingDone` set, so a re-run quit halfway never makes the next launch a first run). A first run preselects
   the 1421 AH print (`qcf_v2`) with ornate headers; the `mushafStyle` default stays `hafs`. Offline locks the QCF cards;
   a Tajweed card this webview cannot draw is locked; unticking "Ornate surah headers" drops `decor` from the set (unless
   "Download all pages" requires it); totals under 10 MB are exact kB (en 832 kB, ar 1,119 kB). About opens with a "This app" group (the GPL notice and
