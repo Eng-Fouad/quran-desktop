@@ -923,7 +923,7 @@ describe('stylesheet wiring', () => {
     expect(css.replace(/@(?:layer|import)[^;{]*;/g, '').trim()).toBe('')
   })
 
-  it('fonts.css imports the §9.3 UI faces and declares qd-hafs (§8.5)', () => {
+  it('fonts.css imports the §9.3 UI faces and declares qd-hafs (§8.5) and qd-print-labels (LEAD 25)', () => {
     const css = strip(read('src/styles/fonts.css'))
     const imports = [...css.matchAll(/@import\s+'([^']+)'/g)].map((m) => m[1])
     expect(imports).toEqual([
@@ -935,11 +935,30 @@ describe('stylesheet wiring', () => {
     ])
     for (const file of imports)
       expect(existsSync(resolve(process.cwd(), 'node_modules', file ?? '')), file).toBe(true)
-    expect(declarations(css, '@font-face')).toEqual({
-      'font-family': "'qd-hafs'",
-      src: "url('/fonts/KFGQPC-Hafs-V30.ttf') format('truetype')",
-      'font-display': 'block',
-    })
+    // Both bundled faces block (main.ts awaits them before the first paint), and their files ship in public/fonts.
+    const faces = [...css.matchAll(/@font-face\s*\{([^{}]*)\}/g)].map((m) =>
+      Object.fromEntries(
+        (m[1] ?? '')
+          .split(';')
+          .map((d) => d.trim())
+          .filter(Boolean)
+          .map((d) => [d.slice(0, d.indexOf(':')).trim(), d.slice(d.indexOf(':') + 1).trim()]),
+      ),
+    )
+    expect(faces).toEqual([
+      {
+        'font-family': "'qd-hafs'",
+        src: "url('/fonts/KFGQPC-Hafs-V30.ttf') format('truetype')",
+        'font-display': 'block',
+      },
+      {
+        'font-family': "'qd-print-labels'",
+        src: "url('/fonts/QuranPrintLabels.otf') format('opentype')",
+        'font-display': 'block',
+      },
+    ])
+    expect(existsSync(resolve(process.cwd(), 'public/fonts/QuranPrintLabels.otf'))).toBe(true)
+    expect(existsSync(resolve(process.cwd(), 'public/fonts/QuranPrintLabels.LICENSE.txt'))).toBe(true)
   })
 
   it('base.css carries the §9.3 .quran-text guard verbatim (enforced with !important)', () => {

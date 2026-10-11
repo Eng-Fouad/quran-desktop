@@ -107,7 +107,7 @@ describe('about view', () => {
     const source = app.info.core.source
     const builtFrom = source === 'qul' ? ['qul'] : source === 'qdc' ? ['qdc-dev'] : []
     expect(entries('text')).toEqual([...builtFrom, 'kfgqpc', 'tanzil'])
-    expect(entries('fonts')).toEqual(['kfgqpc-hafs', 'qcf', 'decor', 'ui-fonts'])
+    expect(entries('fonts')).toEqual(['kfgqpc-hafs', 'print-labels', 'qcf', 'decor', 'ui-fonts'])
     expect(entries('translations')).toContain('tr.en.saheeh')
     expect(entries('tafsir')).toContain('tafsir.ar.muyassar')
     expect(entries('recitations')).toEqual(['quranicaudio', 'qf-timings'])
@@ -145,6 +145,19 @@ describe('about view', () => {
     expect(text).toContain('King Fahd Glorious Quran Printing Complex')
     expect(text).toContain('ELECTRONIC END-USER LICENSE AGREEMENT')
     expect(toggle.getAttribute('aria-expanded')).toBe('true')
+  })
+
+  it('credits the print’s furniture font with its source and shows its licence as plain text (LEAD 25)', async () => {
+    await mount()
+    expect($('[data-entry="print-labels"] .credit')?.textContent).toContain('Mushaf Database')
+    expect($<HTMLAnchorElement>('[data-entry="print-labels"] a.site')?.href).toBe(
+      'https://github.com/mushafdatabase/MushafDatabase-Ligature-Based-SVG',
+    )
+    await userEvent.click($('[data-entry="print-labels"] .notice-toggle') as HTMLElement)
+    await until(() => $('[data-entry="print-labels"] pre.notice-text') !== null)
+    const text = $('[data-entry="print-labels"] pre.notice-text')?.textContent ?? ''
+    expect(text).toContain('Legal Use and Open Permission (Sadaqa-e-Jaria)')
+    expect(text).toContain('King Fahd Glorious Qur')
   })
 
   it('credits the app’s own licence with its full text, and its name and icon to Quran.com', async () => {

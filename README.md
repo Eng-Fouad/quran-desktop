@@ -41,7 +41,8 @@ port: no code is copied from it.
 - **The printed page, line for line.** Every page has the lines, line breaks and centred lines of the print, the page
   frame, the surah headers in their cartouches, the basmala lines, running heads (surah, juz, quarter) and the page
   number in Eastern Arabic numbers. The margin carries the juz, hizb and quarter markers with their labels (the quarters
-  in words: ربع، نصف، ثلاثة أرباع الحزب), and the sajda marks.
+  in words: ربع، نصف، ثلاثة أرباع الحزب), and the sajda marks. The running heads and the hizb labels are written in the
+  print's own calligraphy, from a font that ships with the app.
 - **A book on a large screen.** Two-page spreads (odd page on the right) or a single page, chosen by the window size;
   fit to the window with zoom on top; a page rail to scrub through the 604 pages; held arrow keys flip through pages at
   the pace of a thumb.
@@ -255,15 +256,16 @@ QA drivers, private preview builds and the common failures. Releases are built b
 The Quran text, layouts, fonts, translations, tafsir and recitations belong to their publishers and are used under
 their own terms. The app credits each of them, with its licence, under **About**.
 
-| Source                                                                             | What the app uses                                                             | How                                                                                                       |
-| ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| [King Fahd Glorious Qur'an Printing Complex](https://qurancomplex.gov.sa) (KFGQPC) | The Madani Mushaf: the KFGQPC Hafs font, the QCF page fonts, the page layouts | The Hafs font ships unmodified under its licence; page fonts download on demand into the user's app data. |
-| [Quranic Universal Library](https://qul.tarteel.ai) (QUL, Tarteel)                 | Layouts, glyph codes, text and metadata for the release `core.db`             | Release builds only, and only once written permission is recorded (below).                                |
-| [Quran Foundation](https://quran.foundation) / [Quran.com](https://quran.com) APIs | Recitation timings, tafsir and word by word; development `core.db` builds     | Fetched per user and refreshed at least every 7 days (QF terms); never redistributed.                     |
-| [Tanzil](https://tanzil.net)                                                       | Quran metadata (juz, hizb, manzil, ruku, sajda) as a cross-check              | CC BY 3.0, with attribution.                                                                              |
-| [QuranEnc](https://quranenc.com)                                                   | Translations and At-Tafsir Al-Muyassar                                        | Installed unmodified with attribution; updates are offered as QuranEnc publishes them.                    |
-| [QuranicAudio](https://quranicaudio.com)                                           | Recitation audio                                                              | Streamed and cached in the user's app data for personal use; never mirrored or exported.                  |
-| Inter, Noto Naskh Arabic, IBM Plex Sans Arabic, Noto Nastaliq Urdu                 | Interface typefaces                                                           | SIL Open Font License 1.1.                                                                                |
+| Source                                                                                            | What the app uses                                                                | How                                                                                                           |
+| ------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| [King Fahd Glorious Qur'an Printing Complex](https://qurancomplex.gov.sa) (KFGQPC)                | The Madani Mushaf: the KFGQPC Hafs font, the QCF page fonts, the page layouts    | The Hafs font ships unmodified under its licence; page fonts download on demand into the user's app data.     |
+| [Mushaf Database](https://github.com/mushafdatabase/MushafDatabase-Ligature-Based-SVG) SVG Mushaf | Running heads and hizb labels of the print (the bundled Quran Print Labels font) | Open permission (Sadaqa-e-Jaria), from the KFGQPC printing-use Mushaf ([how](assets/print-labels/README.md)). |
+| [Quranic Universal Library](https://qul.tarteel.ai) (QUL, Tarteel)                                | Layouts, glyph codes, text and metadata for the release `core.db`                | Release builds only, and only once written permission is recorded (below).                                    |
+| [Quran Foundation](https://quran.foundation) / [Quran.com](https://quran.com) APIs                | Recitation timings, tafsir and word by word; development `core.db` builds        | Fetched per user and refreshed at least every 7 days (QF terms); never redistributed.                         |
+| [Tanzil](https://tanzil.net)                                                                      | Quran metadata (juz, hizb, manzil, ruku, sajda) as a cross-check                 | CC BY 3.0, with attribution.                                                                                  |
+| [QuranEnc](https://quranenc.com)                                                                  | Translations and At-Tafsir Al-Muyassar                                           | Installed unmodified with attribution; updates are offered as QuranEnc publishes them.                        |
+| [QuranicAudio](https://quranicaudio.com)                                                          | Recitation audio                                                                 | Streamed and cached in the user's app data for personal use; never mirrored or exported.                      |
+| Inter, Noto Naskh Arabic, IBM Plex Sans Arabic, Noto Nastaliq Urdu                                | Interface typefaces                                                              | SIL Open Font License 1.1.                                                                                    |
 
 Two rules follow from these terms, and the tooling enforces both:
 
@@ -280,6 +282,7 @@ Two rules follow from these terms, and the tooling enforces both:
 - **Quran.com and the quran_android contributors** for the app's name, identity and icon, and for the reader this app
   takes its inspiration from.
 - **The King Fahd Glorious Qur'an Printing Complex** for the Madani Mushaf and its fonts.
+- **The Mushaf Database** for its vector edition of the print, the source of the running heads and hizb labels.
 - **Tarteel's Quranic Universal Library**, **Tanzil**, **QuranEnc**, **Quran Foundation** and **QuranicAudio** for the
   data and audio, and the reciters and translators whose work they carry.
 - The open-source projects the app is built on, listed with their licence texts in the app under **About ▸ Open-source
@@ -297,5 +300,7 @@ warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Gen
 
 Third-party components keep their own licences: the open-source packages are listed with their licence texts in the
 app (**About ▸ Open-source licences**), the KFGQPC Hafs font ships unmodified under the King Fahd Complex's end-user
-licence (its copy in `xtask/assets/` too: it is not covered by the GPL), and the data and audio sources above are used
+licence (its copy in `xtask/assets/` too: it is not covered by the GPL), the Quran Print Labels font
+(`public/fonts/QuranPrintLabels.otf`) is a separate work under the Mushaf Database's open permission and the King Fahd
+Complex's terms (its licence beside it; not covered by the GPL either), and the data and audio sources above are used
 under their own terms.

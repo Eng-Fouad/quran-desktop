@@ -11,7 +11,9 @@
    * Furniture text (heads, page numbers, margin labels) is set in the bundled KFGQPC Hafs face, a Naskh that main.ts
    * loads before the first paint, so it never reflows when a web font arrives (CLS 0, §8.1). Every furniture string
    * (Arabic words, Eastern Arabic numbers; the quarters are words, not ¼ ½ ¾, which it lacks) is in it: the system
-   * font only backs up a glyph it might lack, never a web font's lazily loaded subset.
+   * font only backs up a glyph it might lack, never a web font's lazily loaded subset. The running heads and the rub
+   * labels are the print's own calligraphy instead (`qd-print-labels`, LEAD 25), a face main.ts also loads before the
+   * first paint; the Hafs text stays their fallback.
    */
   .mp {
     --mp-furniture-font: 'qd-hafs', system-ui, sans-serif;
@@ -117,7 +119,7 @@
   /* ── Running heads (§8.9): the HEAD band above the frame ───────────────────────────────────────────────────────── */
 
   .mp-head {
-    /* The heads' Naskh size (the juz calligraphy aligns its ink to text of this size, below). */
+    /* The heads' Naskh size (the text fallback; the khatam is sized from it). */
     --mp-head-fs: max(calc(var(--qfs) * 0.5), 12px);
 
     position: absolute;
@@ -155,8 +157,7 @@
 
   /*
    * The juz group sits at the frame's left edge. Laid out left-to-right in reverse (the juz first, on the right), it
-   * keeps its left edge and its height whatever it holds, so the decor calligraphy arriving after the first paint
-   * replaces the "الجزء ١٤" text without moving anything else (CLS 0). The spans keep their RTL text direction.
+   * keeps its left edge whatever it holds. The spans keep their RTL text direction.
    */
   .mp-head-juz {
     display: flex;
@@ -183,28 +184,37 @@
   }
 
   /*
-   * quran-common's "الجزء الرابع عشر" calligraphy (U+E001 + juz − 1), at 0.68·qfs in a 1.17 em line box, bottom-aligned
-   * with the head's Naskh text like the quarter label beside it. Its ink is moved (translate: no layout, CLS 0) so its
-   * centre sits on the text's ink centre, and the three items of a head read as one line:
-   * - calligraphy: ascent 0.80 / descent 0.20 em, so its baseline is 0.285 em above the box bottom; the 30 juz inks are
-   *   centred 0.125–0.265 em above the baseline, median 0.185 → centre 0.47 em above the box bottom;
-   * - head text (qd-hafs, line-height 1: ascent 1.17 / descent 0.59 em): baseline 0.207 em above its box bottom; the
-   *   114 "سورة …" heads are centred 0.20 em above the baseline (median) and the quarter labels 0.23 → ≈ 0.41 em.
-   * Both boxes end at the head's bottom, so the shift is 0.47·fs − 0.41·(head size), 0.17 em down. Measured with the
-   * canvas ink boxes of both faces in Edge over the 602 heads (pages 3–604): the calligraphy's ink centre lies within
-   * 0.03 em of the label's (median) and 0.04 em of the surah name's, whose own centre moves ±0.15 em with its
-   * descenders (ابراهيم, page 256: 0.5 px from the label, 1.0 px from the middle of the two texts at qfs 26.25).
-   * furniture.browser.test.ts checks page 262.
+   * The print's calligraphy (LEAD 25; RunningHead `data-print`): «سُورَةُ name», «الجُزۡءُ …» and the quarter's words and
+   * digits in `qd-print-labels` at PRINT_EM·qfs (`--mp-print-fs`). Every glyph of the face sits on one baseline, which
+   * a `line-height: normal` box puts the face's descent (0.384 em) above its bottom; the boxes stand on the band's
+   * bottom (no padding here), and `--mp-print-drop` (printHeadDrop) moves that baseline to PRINT_HEAD_BASELINE·qfs above
+   * the frame with a translate (no layout, CLS 0). The box overhangs the band; the ink stays inside it.
    */
-  .mp-head-juz-glyph {
-    --fs: max(calc(var(--qfs) * 0.68), 16px);
+  .mp-head[data-print] {
+    padding-block-end: 0;
+  }
 
+  .mp-head-print {
     display: block;
-    height: calc(var(--fs) * 1.17);
-    font-family: 'qd-quran-common';
-    font-size: var(--fs);
-    line-height: calc(var(--fs) * 1.17);
-    translate: 0 calc(var(--fs) * 0.47 - var(--mp-head-fs) * 0.41);
+    font-family: 'qd-print-labels', var(--mp-furniture-font);
+    font-size: var(--mp-print-fs);
+    line-height: normal;
+    translate: 0 var(--mp-print-drop);
+  }
+
+  /*
+   * The quarter on one line: the face's words and digits as flex items, right to left (`direction: rtl` from
+   * `.mp-head-juz > span`; the face's private-use code points are bidi class L, so bidi must not order them), a space
+   * apart (the face's space, the print's gap before a number).
+   */
+  .mp-head-quarter.mp-head-print {
+    display: flex;
+    gap: var(--mp-print-gap);
+  }
+
+  /* The khatam centred on the quarter's ink: «الحِزۡبُ» is centred 0.08 em above the print baseline. */
+  .mp-head[data-print] .mp-head-sep {
+    margin-block-end: calc(var(--qfs) * 0.5 + var(--mp-print-fs) * 0.08 - 0.31em);
   }
 
   /* ── Footer (§8.9): the page number in a medallion, centred under the text block ──────────────────────────────── */
@@ -538,7 +548,7 @@
 
   /*
    * One line, or a quarter's two (its words over «الحزب ٢٧», joined by a newline: `rubLabelLines`), each centred and
-   * never wrapped; the marker's height counts the lines (`markerHeight`).
+   * never wrapped; the marker's height counts the lines (`markerBoxHeight`).
    */
   .mk-label {
     position: relative;
@@ -547,6 +557,19 @@
     line-height: 1.3;
     text-align: center;
     white-space: pre;
+  }
+
+  /*
+   * A rub start's label in the print's own calligraphy (LEAD 25): one stacked glyph of `qd-print-labels` (U+F800 +
+   * rub). Its size and height come from the ink of its kind of label (`markerPrintLabel`, `markerGlyphBox`); its line,
+   * the face's own height, starts at the box's top, and the shift (`printLabelShift`) moves the ink onto the box. Not
+   * Quran text.
+   */
+  .mk-label[data-print] {
+    font-family: 'qd-print-labels', var(--mp-furniture-font);
+    line-height: normal;
+    white-space: nowrap;
+    translate: 0 var(--shift, 0);
   }
 
   .mm {

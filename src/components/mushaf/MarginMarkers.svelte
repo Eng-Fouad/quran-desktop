@@ -11,10 +11,15 @@
     the line, never a second ۞ beside the inline one; not drawn while labels are hidden (the running head names the
     quarter then);
   - a sajda: ۩ beside the line where its ayah ends;
-  - under each glyph its Arabic label (الجزء ١٤ · الحزب ٢٧ · سجدة · سجدة واجبة) at max(0.36·qfs, 11px), only while
-    0.36·qfs ≥ 10 (qfs ≥ 28); smaller pages draw the glyph alone and the running head carries the quarter. A quarter
-    is written in words on two lines, ربع / نصف / ثلاثة أرباع over الحزب ٢٧ (`rubLabelLines`): on one line it is wider
-    than the margin.
+  - under each glyph its label, only while 0.36·qfs ≥ 10 (qfs ≥ 28); smaller pages draw the glyph alone and the
+    running head carries the quarter. A rub start's label is the 1441H print's own (LEAD 25): its stacked calligraphy
+    in the bundled `qd-print-labels` face (U+F800 + rub: «رُبُع» / «الحِزۡبُ» / «٢٧», or «الجُزۡءُ ١٤» / «الحِزۡبُ ٢٧» at a
+    juz start), at the print's proportion (`PRINT_EM`·qfs) in a box as tall as the ink of its kind of label
+    (`markerPrintLabel`), drawn whatever `ornateHeaders` says (bundled print furniture, not decor). A sajda's label,
+    and every label when that face did not load, is Hafs text at max(0.36·qfs, 11px) (الجزء ١٤ · الحزب ٢٧ · سجدة ·
+    سجدة واجبة), a quarter in words on two lines, ربع / نصف / ثلاثة أرباع over الحزب ٢٧ (`rubLabelLines`): on one
+    line it is wider than the margin. The tooltip always has the Hafs words, and a print label carries them in
+    `data-text`.
 
   The furniture is Arabic in every UI language, so the column carries `dir="rtl" lang="ar"` itself, as the running
   head does: inside a settings or onboarding preview no `.spread` gives it a direction.
@@ -37,11 +42,13 @@
     markerGlyphBox,
     markerInk,
     markerInset,
+    markerPrintLabel,
     pageMarkers,
     placeMarkers,
     round2,
     type MarginMarker,
   } from '$lib/mushaf/ornaments'
+  import { printLabelShift } from '$lib/mushaf/printLabels'
   import { fonts, i18n, reader, settings } from '$lib/stores'
 
   let { data, qfs, side }: PageFurnitureProps = $props()
@@ -54,8 +61,12 @@
     (page?.ornaments ?? settings.value.ornateHeaders) && fonts.status.get('qd-quran-common') === 'ready',
   )
   const ornaments = $derived(decor && labels)
+  /** The print's own rub labels (the bundled face is loaded); else the Hafs words. */
+  const print = $derived(fonts.printLabelsReady)
   const placed = $derived(
-    settings.value.showMarginMarkers ? placeMarkers(pageMarkers(data), qfs, labels, decor).placed : [],
+    settings.value.showMarginMarkers
+      ? placeMarkers(pageMarkers(data), qfs, labels, decor, false, print).placed
+      : [],
   )
   /** Tooltips open away from the text block, into the canvas beside the page. */
   const tooltipSide = $derived(side === 'right' ? 'right' : 'left')
@@ -74,6 +85,14 @@
       stroke: decorGlyph ? decorStroke(box.fontSize) : 0,
       inset: text !== null && place !== null ? { text, ...place } : null,
     }
+  }
+
+  /** A rub start's print label: the glyph, its font size, its box (the ink of its kind) and the shift onto it. */
+  function printLabel(m: MarginMarker) {
+    const ink = markerPrintLabel(m, print)
+    if (!ink) return null
+    const { fontSize, height } = markerGlyphBox(qfs, ink)
+    return { char: ink.char, fontSize, height, shift: printLabelShift(ink) }
   }
 
   function description(m: MarginMarker): string {
@@ -112,7 +131,7 @@
     style:--mk-label="{round2(labelSize(qfs))}px"
   >
     <!-- Keyed by the face too: decor arriving late re-creates the markers rather than moving them (CLS 0). -->
-    {#each placed as { item, top, height } (`${item.key}|${ornaments}|${labels}`)}
+    {#each placed as { item, top, height } (`${item.key}|${ornaments}|${labels}|${print}`)}
       {#snippet marker(props: Record<string, unknown>)}
         <button
           {...props}
@@ -147,7 +166,19 @@
             {/if}
           {/if}
           {#if labels}
-            <span class="mk-label">{item.lines.join('\n')}</span>
+            {@const p = printLabel(item)}
+            {#if p}
+              <span
+                class="mk-label"
+                data-print=""
+                data-text={item.lines.join('\n')}
+                style:font-size="{round2(p.fontSize)}px"
+                style:height="{round2(p.height)}px"
+                style:--shift="{Math.round(p.shift * 1000) / 1000}em">{p.char}</span
+              >
+            {:else}
+              <span class="mk-label">{item.lines.join('\n')}</span>
+            {/if}
           {/if}
         </button>
       {/snippet}

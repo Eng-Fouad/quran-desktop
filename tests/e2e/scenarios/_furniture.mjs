@@ -34,7 +34,7 @@ export function inspectFurniture(pageNo) {
         /** @type {{ line: number, surah: number, decor: boolean, name: string, width: number }[]} */ ([]),
       basmalas: /** @type {{ line: number, decor: boolean, text: string }[]} */ ([]),
       markers:
-        /** @type {{ kind: string, line: number, glyph: string, label: string, top: number, height: number }[]} */ ([]),
+        /** @type {{ kind: string, line: number, glyph: string, label: string, print: boolean, top: number, height: number }[]} */ ([]),
       marks: /** @type {{ kind: string, ayah: number, top: number }[]} */ ([]),
       ribbon: /** @type {{ ayah: number, height: number, x: number, width: number } | null} */ (null),
       dogEar: false,
@@ -85,9 +85,20 @@ export function inspectFurniture(pageNo) {
     count: edgeBox?.children.length ?? 0,
   }
 
-  // Running heads (§8.9): in the HEAD band above the frame.
+  /**
+   * An item's words: the text, or for a glyph of the print's calligraphy (`qd-print-labels`, LEAD 25) the words it
+   * stands for, which its `data-text` carries.
+   * @param {Element | null | undefined} el
+   */
+  const words = (el) => {
+    const tagged =
+      el instanceof HTMLElement && el.dataset.text !== undefined ? el : el?.querySelector('[data-text]')
+    return ((tagged instanceof HTMLElement ? tagged.dataset.text : el?.textContent) ?? '').trim()
+  }
+
+  // Running heads (§8.9): in the HEAD band above the frame; the print's calligraphy when its face is loaded.
   const headEl = /** @type {HTMLElement | null} */ (section.querySelector(':scope > .mp-head'))
-  /** @type {{ surah: string, juz: string, size: number } | null} */
+  /** @type {{ surah: string, juz: string, size: number, print: boolean } | null} */
   let head = null
   if (headEl) {
     const box = headEl.getBoundingClientRect()
@@ -97,12 +108,12 @@ export function inspectFurniture(pageNo) {
       )
     const size = Number.parseFloat(getComputedStyle(headEl).fontSize)
     if (!near(size, Math.max(0.5 * qfs, 12), 0.1)) problems.push(`running head size ${size}`)
-    const surahText = headEl.querySelector('.mp-head-surah')?.textContent?.trim() ?? ''
+    const surahText = words(headEl.querySelector('.mp-head-surah'))
     const juzText = [...(headEl.querySelector('.mp-head-juz')?.children ?? [])]
-      .map((c) => c.textContent?.trim() ?? '')
+      .map(words)
       .filter(Boolean)
       .join(' ')
-    head = { surah: surahText, juz: juzText, size }
+    head = { surah: surahText, juz: juzText, size, print: headEl.hasAttribute('data-print') }
   }
 
   // Footer (§8.9): the page number in Eastern Arabic numbers, centred under the block in a rosette tinted by its own
@@ -167,7 +178,8 @@ export function inspectFurniture(pageNo) {
       kind: /** @type {HTMLElement} */ (el).dataset.kind ?? '',
       line,
       glyph: el.querySelector('.mk-glyph')?.textContent ?? '',
-      label: el.querySelector('.mk-label')?.textContent?.trim() ?? '',
+      label: words(el.querySelector('.mk-label')),
+      print: el.querySelector('.mk-label')?.hasAttribute('data-print') ?? false,
       top: Math.round(((box.top - page.top) / qfs) * 100) / 100,
       height: Math.round((box.height / qfs) * 100) / 100,
     }

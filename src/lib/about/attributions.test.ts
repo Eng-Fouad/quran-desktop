@@ -63,6 +63,7 @@ describe('static sources', () => {
       'kfgqpc',
       'tanzil',
       'kfgqpc-hafs',
+      'print-labels',
       'qcf',
       'decor',
       'ui-fonts',
@@ -88,6 +89,19 @@ describe('static sources', () => {
     expect(byId.get('quranicaudio')?.licence.en).toMatch(/personal, non-commercial/)
     expect(byId.get('kfgqpc-hafs')?.notice).toBe('kfgqpc-hafs')
     expect(NOTICE_PATHS['kfgqpc-hafs']).toBe('fonts/KFGQPC-Hafs-V30.LICENSE.txt')
+    // The print's furniture font (LEAD 25): its source, its licence in full, and the KFGQPC permission it rests on.
+    const print = byId.get('print-labels')
+    expect(print?.notice).toBe('print-labels')
+    expect(NOTICE_PATHS['print-labels']).toBe('fonts/QuranPrintLabels.LICENSE.txt')
+    expect(print?.url).toBe('https://github.com/mushafdatabase/MushafDatabase-Ligature-Based-SVG')
+    expect(print?.credit.en).toContain('Mushaf Database')
+    expect(print?.credit.en).toContain('King Fahd Complex')
+    expect(print?.credit.ar).toContain('مجمع الملك فهد')
+    expect(print?.licence.en).toContain('Sadaqa-e-Jaria')
+    const notice = readFileSync(resolve(process.cwd(), 'public', NOTICE_PATHS['print-labels']), 'utf8')
+    expect(notice).toContain('Legal Use and Open Permission (Sadaqa-e-Jaria)')
+    expect(notice).toContain('https://dm.qurancomplex.gov.sa/rights/')
+    expect(notice).toContain('not covered by the GNU General Public License')
   })
 })
 
@@ -238,7 +252,14 @@ describe('attributionGroups', () => {
     ])
     expect(ids(groups, 'wbw')).toEqual(['wbw.en'])
     // The ornaments are always credited as a source; the optional Nastaliq font only once installed.
-    expect(ids(groups, 'fonts')).toEqual(['kfgqpc-hafs', 'qcf', 'decor', 'ui-fonts', 'decor.nastaliq'])
+    expect(ids(groups, 'fonts')).toEqual([
+      'kfgqpc-hafs',
+      'print-labels',
+      'qcf',
+      'decor',
+      'ui-fonts',
+      'decor.nastaliq',
+    ])
     const nastaliq = groups.find((g) => g.id === 'fonts')?.entries.at(-1)
     expect(nastaliq?.licence).toEqual({ en: 'SIL Open Font License 1.1', ar: 'رخصة SIL للخطوط المفتوحة 1.1' })
   })

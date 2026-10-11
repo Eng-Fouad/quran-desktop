@@ -13,7 +13,8 @@
   `interactive={false}` (onboarding thumbnails, the Settings preview) renders an inert, decorative page: no pointer
   interactions, no highlight layer and no roving a11y items. `furniture={false}` leaves out the frame, heads, margins
   and footer. `ornaments` overrides the `ornateHeaders` setting for this page (the onboarding's Mushaf preview shows
-  the choice before it is saved): the header, basmala, running head and margin layers read it from the page context.
+  the choice before it is saved): the header, basmala and margin layers read it from the page context (the running
+  heads are print furniture, drawn either way, LEAD 25).
 -->
 <script lang="ts">
   import type { MushafPageProps, WordBox } from '$lib/contracts/components'

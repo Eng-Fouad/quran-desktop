@@ -194,7 +194,13 @@ describe('margin markers in --marker-ink (§8.9, §9.2)', () => {
     )
     expect(ornament).toMatch(/paint-order: stroke fill/)
     // Nothing inside a marker sets another colour.
-    for (const part of ['.mk-glyph', '.mk-glyph[data-ornament]', '.mk-inset', '.mk-label'])
+    for (const part of [
+      '.mk-glyph',
+      '.mk-glyph[data-ornament]',
+      '.mk-inset',
+      '.mk-label',
+      '.mk-label[data-print]',
+    ])
       expect(rule(part)).not.toMatch(/(^|[^-])color:/)
   })
 

@@ -28,6 +28,7 @@ import {
   TB_W,
   isOpeningPage,
 } from './geometry'
+import { printLabelInk } from './printLabels'
 
 /** An SVG path `d` attribute. */
 export type PathData = string
@@ -605,7 +606,8 @@ export function rubKind(a: Pick<PageAyah, 'flags' | 'rub'>): RubKind {
 }
 
 /**
- * The Arabic margin label of a rub start as the margin sets it (§3.1.2, §8.9): one line, `الجزء ١٤` or `الحزب ٢٧`, or
+ * The Arabic margin label of a rub start as the margin sets it in Hafs (§3.1.2, §8.9; with the print-labels face the
+ * margin draws the print's own label instead, `markerPrintLabel`, LEAD 25): one line, `الجزء ١٤` or `الحزب ٢٧`, or
  * for a quarter its words over its hizb, `ثلاثة أرباع` / `الحزب ٢٧`. On one line a quarter is wider than the margin
  * (`ثلاثة أرباع الحزب ٢٧` is 6.6 em of qd-hafs, the margin 1.9·qfs holds 4.8 em of the 11 px label at qfs 28 and
  * 5.3 em from qfs 30.6); each line is at most 3.5 em, narrower than `سجدة واجبة` (3.9 em).
@@ -622,7 +624,10 @@ export function rubLabel(a: Pick<PageAyah, 'flags' | 'rub' | 'juz' | 'hizb'>): s
   return rubLabelLines(a).join(' ')
 }
 
-/** The short hizb label of a rub start for the running head (§8.9), one line: `الحزب ٢٧` or `ربع الحزب ٢٧`. */
+/**
+ * The short hizb label of a rub start for the running head (§8.9), one line: `الحزب ٢٧` or `ربع الحزب ٢٧`; the head
+ * composes the same line in the print-labels face when it is loaded (`printQuarterLine`, LEAD 25).
+ */
 export function rubShortLabel(a: Pick<PageAyah, 'rub' | 'hizb'>): string {
   const quarter = rubQuarter(a.rub)
   const hizb = `الحزب ${arabicNum(a.hizb)}`
@@ -643,15 +648,6 @@ export const DECOR_HIZB = String.fromCodePoint(0xfc23)
 export const DECOR_QUARTER = String.fromCodePoint(0xfc22)
 /** quran-common basmala calligraphy (§8.8). */
 export const DECOR_BASMALA = String.fromCodePoint(0xfdfd)
-/**
- * quran-common's juz calligraphy for the running head: `juz001`…`juz030` = U+E001 + (juz − 1), which reads
- * "الجزء الأول" … "الجزء الثلاثون" (the word form of the fallback "الجزء ١٤", as the printed head reads). The other
- * series, `j001`…`j030` = U+E900…, names each juz by its opening words ("رُبَمَا"), which the Madani print does not use.
- */
-export function decorJuzGlyph(juz: number): string {
-  const n = Math.min(30, Math.max(1, Math.round(juz)))
-  return String.fromCodePoint(0xe001 + n - 1)
-}
 /** The Unicode basmala of the fallback line (§8.8). */
 export const BASMALA_TEXT = 'بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ'
 
@@ -737,8 +733,8 @@ export interface MarginMarker {
   label: string
   /** The label as the margin sets it: one line, or a quarter's words over its hizb (`rubLabelLines`). */
   lines: readonly string[]
-  /** Rub starts: what it opens and its numbers. */
-  rub: { kind: RubKind; quarter: 0 | 1 | 2 | 3; hizb: number; juz: number } | null
+  /** Rub starts: what it opens and its numbers (`number`: the rub, 1–240, whose print label the margin draws). */
+  rub: { kind: RubKind; quarter: 0 | 1 | 2 | 3; hizb: number; juz: number; number: number } | null
   /** Sajdas: recommended or obligatory. */
   sajda: SajdaKind | null
   /**
@@ -769,7 +765,7 @@ export function pageMarkers(data: Pick<PageData, 'page' | 'ayahs' | 'lines'>): M
         line: a.line,
         label: rubLabel(a),
         lines: rubLabelLines(a),
-        rub: { kind: rubKind(a), quarter: rubQuarter(a.rub), hizb: a.hizb, juz: a.juz },
+        rub: { kind: rubKind(a), quarter: rubQuarter(a.rub), hizb: a.hizb, juz: a.juz, number: a.rub },
         sajda: null,
         inline: startsWithRubSign(data.lines, a),
       })
@@ -882,10 +878,33 @@ export function markerGlyphBox(
   return { height, fontSize: height / inkHeight(ink), shift: inkShift(ink) }
 }
 
-/** The height in px of one marker: its glyph box, plus its label (`lines` lines) when labels are visible. */
+/** The height in px of one marker: its glyph box, plus its label (`lines` lines of Hafs) when labels are visible. */
 export function markerHeight(qfs: number, ink: GlyphInk, labels: boolean, lines = 1): number {
   const glyph = markerGlyphBox(qfs, ink).height
   return glyph + (labels ? LABEL_GAP * qfs + labelSize(qfs) * LABEL_LEADING * lines : 0)
+}
+
+/**
+ * The print's own label of a marker (LEAD 25): a rub start's stacked label in the bundled `qd-print-labels` face
+ * (U+F800 + rub, `printLabelInk`), while that face is loaded (`print`); null for a sajda (the print has no such label
+ * in the face) or without the face, which keep the Hafs words (`lines`).
+ */
+export function markerPrintLabel(m: Pick<MarginMarker, 'kind' | 'rub'>, print: boolean): GlyphInk | null {
+  if (!print || m.kind !== 'rub' || !m.rub) return null
+  return printLabelInk(m.rub.number)
+}
+
+/**
+ * The height in px of a marker's label: the print label's box (the ink extent of its kind of label at `PRINT_EM`·qfs,
+ * `markerGlyphBox`), else its Hafs lines.
+ */
+export function labelBoxHeight(
+  m: Pick<MarginMarker, 'kind' | 'rub' | 'lines'>,
+  qfs: number,
+  print = false,
+): number {
+  const ink = markerPrintLabel(m, print)
+  return ink ? markerGlyphBox(qfs, ink).height : labelSize(qfs) * LABEL_LEADING * m.lines.length
 }
 
 /**
@@ -896,15 +915,20 @@ export function markerDrawn(m: Pick<MarginMarker, 'inline'>, labels: boolean): b
   return !m.inline || labels
 }
 
-/** The height in px of a drawn marker: the label lines of an `inline` rub start, else glyph plus label. */
+/**
+ * The height in px of a drawn marker: the label of an `inline` rub start, else glyph plus label; the label is the
+ * print's (`print`, `labelBoxHeight`) or the Hafs lines.
+ */
 export function markerBoxHeight(
   m: Pick<MarginMarker, 'kind' | 'rub' | 'inline' | 'lines'>,
   qfs: number,
   labels: boolean,
   decor = false,
+  print = false,
 ): number {
-  if (m.inline) return labelSize(qfs) * LABEL_LEADING * m.lines.length
-  return markerHeight(qfs, markerInk(m, decor, labels), labels, m.lines.length)
+  if (m.inline) return labelBoxHeight(m, qfs, print)
+  const glyph = markerGlyphBox(qfs, markerInk(m, decor, labels)).height
+  return glyph + (labels ? LABEL_GAP * qfs + labelBoxHeight(m, qfs, print) : 0)
 }
 
 /**
@@ -1004,7 +1028,8 @@ export interface Placed<T> {
 /**
  * Places the markers of a page (§8.9): those on the same line stack with 0.2·qfs between them, the stack centred on
  * the line. Returns the placed markers and, per line, the bottom edge of its stack (where the marks continue). An
- * `inline` rub start is a label line, and is left out while labels are hidden (`markerDrawn`).
+ * `inline` rub start is a label line, and is left out while labels are hidden (`markerDrawn`). `print`: the rub labels
+ * are the print's (`qd-print-labels` loaded), sized by their own ink.
  */
 export function placeMarkers(
   markers: readonly MarginMarker[],
@@ -1012,11 +1037,12 @@ export function placeMarkers(
   labels: boolean,
   decor = false,
   opening = false,
+  print = false,
 ): { placed: Placed<MarginMarker>[]; bottoms: Map<number, number> } {
   const placed: Placed<MarginMarker>[] = []
   const bottoms = new Map<number, number>()
   for (const [line, items] of groupByLine(markers.filter((m) => markerDrawn(m, labels)))) {
-    const heights = items.map((m) => markerBoxHeight(m, qfs, labels, decor))
+    const heights = items.map((m) => markerBoxHeight(m, qfs, labels, decor, print))
     const tops = stackCentered(lineCenterY(qfs, line, opening), heights, STACK_GAP * qfs)
     items.forEach((item, i) => placed.push({ item, top: tops[i] ?? 0, height: heights[i] ?? 0 }))
     const last = tops.length - 1
@@ -1042,7 +1068,8 @@ export function markHeight(kind: MarginMark['kind'], qfs: number): number {
 
 /**
  * Places the marks (§8.9): stacked after the markers on the ayah's first line with a 0.2·qfs gap, or, on a line with
- * no marker, as a stack centred on the line.
+ * no marker, as a stack centred on the line, pushed down to 0.2·qfs below the line above's markers when that stack
+ * reaches into it (a juz start's ornament over the print's two-line label is about 3·qfs tall).
  */
 export function placeMarks(
   marks: readonly MarginMark[],
@@ -1055,10 +1082,14 @@ export function placeMarks(
   for (const [line, items] of groupByLine(marks)) {
     const heights = items.map((m) => markHeight(m.kind, qfs))
     const after = markerBottoms.get(line)
-    const tops =
-      after === undefined
-        ? stackCentered(lineCenterY(qfs, line, opening), heights, gap)
-        : stackFrom(after + gap, heights, gap)
+    let tops: number[]
+    if (after === undefined) {
+      tops = stackCentered(lineCenterY(qfs, line, opening), heights, gap)
+      const above = markerBottoms.get(line - 1)
+      if (above !== undefined && (tops[0] ?? 0) < above + gap) tops = stackFrom(above + gap, heights, gap)
+    } else {
+      tops = stackFrom(after + gap, heights, gap)
+    }
     items.forEach((item, i) => placed.push({ item, top: tops[i] ?? 0, height: heights[i] ?? 0 }))
   }
   return placed

@@ -7,6 +7,9 @@
  *   now), `failed` (download, integrity or decode failure; `retry` asks again) or `unavailable` (offline or network not
  *   allowed, and not on disk). A family missing from the map was never asked for (or was evicted). Style `hafs` is
  *   always ready: the bundled `qd-hafs` face is loaded before the app mounts (§8.5).
+ * - `printLabelsReady`: the bundled print-labels face (`qd-print-labels`, the 1441H print's running heads and margin
+ *   labels, LEAD 25) is loaded. `main.ts` loads it before the app mounts, and `init` reads the outcome from
+ *   `document.fonts`, so it never changes after the first paint (CLS 0); false, the furniture keeps its Hafs text.
  * - `ensure(style, pages, priority)` resolves once every page is final. Requests are batched (≤ 12 pages, the command's
  *   limit) and deduplicated per family; an interactive request overtakes a prefetch already in flight. `Ready` pages
  *   are loaded into `document.fonts` (`fontRegistry`), prefetched ones too (a local file load is cheap, §8.5).
@@ -58,6 +61,7 @@ import {
   touchFace,
 } from '$lib/mushaf/fontRegistry'
 import { PAGE_COUNT } from '$lib/mushaf/geometry'
+import { PRINT_LABELS_FAMILY } from '$lib/mushaf/printLabels'
 import {
   inkFilterValues,
   paletteCss,
@@ -112,6 +116,22 @@ const NO_DECOR: DecorStatus = {
 
 const isPage = (p: number) => Number.isInteger(p) && p >= 1 && p <= PAGE_COUNT
 
+/**
+ * Whether the bundled `qd-print-labels` face (`src/styles/fonts.css`) is loaded in this document: `main.ts` awaited it
+ * before the app mounted. A face that failed (a missing file) stays out, and the furniture keeps its Hafs text.
+ */
+export function printLabelsLoaded(): boolean {
+  if (typeof document === 'undefined' || !('fonts' in document)) return false
+  try {
+    for (const face of document.fonts)
+      if (face.family.replace(/^["']|["']$/g, '') === PRINT_LABELS_FAMILY && face.status === 'loaded')
+        return true
+  } catch {
+    // A FontFaceSet that cannot be iterated (a test double): no face to find.
+  }
+  return false
+}
+
 /** The CSS family of a page in a style: `qcf-v2-p262` (`qcf-v1-…`, `qcf-v4-…`), or `qd-hafs` for hafs. */
 export function pageFamily(style: MushafStyle, page: number): string {
   return style === 'hafs' ? HAFS_FAMILY : `qcf-${style.slice(4)}-p${page}`
@@ -154,7 +174,9 @@ class FontsStore implements Store {
   readonly v4Families = new SvelteSet<string>()
 
   readonly transport = $derived(app.info.fontTransport)
-  /** All three decor faces are loaded (WP8c draws the QCF header, basmala and juz calligraphy with them). */
+  /** The bundled print-labels face is loaded (`printLabelsLoaded`): the furniture draws the print's calligraphy. */
+  printLabelsReady = $state(false)
+  /** All three decor faces are loaded (WP8c draws the QCF header and basmala with them). */
   readonly decorReady = $derived(DECOR_FACES.every(({ family }) => this.status.get(family) === 'ready'))
 
   /** Bumped (once per task) whenever a face joins `document.fonts`, finishes loading there, or leaves it. */
@@ -190,6 +212,7 @@ class FontsStore implements Store {
     this.dispose()
     this.#ornateSeen = null
     this.decor = b.decor
+    this.printLabelsReady = printLabelsLoaded()
     this.v4Supported = readCachedSupport(b.app.webviewVersion)
     this.#online = b.online && b.settings.networkAllowed
     this.#watchContrast()

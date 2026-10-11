@@ -36,19 +36,14 @@ export default async function s06(ctx) {
   check(!p261.medallion && !p262.medallion, 'no opening medallion on ordinary pages')
   check(p261.edges.shown && p262.edges.shown, 'page-stack hairlines in a spread')
 
-  // Running heads: surah on the right, juz on the left; the hizb that starts on 262 follows the juz.
+  // Running heads: surah on the right, juz on the left; the hizb that starts on 262 follows the juz. In the print's
+  // calligraphy once its bundled face is loaded (LEAD 25), whatever the decor; the words are the glyphs' `data-text`.
   // Names as core.db spells them (`name_ar`; the qdc source writes ابراهيم without hamza).
   check(/^سورة [إا]براهيم$/.test(p261.head?.surah ?? ''), `page 261: the surah head (${p261.head?.surah})`)
   equal(p262.head?.surah, 'سورة الحجر', 'page 262: the surah head')
-  if (!decor) {
-    equal(p261.head?.juz, `الجزء ${arabic(13)}`, 'page 261: the juz head')
-    equal(p262.head?.juz, `الجزء ${arabic(14)} الحزب ${arabic(27)}`, 'page 262: juz head with the hizb')
-  } else {
-    check(
-      p262.head?.juz.endsWith(`الحزب ${arabic(27)}`),
-      `page 262: the hizb follows the juz (${p262.head?.juz})`,
-    )
-  }
+  equal(p261.head?.juz, `الجزء ${arabic(13)}`, 'page 261: the juz head')
+  equal(p262.head?.juz, `الجزء ${arabic(14)} الحزب ${arabic(27)}`, 'page 262: juz head with the hizb')
+  check(p262.head?.print === true, 'page 262: the heads in the print calligraphy')
 
   // The surah header and basmala of Al-Hijr on lines 1–2.
   equal(

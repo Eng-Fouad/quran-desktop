@@ -3711,7 +3711,10 @@ the measurement date are recorded in `metrics.ts`. Target: ≥ 99 % of lines fit
 ### 8.5 Fonts: registry, transport, swap, LRU, prefetch (WP8b)
 - **Bundled:** `@font-face { font-family: "qd-hafs"; src: url("/fonts/KFGQPC-Hafs-V30.ttf") format("truetype"); font-display: block; }`.
   `main.ts` awaits `document.fonts.load('32px "qd-hafs"', 'بسم')` before mounting, and the window is shown only after first paint
-  (`windowReady`). The user never sees a system-font flash.
+  (`windowReady`). The user never sees a system-font flash. **(v1.2, LEAD 25)** A second bundled face,
+  `@font-face { font-family: "qd-print-labels"; src: url("/fonts/QuranPrintLabels.otf") format("opentype"); font-display: block; }`
+  (the 1441H print's running heads and margin labels, §8.9), is awaited the same way, in parallel; `fonts.printLabelsReady`
+  records whether it loaded.
 - **Page fonts:** family `qcf-{v1|v2|v4}-p{N}`. By transport (D30, `AppInfo.fontTransport`):
   - `url`: `new FontFace(family, \`url("${status.url}") format("woff2")\`, { display: 'block' })`;
   - `bytes`: `new FontFace(family, await fontBytes(status.rel), { display: 'block' })` (raw IPC, no CORS, §5.16);
@@ -3813,7 +3816,8 @@ export function wordPill(box: WordBox, qfs: number, lh: number): Rect;
 ### 8.8 Surah header and basmala lines (WP8c)
 - **`surah_name` line.**
   - Decor installed, `ornateHeaders` on (**v1.2**: the setting, or the page's `ornaments` prop, gates every decor
-    ornament on the page: header, basmala, juz calligraphy, margin ornaments) and `header_cp` present:
+    ornament on the page: header, basmala, margin ornaments; the print's running heads and rub labels, LEAD 25, are
+    not decor) and `header_cp` present:
     `<span class="sh" style="font-family:qd-surah-header">` with
     `String.fromCodePoint(header_cp)`. Font size `calc(var(--qfs) * var(--sh-scale))` (tunable, start at 1.55), colour
     `--surah-header-ink`, centred.
@@ -3847,9 +3851,14 @@ export function wordPill(box: WordBox, qfs: number, lh: number): Rect;
   the pages on that side: right = `page / 604`, left = `(604 − page) / 604`.
 - **Running head** (`HEAD` band, `--font-naskh`, `--text-muted`), font-size `max(0.5·qfs, 12px)`:
   - right: `سورة {name_ar of info.headSurah}`
-  - left: juz. With decor: `qd-quran-common` U+E900 + (juz − 1) (juz-name calligraphy). Without: `الجزء {mushafNum(juz)}`.
+  - left: juz: `الجزء {mushafNum(juz)}`. (v1.2: no decor glyph here any more; see below.)
   - At `qfs < 20` the heads drop the `سورة` / `الجزء` prefixes. When margin labels are glyph-only (below), the quarter of a
     rub starting on the page is appended on the same line (e.g. `الجزء ١٤ · ثلاثة أرباع الحزب ٢٧`, v1.2).
+  - **(v1.2, LEAD 25)** From `qfs` 20, with the bundled `qd-print-labels` face loaded, both heads are the print's own
+    calligraphy at the print's proportion (1.7·qfs, baseline 0.5·qfs above the frame): U+F600 + `headSurah`
+    («سُورَةُ name») and U+F700 + juz («الجُزۡءُ …», the ordinal in words); the quarter is the face's fraction word,
+    «الحِزۡبُ» and digits as an RTL flex row. Bundled print furniture, not decor: drawn whatever `ornateHeaders` says.
+    The text above is its fallback (and the compact form below `qfs` 20).
   - Hidden when `showRunningHeads = false`.
 - **Footer:** the page number in Eastern Arabic numbers (`Intl.NumberFormat('ar-u-nu-arab')`), centred in a 1.1·qfs
   medallion (**v1.2:** a 12-lobed SVG rosette whose whole interior carries the 10 % `--frame-gold` tint: the fill of the
@@ -3866,12 +3875,17 @@ export function wordPill(box: WordBox, qfs: number, lh: number): Rect;
   - Label underneath, `font-size: max(0.36·qfs, 11px)`, **only when `0.36·qfs ≥ 10` (qfs ≥ 28)**: juz start → `الجزء N`;
     hizb start → `الحزب N`; else **(v1.2)** the quarter in words on two lines, `ربع`/`نصف`/`ثلاثة أرباع` over `الحزب N`
     (on one line it is wider than the margin; the tooltip keeps one line). Below that size the glyph is drawn alone; the
-    label goes into its tooltip, the a11y text and the running head.
+    label goes into its tooltip, the a11y text and the running head. **(v1.2, LEAD 25)** With the bundled
+    `qd-print-labels` face loaded, a rub start's label is the print's own stacked glyph U+F800 + rub («رُبُع» / «الحِزۡبُ»
+    / «٢٧»; «الجُزۡءُ ١٤» / «الحِزۡبُ ٢٧» at a juz start) at 1.7·qfs, in a box as tall as the ink of its kind of label;
+    the Hafs words remain its fallback and its tooltip.
   - sajda: ۩ U+06E9 plus `سجدة`, plus ` واجبة` for obligatory ones (same size rules).
   - Vertical centre = block top + (line − 1)·LH + LH/2. Markers on the same line stack with 0.2·qfs spacing.
   - Hidden when `showMarginMarkers = false`. Pointer cursor; click selects the ayah; tooltip shows the full label.
-- **Margin marks** (`MarginMarks.svelte`), stacked after the markers on the ayah's first line with a 0.2·qfs gap (shown when
-  `highlightBookmarks` — now "show bookmarks and notes in the margin"):
+- **Margin marks** (`MarginMarks.svelte`), stacked after the markers on the ayah's first line with a 0.2·qfs gap, or
+  centred on a line without markers and pushed down to 0.2·qfs below a taller stack from the line above (a juz start
+  with its ornament and print label, about 3·qfs) (shown when `highlightBookmarks` — now "show bookmarks and notes in
+  the margin"):
   - **Ayah bookmark:** a filled bookmark glyph, 0.55·qfs, `--accent`.
   - **Note:** a note glyph, 0.5·qfs, `--text-muted`; tooltip with the first 80 characters; click opens the side pane on the
     Notes tab.

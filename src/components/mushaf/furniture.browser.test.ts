@@ -6,7 +6,10 @@
  * library store's `user_marks` cache). The user-data IPC is faked; pages come from the exported fixtures. The footer
  * medallion's tint is checked on screenshots, pixel by pixel, in every theme (and forced colours, Chromium only). The
  * quarters of a hizb are written in words with Eastern Arabic numbers in the margin, its tooltip and the running head,
- * and fit there at every size, in both UI languages.
+ * and fit there at every size, in both UI languages. With the bundled print-labels face (loaded for real here,
+ * `fonts.printLabelsReady`; LEAD 25) the running heads and the rub labels are the 1441H print's own calligraphy: their
+ * glyphs and face, one baseline inside the head band, the stacked labels in boxes as tall as their ink, the quarter
+ * right to left, whatever the ornaments, without a layout shift, in both UI languages. Without it, the Hafs text.
  */
 import { flushSync } from 'svelte'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
@@ -23,6 +26,7 @@ import {
   labelSize,
   lineCenterY,
 } from '$lib/mushaf/ornaments'
+import { PRINT_EM, PRINT_HEAD_BASELINE, PRINT_METRICS, printMarginKind } from '$lib/mushaf/printLabels'
 import { parseColor, type Rgba } from '../../styles/token-harness'
 import { fonts, library, player, quran, reader, settings } from '$lib/stores'
 import MushafPage from './MushafPage.svelte'
@@ -141,7 +145,8 @@ describe('CLS 0 (§8.1)', () => {
     observer.disconnect()
     expect(section.querySelector('.sh-line')?.hasAttribute('data-decor')).toBe(true)
     expect(section.querySelector('.bsm-decor')).not.toBeNull()
-    expect(section.querySelector('.mp-head-juz-glyph')).not.toBeNull()
+    // The running head is no decor: its juz stays as it was (the print's calligraphy, or its text, LEAD 25).
+    expect(section.querySelector('.mp-head-juz')?.textContent).toContain('الجزء ١٤')
     if (supported) expect(shifts.reduce((a, b) => a + b, 0)).toBe(0)
   })
 })
@@ -159,7 +164,6 @@ describe('Ornate surah headers off (§8.8, §8.9; owner 2026-10-11)', () => {
     expect(sh?.querySelector('.sc'), where).not.toBeNull()
     expect(section.querySelector('.bsm-decor'), where).toBeNull()
     expect(section.querySelector('.bsm-line')?.hasAttribute('data-decor'), where).toBe(false)
-    expect(section.querySelector('.mp-head-juz-glyph'), where).toBeNull()
     expect(section.querySelector('.mp-head-juz')?.textContent?.trim(), where).toBe('الجزء ١٤')
     const glyph = section.querySelector<HTMLElement>('.mp-markers .mk-glyph')
     expect(glyph?.textContent, where).toBe('۞')
@@ -192,7 +196,6 @@ describe('Ornate surah headers off (§8.8, §8.9; owner 2026-10-11)', () => {
     const { section } = await show(262, { qfs: 30, ornaments: true })
     expect(section.querySelector('.sh-line')?.hasAttribute('data-decor')).toBe(true)
     expect(section.querySelector('.bsm-decor')).not.toBeNull()
-    expect(section.querySelector('.mp-head-juz-glyph')).not.toBeNull()
     expect(section.querySelector('.mp-markers .mk-glyph')?.hasAttribute('data-ornament')).toBe(true)
   })
 
@@ -298,60 +301,15 @@ describe('RunningHead (§8.9)', () => {
     expect(off.section.querySelector('.mp-head')).toBeNull()
   })
 
-  it('uses the decor juz calligraphy when quran-common is loaded', async () => {
+  it('stays text without the print-labels face, whatever the decor (LEAD 25)', async () => {
     fonts.status.set('qd-quran-common', 'ready')
     const { section } = await show(262)
-    expect(section.querySelector('.mp-head-juz-glyph')?.textContent?.codePointAt(0)).toBe(0xe00e)
-  })
-
-  it('centres the juz calligraphy’s ink on the head text’s, so the head reads as one line', async (ctx) => {
-    // The decor face itself (dev packs, `pnpm dev-packs`); without it there is no calligraphy to measure.
-    const face = new FontFace('qd-quran-common', 'url(/data/dev-packs/decor/quran-common.ttf)')
-    try {
-      await face.load()
-    } catch {
-      ctx.skip()
-    }
-    document.fonts.add(face)
-    onTestFinished(() => void document.fonts.delete(face))
-    fonts.status.set('qd-quran-common', 'ready')
-    const { section } = await show(262)
-    await document.fonts.ready
-    const glyph = section.querySelector<HTMLElement>('.mp-head-juz-glyph')
-    const surah = section.querySelector<HTMLElement>('.mp-head-surah')
-    const quarter = section.querySelector<HTMLElement>('.mp-head-quarter')
-    if (!glyph || !surah || !quarter) throw new Error('no running head')
-    const centre = inkCentre(glyph)
-    // Before: 7 px above the text (≈ 0.27·qfs) on page 256; now within 0.05·qfs of both texts.
-    expect(Math.abs(centre - inkCentre(surah))).toBeLessThanOrEqual(0.05 * QFS)
-    expect(Math.abs(centre - inkCentre(quarter))).toBeLessThanOrEqual(0.05 * QFS)
+    const head = section.querySelector<HTMLElement>(':scope > .mp-head')
+    expect(head?.hasAttribute('data-print')).toBe(false)
+    expect(head?.querySelector('.mp-head-print')).toBeNull()
+    expect(head?.querySelector('.mp-head-juz')?.textContent).toContain('الجزء ١٤')
   })
 })
-
-/**
- * The vertical centre of an element's text ink, in client px: its baseline (a zero-size inline-block laid out after the
- * text, translate included) minus the middle of the text's canvas ink box in the element's font.
- */
-function inkCentre(el: HTMLElement): number {
-  const text = el.textContent ?? ''
-  const style = getComputedStyle(el)
-  // A flex container (the surah head) holds its text in an anonymous item: wrap it so the probe shares its line.
-  const wrap = document.createElement('span')
-  wrap.append(...el.childNodes)
-  const probe = document.createElement('span')
-  probe.style.cssText = 'display:inline-block;inline-size:0;block-size:0'
-  wrap.append(probe)
-  el.append(wrap)
-  const baseline = probe.getBoundingClientRect().bottom
-  probe.remove()
-  el.append(...wrap.childNodes)
-  wrap.remove()
-  const ctx = document.createElement('canvas').getContext('2d')
-  if (!ctx) throw new Error('no canvas')
-  ctx.font = `${style.fontSize} ${style.fontFamily}`
-  const ink = ctx.measureText(text)
-  return baseline - (ink.actualBoundingBoxAscent - ink.actualBoundingBoxDescent) / 2
-}
 
 describe('PageFooter (§8.9)', () => {
   it('centres the page number in Eastern Arabic numbers under the block in a 1.1·qfs inert medallion', async () => {
@@ -1002,6 +960,341 @@ describe('Hizb quarters in words (§8.9; owner 2026-10-11)', () => {
         screen.unmount()
       }
     }
+  })
+})
+
+describe('The 1441H print’s calligraphy (§8.9; LEAD 25)', () => {
+  /** The bundled face, loaded for real in this engine; `fonts.printLabelsReady` is what main.ts's load sets. */
+  const FACE = 'qd-print-labels'
+  const cp = (n: number) => String.fromCodePoint(n)
+
+  /** The real quran-common face (dev packs, `pnpm dev-packs`), so an ornament above a label has its own width. */
+  let decorFace: FontFace | null = null
+
+  beforeAll(async () => {
+    await document.fonts.load(`30px "${FACE}"`, cp(0xf801))
+    try {
+      const face = new FontFace('qd-quran-common', 'url(/data/dev-packs/decor/quran-common.ttf)')
+      await face.load()
+      document.fonts.add(face)
+      decorFace = face
+    } catch {
+      decorFace = null
+    }
+  })
+
+  afterAll(() => {
+    if (decorFace) document.fonts.delete(decorFace)
+  })
+
+  beforeEach(() => {
+    fonts.printLabelsReady = true
+  })
+
+  afterEach(() => {
+    fonts.printLabelsReady = false
+  })
+
+  /** The UI language: html lang/dir and the settings, both restored after the test. */
+  function uiLanguage(lang: 'en' | 'ar'): void {
+    html.lang = lang
+    html.dir = lang === 'ar' ? 'rtl' : 'ltr'
+    settings.value = { ...settings.value, uiLanguage: lang }
+    onTestFinished(() => {
+      html.lang = 'en'
+      html.dir = 'ltr'
+    })
+  }
+
+  /** The baseline (client px) of an element's text: a zero-size inline-block probe laid out after it. */
+  function baselineOf(el: HTMLElement): number {
+    const probe = document.createElement('span')
+    probe.style.cssText = 'display:inline-block;inline-size:0;block-size:0'
+    el.append(probe)
+    const y = probe.getBoundingClientRect().bottom
+    probe.remove()
+    return y
+  }
+
+  /** The ink (client px) of an element's glyph: its baseline and the glyph's canvas ink box in the element's size. */
+  function inkOf(el: HTMLElement): { top: number; bottom: number; base: number } {
+    const ctx = document.createElement('canvas').getContext('2d')
+    if (!ctx) throw new Error('no canvas')
+    ctx.font = `${getComputedStyle(el).fontSize} "${FACE}"`
+    const m = ctx.measureText(el.textContent ?? '')
+    const base = baselineOf(el)
+    return { top: base - m.actualBoundingBoxAscent, bottom: base + m.actualBoundingBoxDescent, base }
+  }
+
+  /** An element's box where layout put it: its client rect less its `translate` (which moves only the ink). */
+  function layoutBox(el: HTMLElement): {
+    top: number
+    bottom: number
+    left: number
+    right: number
+    height: number
+  } {
+    const r = el.getBoundingClientRect()
+    const ty = Number.parseFloat(getComputedStyle(el).translate.split(' ')[1] ?? '0') || 0
+    return { top: r.top - ty, bottom: r.bottom - ty, left: r.left, right: r.right, height: r.height }
+  }
+
+  /** The rub that starts on a page (its margin label is U+F800 + rub). */
+  const rubOn = (data: PageData) => data.ayahs.find((a) => a.flags & 1 && a.startsOnPage)?.rub ?? 0
+
+  it('is loaded in this engine before the furniture draws with it', () => {
+    for (const glyph of [cp(0xf60f), cp(0xf70e), cp(0xf869), cp(0xf503), '٢٧'])
+      expect(document.fonts.check(`24px "${FACE}"`, glyph)).toBe(true)
+  })
+
+  it('names the surah and the juz in the print’s calligraphy, with the quarter right to left, in both UIs', async () => {
+    for (const lang of ['en', 'ar'] as const) {
+      uiLanguage(lang)
+      // Page 262 at qfs 24: 15:1 opens juz 14 and hizb 27; the labels are glyph-only, so the head names the hizb.
+      const { section, screen } = await show(262, { interactive: false })
+      const head = section.querySelector<HTMLElement>(':scope > .mp-head')
+      const surah = head?.querySelector<HTMLElement>('.mp-head-surah .mp-head-print')
+      const juz = head?.querySelector<HTMLElement>('.mp-head-juz > .mp-head-print:not(.mp-head-quarter)')
+      const quarter = head?.querySelector<HTMLElement>('.mp-head-quarter')
+      if (!head || !surah || !juz || !quarter) throw new Error(`no print running head (${lang})`)
+      expect(head.hasAttribute('data-print'), lang).toBe(true)
+      expect(head.dir, lang).toBe('rtl')
+      expect(surah.textContent, lang).toBe(cp(0xf60f))
+      expect(surah.dataset.text, lang).toBe('سورة الحجر')
+      expect(juz.textContent, lang).toBe(cp(0xf70e))
+      expect(juz.dataset.text, lang).toBe('الجزء ١٤')
+      expect(quarter.dataset.text, lang).toBe('الحزب ٢٧')
+      const parts = [...quarter.children] as HTMLElement[]
+      expect(
+        parts.map((p) => p.textContent),
+        lang,
+      ).toEqual([cp(0xf503), '٢٧'])
+      for (const el of [surah, juz, quarter]) {
+        const style = getComputedStyle(el)
+        expect(style.fontFamily, lang).toContain(FACE)
+        expect(Number.parseFloat(style.fontSize), lang).toBeCloseTo(PRINT_EM * QFS, 1)
+      }
+      // Right to left by the flex row, not bidi: «الحِزۡبُ» on the right of the number.
+      const [word, number] = parts.map((p) => p.getBoundingClientRect())
+      expect(word && number && word.left >= number.right - 0.5, lang).toBe(true)
+      // Physical sides: the surah right of the juz, the juz right of its quarter.
+      expect(surah.getBoundingClientRect().left, lang).toBeGreaterThan(juz.getBoundingClientRect().right)
+      expect(juz.getBoundingClientRect().left, lang).toBeGreaterThan(quarter.getBoundingClientRect().right)
+      expect(head.textContent, lang).not.toMatch(/[0-9]/u)
+      screen.unmount()
+    }
+  })
+
+  it('sets every head on one baseline inside the HEAD band, clear of the frame, at every size', async () => {
+    // Al-Hijr / juz 14 (a juz start), At-Tawbah, Al-Qamar (a three-quarter), Al-‘Adiyat (the last pages).
+    for (const n of [262, 187, 529, 600]) {
+      for (const qfs of [20, 24, 30, 60]) {
+        const { section, screen } = await show(n, { qfs, interactive: false })
+        const where = `page ${n} at qfs ${qfs}`
+        const head = section.querySelector<HTMLElement>(':scope > .mp-head')
+        if (!head) throw new Error(`no head (${where})`)
+        const band = head.getBoundingClientRect()
+        const glyphs = [
+          ...head.querySelectorAll<HTMLElement>(
+            '.mp-head-print:not(.mp-head-quarter), .mp-head-quarter > span',
+          ),
+        ]
+        expect(glyphs.length, where).toBeGreaterThanOrEqual(2)
+        for (const g of glyphs) {
+          const ink = inkOf(g)
+          expect(near(ink.base, band.bottom - PRINT_HEAD_BASELINE * qfs, 1), where).toBe(true)
+          expect(ink.top, where).toBeGreaterThanOrEqual(band.top - 1)
+          expect(ink.bottom, where).toBeLessThanOrEqual(band.bottom)
+        }
+        screen.unmount()
+      }
+    }
+  })
+
+  it('is drawn whatever the ornaments say (bundled furniture, not decor); compact pages keep the text', async () => {
+    fonts.status.set('qd-quran-common', 'ready')
+    for (const [ornateHeaders, ornaments] of [
+      [false, undefined],
+      [true, undefined],
+      [true, false],
+      [false, true],
+    ] as const) {
+      settings.value = { ...settings.value, ornateHeaders }
+      const { section, screen } = await show(262, { ornaments, interactive: false })
+      const where = `ornateHeaders ${ornateHeaders}, ornaments ${ornaments}`
+      expect(section.querySelector(':scope > .mp-head')?.hasAttribute('data-print'), where).toBe(true)
+      expect(section.querySelector('.mp-head-juz .mp-head-print')?.textContent, where).toBe(cp(0xf70e))
+      screen.unmount()
+    }
+    const small = await show(262, { qfs: 18, interactive: false })
+    const head = small.section.querySelector<HTMLElement>(':scope > .mp-head')
+    expect(head?.hasAttribute('data-print')).toBe(false)
+    expect(head?.querySelector('.mp-head-surah')?.textContent).toBe('الحجر')
+    expect(head?.querySelector('.mp-head-juz')?.textContent).toContain('ج ١٤')
+  })
+
+  it('fits the widest heads beside the widest quarter on one line, from qfs 20 up', async () => {
+    // The widest glyphs of the face: «سُورَةُ المُرۡسَلَاتِ» (77) and juz 25's ordinal, beside ثلاثة أرباع الحزب ٥٣.
+    const data = await page(529)
+    for (const [qfs, showMarginMarkers] of [
+      [20, true],
+      [24, true],
+      [27, true],
+      [60, false],
+    ] as const) {
+      settings.value = { ...settings.value, showMarginMarkers }
+      const screen = await render(MushafPage, {
+        data: { ...data, info: { ...data.info, headSurah: 77, juz: 25 } },
+        qfs,
+        side: 'right',
+        interactive: false,
+      })
+      await frames()
+      const where = `qfs ${qfs}`
+      const head = screen.container.querySelector<HTMLElement>('section.mp > .mp-head')
+      const quarter = head?.querySelector<HTMLElement>('.mp-head-quarter')
+      const surah = head?.querySelector<HTMLElement>('.mp-head-surah')
+      const juz = head?.querySelector<HTMLElement>('.mp-head-juz')
+      if (!head || !quarter || !surah || !juz) throw new Error(`no running head quarter (${where})`)
+      expect(head.hasAttribute('data-print'), where).toBe(true)
+      expect(quarter.dataset.text, where).toBe('ثلاثة أرباع الحزب ٥٣')
+      expect(
+        [...quarter.children].map((c) => c.textContent),
+        where,
+      ).toEqual([cp(0xf502), cp(0xf503), '٥٣'])
+      // One line: the three parts share their top, right to left.
+      const boxes = [...quarter.children].map((c) => c.getBoundingClientRect())
+      for (const b of boxes) expect(b.top, where).toBeCloseTo(boxes[0]?.top ?? 0, 0)
+      for (let i = 1; i < boxes.length; i++)
+        expect(boxes[i - 1]?.left ?? 0, where).toBeGreaterThanOrEqual((boxes[i]?.right ?? 0) - 0.5)
+      const h = head.getBoundingClientRect()
+      const s = surah.getBoundingClientRect()
+      const j = juz.getBoundingClientRect()
+      expect(j.left, where).toBeGreaterThanOrEqual(h.left - 0.5)
+      expect(s.right, where).toBeLessThanOrEqual(h.right + 0.5)
+      expect(s.left, where).toBeGreaterThan(j.right)
+      screen.unmount()
+    }
+  })
+
+  it('labels the margin with the print’s stacked labels, sized by the ink of their kind, in both UIs', async () => {
+    // A juz start (262, under its ۞ or ornament), a half (187), a three-quarter with the inline ۞ (529, label alone),
+    // a quarter and a three-quarter on left pages (594, 600): every kind of stacked label, hizbs 19 to 60.
+    for (const lang of ['en', 'ar'] as const) {
+      uiLanguage(lang)
+      // With the ornaments only where their face is here: a stand-in font would draw them wider than the margin.
+      for (const decor of decorFace ? [false, true] : [false]) {
+        if (decor) fonts.status.set('qd-quran-common', 'ready')
+        else fonts.status.delete('qd-quran-common')
+        for (const n of [262, 187, 529, 594, 600]) {
+          const { section, screen, data } = await show(n, { qfs: 30, interactive: false })
+          const where = `page ${n}, ${lang}, decor ${decor}`
+          const rub = rubOn(data)
+          const column = section.querySelector(':scope > .mp-markers')?.getBoundingClientRect()
+          const block = section.querySelector('.mp-block')?.getBoundingClientRect()
+          const mk = section.querySelector<HTMLElement>('.mp-markers .mk[data-kind="rub"]')
+          const label = mk?.querySelector<HTMLElement>('.mk-label')
+          if (!column || !block || !mk || !label) throw new Error(`no rub label (${where})`)
+          expect(label.hasAttribute('data-print'), where).toBe(true)
+          expect(label.textContent, where).toBe(cp(0xf800 + rub))
+          expect(document.fonts.check(`30px "${FACE}"`, label.textContent ?? ''), where).toBe(true)
+          const style = getComputedStyle(label)
+          expect(style.fontFamily, where).toContain(FACE)
+          expect(Number.parseFloat(style.fontSize), where).toBeCloseTo(PRINT_EM * 30, 1)
+          // The box is the ink extent of its kind of label; the glyph's own ink stays inside it.
+          const { yMin, yMax } = PRINT_METRICS[printMarginKind(rub)]
+          const box = layoutBox(label)
+          expect(box.height, where).toBeCloseTo(((yMax - yMin) / 1000) * PRINT_EM * 30, 0)
+          const ink = inkOf(label)
+          expect(ink.top, where).toBeGreaterThanOrEqual(box.top - 1)
+          expect(ink.bottom, where).toBeLessThanOrEqual(box.bottom + 1)
+          // Inside its marker, which stays in the outer margin column, never over the frame or past the paper.
+          const m = mk.getBoundingClientRect()
+          expect(box.top, where).toBeGreaterThanOrEqual(m.top - 0.75)
+          expect(box.bottom, where).toBeLessThanOrEqual(m.bottom + 0.75)
+          expect(box.left, where).toBeGreaterThanOrEqual(column.left - 0.5)
+          expect(box.right, where).toBeLessThanOrEqual(column.right + 0.5)
+          expect(box.right <= block.left || box.left >= block.right, where).toBe(true)
+          // The marker is centred on its line (a label alone included).
+          const pageBox = section.getBoundingClientRect()
+          expect(
+            near(m.top + m.height / 2 - pageBox.top, lineCenterY(30, Number(mk.dataset.line)), 1),
+            where,
+          ).toBe(true)
+          expect(mk.textContent, where).not.toMatch(/[0-9]/u)
+          screen.unmount()
+        }
+      }
+    }
+  })
+
+  it('stacks exactly from qfs 28 to 160, and the marks continue after a print-labelled marker', async () => {
+    for (const n of [529, 594]) {
+      for (const qfs of [28, 48, 96, 160]) {
+        const { section, screen } = await show(n, { qfs, interactive: false })
+        const where = `page ${n} at qfs ${qfs}`
+        const label = section.querySelector<HTMLElement>('.mp-markers .mk-label[data-print]')
+        const column = section.querySelector(':scope > .mp-markers')?.getBoundingClientRect()
+        if (!label || !column) throw new Error(`no print label (${where})`)
+        const box = layoutBox(label)
+        const ink = inkOf(label)
+        expect(ink.top, where).toBeGreaterThanOrEqual(box.top - 1)
+        expect(ink.bottom, where).toBeLessThanOrEqual(box.bottom + 1)
+        expect(box.left, where).toBeGreaterThanOrEqual(column.left - 0.5)
+        expect(box.right, where).toBeLessThanOrEqual(column.right + 0.5)
+        screen.unmount()
+      }
+    }
+    // A bookmark on 15:1 (page 262) goes on 0.2·qfs below the juz marker and its print label.
+    user.marks = {
+      bookmarks: [{ ayahId: 1803, bookmarkId: 'b1' }],
+      pageBookmarks: [],
+      highlights: [],
+      notes: [],
+      readingAyahId: null,
+    }
+    const { section } = await show(262, { qfs: 30 })
+    await expect.poll(() => section.querySelectorAll('.mp-marks .mm').length).toBe(1)
+    const marker = section.querySelector('.mp-markers .mk')?.getBoundingClientRect()
+    const mark = section.querySelector('.mp-marks .mm')?.getBoundingClientRect()
+    if (!marker || !mark) throw new Error('no marker or mark')
+    expect(near(mark.top - marker.bottom, 0.2 * 30, 1)).toBe(true)
+  })
+
+  it('keeps the Hafs words in the marker’s tooltip', async () => {
+    const { section } = await show(187, { qfs: 30 })
+    const mk = section.querySelector<HTMLElement>('.mp-markers .mk[data-rub="quarter"]')
+    if (!mk) throw new Error('no quarter marker')
+    expect(mk.querySelector('.mk-label')?.hasAttribute('data-print')).toBe(true)
+    await userEvent.hover(mk)
+    const end = performance.now() + 3_000
+    while (!document.querySelector('.mk-tip-label') && performance.now() < end) await frames()
+    expect(document.querySelector('.mk-tip-label')?.textContent).toBe('نصف الحزب ١٩')
+    await userEvent.unhover(mk)
+  })
+
+  it('moves nothing while the page is drawn with it and the decor arrives (CLS 0)', async () => {
+    const supported = PerformanceObserver.supportedEntryTypes.includes('layout-shift')
+    const shifts: number[] = []
+    const observer = new PerformanceObserver((list) => {
+      for (const e of list.getEntries()) shifts.push((e as unknown as { value: number }).value)
+    })
+    if (supported) observer.observe({ type: 'layout-shift' })
+    const { section } = await show(262, { qfs: 30, interactive: false })
+    await frames(3)
+    fonts.status.set('qd-surah-header', 'ready')
+    fonts.status.set('qd-quran-common', 'ready')
+    flushSync()
+    await frames(3)
+    for (const ornateHeaders of [false, true]) {
+      settings.value = { ...settings.value, ornateHeaders }
+      flushSync()
+      await frames(3)
+    }
+    observer.disconnect()
+    expect(section.querySelector(':scope > .mp-head')?.hasAttribute('data-print')).toBe(true)
+    expect(section.querySelector('.mp-markers .mk-label')?.hasAttribute('data-print')).toBe(true)
+    if (supported) expect(shifts.reduce((a, b) => a + b, 0)).toBe(0)
   })
 })
 

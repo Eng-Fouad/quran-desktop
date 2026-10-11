@@ -34,7 +34,7 @@ export const ATTRIBUTION_GROUPS: readonly AttributionGroupId[] = [
 ]
 
 /** A long licence text that ships with the app, which an entry can show in full (as plain text, never HTML). */
-export type AttributionNotice = 'app-licence' | 'kfgqpc-hafs'
+export type AttributionNotice = 'app-licence' | 'kfgqpc-hafs' | 'print-labels'
 
 /**
  * Where each served notice comes from, relative to the app's base URL (`public/`, copied to `dist/` by Vite). The
@@ -44,6 +44,8 @@ export type AttributionNotice = 'app-licence' | 'kfgqpc-hafs'
 export const NOTICE_PATHS: Readonly<Record<Exclude<AttributionNotice, 'app-licence'>, string>> = {
   // Written by `cargo xtask fetch-assets` (WP3c) from the font's own name table; committed next to the gitignored TTF.
   'kfgqpc-hafs': 'fonts/KFGQPC-Hafs-V30.LICENSE.txt',
+  // Committed beside the font: its provenance and the Mushaf Database licence, verbatim (LEAD 25).
+  'print-labels': 'fonts/QuranPrintLabels.LICENSE.txt',
 }
 
 export interface AttributionEntry {
@@ -196,6 +198,28 @@ const HAFS_FONT: AttributionEntry = {
   notice: 'kfgqpc-hafs',
 }
 
+/**
+ * The print's furniture calligraphy (LEAD 25): the running heads and margin labels of the 1441H Madinah print, cut from
+ * the Mushaf Database SVG Mushaf into a font that ships with the app (`public/fonts/QuranPrintLabels.otf`).
+ */
+const PRINT_LABELS_FONT: AttributionEntry = {
+  id: 'print-labels',
+  name: {
+    en: 'Quran Print Labels (Mushaf Database SVG Mushaf)',
+    ar: 'خط عناوين المصحف المطبوع (مصحف SVG من Mushaf Database)',
+  },
+  credit: {
+    en: 'The running heads and the hizb labels in the margin, in the calligraphy of the 1441 AH Madinah print: outlines from the Mushaf Database Ligature-Based SVG Mushaf (version 1.01), from the printing-use Mushaf of the King Fahd Complex, which allows its use in computer programs.',
+    ar: 'عناوين رؤوس الصفحات وعلامات الأحزاب في الهامش بخط طبعة المدينة النبوية لعام ١٤٤١هـ: محارف مأخوذة من مصحف SVG المبني على الأربطة من Mushaf Database (الإصدار 1.01)، المأخوذ من ملفات المصحف المعدّة للطباعة من مجمع الملك فهد، الذي يأذن باستخدامها في البرامج الحاسوبية.',
+  },
+  licence: {
+    en: 'Mushaf Database open permission (Sadaqa-e-Jaria): free to use, copy, modify and distribute, the Quranic content never altered',
+    ar: 'إذن Mushaf Database المفتوح (صدقة جارية): حرية الاستخدام والنسخ والتعديل والتوزيع، دون أي تغيير في النص القرآني',
+  },
+  url: 'https://github.com/mushafdatabase/MushafDatabase-Ligature-Based-SVG',
+  notice: 'print-labels',
+}
+
 /** The §9.7 credit for the QCF page fonts ("Quran fonts provided by Quran Foundation"). */
 const QCF_FONTS: AttributionEntry = {
   id: 'qcf',
@@ -265,7 +289,7 @@ const QF_TIMINGS: AttributionEntry = {
 /** The sources credited whatever is installed, by group (the pack groups start empty; the app's group is separate). */
 export const attributions: readonly AttributionGroup[] = [
   { id: 'text', entries: [QUL, KFGQPC, TANZIL] },
-  { id: 'fonts', entries: [HAFS_FONT, QCF_FONTS, ORNAMENT_FONTS, UI_FONTS] },
+  { id: 'fonts', entries: [HAFS_FONT, PRINT_LABELS_FONT, QCF_FONTS, ORNAMENT_FONTS, UI_FONTS] },
   { id: 'translations', entries: [] },
   { id: 'tafsir', entries: [] },
   { id: 'wbw', entries: [] },

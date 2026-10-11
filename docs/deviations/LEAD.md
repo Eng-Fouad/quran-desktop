@@ -110,3 +110,26 @@ summarises them); item 17's data rulings are also corrected in place in ARCHITEC
     5). Never on first use or with `--force`, and never for a downloaded file of the wrong size or hash. A pin or re-pin
     rewrites the committed copy; a test checks that it matches the lock. CI still restores its cache first and saves
     it after the first run that fills `public/fonts/`.
+25. **The print's own furniture calligraphy, bundled** (owner decision, 2026-10-11): the running heads «سُورَةُ name»
+    and «الجُزۡءُ …» and the margin hizb labels, stacked as the print sets them («رُبُع» / «الحِزۡبُ» / «٢٧»; «الجُزۡءُ ١٤» /
+    «الحِزۡبُ ٢٧» at a juz start), are drawn in the 1441H Madinah print's own calligraphy. The owner chose to bundle the
+    font, like the Hafs font: `public/fonts/QuranPrintLabels.otf` (family "Quran Print Labels", CSS `qd-print-labels`,
+    CFF, 1,235,388 B: +1.18 MiB of `dist/` against its 6 MiB, 114 KB as LZMA, `xz -9`) is committed with
+    `QuranPrintLabels.LICENSE.txt` beside it, and `main.ts` loads it before the first paint like qd-hafs (CLS 0).
+    - **Source:** outlines cut from 123 pages of the Mushaf Database "Ligature-Based SVG Mushaf" V1.01
+      (github.com/mushafdatabase/MushafDatabase-Ligature-Based-SVG, folder `SVG V1.01`), whose artwork derives from the
+      KFGQPC printing-use Madinah Mushaf (free use in computer programs, dm.qurancomplex.gov.sa/rights). The generator,
+      its pinned fontTools and the page list are in `assets/print-labels/` (deterministic; it reproduces the committed
+      file byte for byte). It reads `core.db` only to know what each page carries; its `map.json`/`report.json`/QA
+      sheets carry `core.db` names and stay out of the repository. The app reads a numbers-only metrics table
+      (`src/lib/mushaf/printLabels.ts`) generated from the font itself (`print_label_metrics.py`).
+    - **Licence:** the dataset's open permission (Sadaqa-e-Jaria: use, copy, modify, publish, distribute, derivative
+      works, commercial use included; the Quranic content never altered; the font holds none). The font is a separate
+      work, not covered by the GPL, and ships unmodified; About ▸ Fonts credits it with the full text.
+    - **What it replaces:** the Hafs text of the running heads from qfs 20 (below, the compact text stays) and the
+      quran-common juz calligraphy (U+E001 + juz − 1) there; the Hafs word lines under a rub marker (qfs ≥ 28). The
+      quarter in the running head (when the margin labels are hidden) is composed of the face's words and digits as an
+      RTL flex row. The ۞ / quran-common ornament above a label, its hizb number in the frame, the sajda labels and the
+      tooltips (Hafs words) are unchanged. It is print furniture, not decor: drawn whatever `ornateHeaders` says; the
+      surah-header cartouche, the basmala calligraphy and the margin ornaments stay gated by it. Without the face (a
+      failed load) the furniture keeps its Hafs text.

@@ -37,6 +37,7 @@ is the lead's fold-in of every accepted deviation (`docs/deviations/WP*.md`), ev
 | LEAD 22 | Release build: `opt-level = "z"` with decode, resampling and WSOLA at 3; tauri without `dynamic-acl`; rustls stays on aws-lc-rs; the setup and uninstall executables carry the app icon; the MSI upgrade code is pinned (NSIS is the only Windows release asset). |
 | LEAD 23 | Contract: event `quit-requested`. A user's quit hides the window and lets the page save its debounced writes before `app_quit` (§8 below). |
 | LEAD 24 | The unmodified KFGQPC Hafs V30 TTF is committed at `xtask/assets/KFGQPC-Hafs-V30.ttf`; `fetch-assets` falls back to it, checked against the same pin, when the download fails (GitHub's runners cannot reach fonts.qurancomplex.gov.sa). Changes D23; answers ARCHITECTURE §15.3 item 5. |
+| LEAD 25 | The running heads and the margin hizb labels are the 1441H print's own calligraphy, from a bundled font: `public/fonts/QuranPrintLabels.otf` (`qd-print-labels`, committed with its licence; cut from the Mushaf Database SVG Mushaf V1.01 under its open permission, from the KFGQPC printing-use Mushaf; generator in `assets/print-labels/`), loaded before the first paint like qd-hafs. It replaces the Hafs head text from qfs 20, quran-common's juz calligraphy in the head and the Hafs label lines under a rub marker; drawn whatever `ornateHeaders` says (§10.2, §10.4). |
 
 ## 1. Process, tooling and acceptance (§0.2, §13.1–13.2, §14)
 
@@ -535,6 +536,10 @@ is the lead's fold-in of every accepted deviation (`docs/deviations/WP*.md`), ev
   (INT fix 1 mushaf). Decor is requested automatically for QCF styles once per session while online, never for hafs
   (WP8b 8), and only while `ornateHeaders` is on; turning `ornateHeaders` on requests it in any style (owner 2026-10-11).
   The faces load whenever decor is installed: the setting gates the drawing, not the loading. The font-status dot sits in the footer band, drawn by `RenditionStack`, and retries a failed page (WP8b 7).
+- **Two bundled faces** (LEAD 25): `main.ts` awaits qd-hafs and `qd-print-labels` (the print's running heads and margin
+  labels, `public/fonts/QuranPrintLabels.otf`) before mounting, each on its own, so one failing never holds the other;
+  `fonts.init` records whether the second loaded (`fonts.printLabelsReady`, read from `document.fonts`), so a page never
+  switches between the print's glyphs and the Hafs text after the first paint.
 - **Shaping warm-up** (`warmup.ts`): the next and previous spreads are laid out off screen in idle time (3 lines per
   slice); a cold page on screen is warmed urgently inside the 120 ms font wait; a turn animates only into warm pages.
   **While flipping** a page shows its QCF rendition only if it was painted in that font before, else the Hafs fallback
@@ -561,12 +566,14 @@ is the lead's fold-in of every accepted deviation (`docs/deviations/WP*.md`), ev
 ### 10.4 Furniture and marks (§8.8–8.9)
 
 - Decor glyphs are sized by their measured metrics (`--sh-scale` 4.4, `--basmala-scale` 1.4); markers by ink height
-  (0.75·qfs, ≥ 13 px). The juz calligraphy is `U+E001 + (juz − 1)` (the `juz001` ligatures), not U+E900 (WP8c 1).
+  (0.75·qfs, ≥ 13 px). The running head no longer draws quran-common's juz calligraphy (it was `U+E001 + (juz − 1)`,
+  the `juz001` ligatures, WP8c 1): the print's own glyph replaces it (LEAD 25, below).
 - **Ornate surah headers** (`ornateHeaders`, default on, every style; owner 2026-10-11): off, a page draws the plain
-  look even with decor loaded: the cartouche, the Unicode basmala, the juz in words in the running head, and the solid ۞
-  without a frame in the margin (a quarter keeps its words in the label). `MushafPageProps.ornaments` overrides the
-  setting for one page (the onboarding's preview); the header, basmala, running head, margin markers and margin marks
-  read it from the page context, so marker stacking follows the same decor flag (CLS 0). The surah-name calligraphy of
+  look even with decor loaded: the cartouche, the Unicode basmala, and the solid ۞ without a frame in the margin. The
+  running heads and the rub labels are bundled print furniture, not decor (LEAD 25): drawn the same either way.
+  `MushafPageProps.ornaments` overrides the setting for one page (the onboarding's preview); the header, basmala,
+  margin markers and margin marks read it from the page context, so marker stacking follows the same decor flag
+  (CLS 0). The surah-name calligraphy of
   lists (Index, the surah popover, the palette) is UI chrome from the same pack and stays whenever decor is installed.
 - **Quarter markers with an inline ۞** (199 of 240) draw the label alone, centred on the line, and nothing below qfs 28;
   never a second ۞. Ornaments appear only with their labels (qfs ≥ 28), stroked (`max(0.5px, 0.018em)`), with the hizb
@@ -577,16 +584,24 @@ is the lead's fold-in of every accepted deviation (`docs/deviations/WP*.md`), ev
   head. The margin label sets them on two lines, the words over `الحزب ٢٧` (6.6 em on one line against the 4.8 em the
   margin holds at qfs 28), and the marker's height counts both. The U+FC22 ornament's frame holds the hizb number, as
   U+FC23's does: the words do not fit it, and the label under it names the quarter of that hizb. Every furniture string
-  is now in qd-hafs. The Index's hizb chips are UI, not furniture: ¼ ½ ¾ with Western Arabic numbers, ١/٤ ١/٢ ٣/٤ with
+  is in qd-hafs, the fallback of the print's own glyphs (LEAD 25, below). The Index's hizb chips are UI, not furniture: ¼ ½ ¾ with Western Arabic numbers, ١/٤ ١/٢ ٣/٤ with
   Eastern Arabic numbers (`i18n.fraction`, also the memo presets' ×½) (owner request; WP8c 2–3, INT owner 2026-10-11).
 - Sajda markers sit on the line where the ayah ends; the opening pages carry none; each marker appears once, on the page
   that shows its sign (WP8c 2). The CSS sajda overline is dropped: both renditions already draw the printed overline
   (WP8c print-scan 1).
 - Running heads: the quarter separator is a small gold khatam (a middle dot beside Eastern Arabic numbers reads as ٠);
-  below qfs 20 the juz reads `ج ١٤`; the head's calligraphy is aligned on the text's ink centre (WP8c 3, INT fix 2
-  mushaf).
-  Furniture text is set in the bundled Hafs face, so a late web font never shifts it (CLS 0) (WP8c 3a). Running head and
-  footer are `div`s.
+  below qfs 20 the heads are text and the juz reads `ج ١٤` (WP8c 3, INT fix 2 mushaf). Furniture text is set in the
+  bundled Hafs face, so a late web font never shifts it (CLS 0) (WP8c 3a). Running head and footer are `div`s.
+- **The print's own calligraphy** (LEAD 25; `printLabels.ts`): with the bundled `qd-print-labels` face loaded, the
+  running heads from qfs 20 are its glyphs «سُورَةُ name» (U+F600 + `headSurah`) and «الجُزۡءُ …» (U+F700 + juz), at the
+  print's proportion (`PRINT_EM` = 1.7·qfs: the print's line is `TB_W`), all on one baseline 0.5·qfs above the frame
+  (inside the 1.4·qfs band; `line-height: normal` boxes moved by a translate). The head's quarter (margin labels
+  hidden) is the face's fraction word, «الحِزۡبُ» and digits, an RTL flex row of spans (its private-use code points are
+  bidi class L). Under a rub marker (qfs ≥ 28) the label is the print's stacked glyph U+F800 + rub at the same size, in
+  a box as tall as the ink of its kind of label (juz start, hizb start, each quarter; the face's own bounding boxes),
+  so marker stacking and the marks after it stay exact. The ۞ / ornament above it with the hizb number in its frame,
+  the sajda labels and the tooltips (Hafs words) are unchanged; each glyph carries its words in `data-text`. Without
+  the face every one of them stays Hafs text.
 - Footer medallion: one rosette path, filled with `--frame-gold` at 10 % and stroked in it, so the tint follows the 12
   lobes at every qfs, in every theme and in forced colours. The earlier 0.8·r tinted disc inside a paper-filled rosette
   left the band under the valleys and every lobe unshaded (owner request; WP8c 4).

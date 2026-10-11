@@ -22,9 +22,9 @@ export interface MushafPageProps {
   /** Frame, running head, footer and margin furniture (default true). */
   furniture?: boolean
   /**
-   * Draw the decor ornaments (surah-header and basmala calligraphy, the juz calligraphy, the margin ornaments) once
-   * their fonts are loaded; default: the `ornateHeaders` setting. The onboarding's preview shows the choice before it
-   * is saved.
+   * Draw the decor ornaments (surah-header and basmala calligraphy, the margin ornaments) once their fonts are loaded;
+   * default: the `ornateHeaders` setting. The onboarding's preview shows the choice before it is saved. The print's
+   * running heads and margin labels (the bundled `qd-print-labels` face, LEAD 25) are drawn either way.
    */
   ornaments?: boolean
 }

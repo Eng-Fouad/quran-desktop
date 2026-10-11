@@ -129,9 +129,12 @@
           pageMarkers(data),
           qfs,
           marginLabelsVisible(qfs),
-          // The markers' decor flag, exactly as MarginMarkers draws them (else the marks' stacking drifts).
+          // The markers' decor and print-label flags, exactly as MarginMarkers draws them (else the marks' stacking
+          // drifts).
           (page?.ornaments ?? settings.value.ornateHeaders) &&
             fonts.status.get('qd-quran-common') === 'ready',
+          false,
+          fonts.printLabelsReady,
         ).bottoms
       : new Map<number, number>(),
   )

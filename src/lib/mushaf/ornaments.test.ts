@@ -13,7 +13,6 @@ import {
   cartouche,
   CARTOUCHE_INSETS,
   CARTOUCHE_MEDALLION,
-  decorJuzGlyph,
   decorStroke,
   DECOR_HIZB,
   DECOR_QUARTER,
@@ -31,12 +30,14 @@ import {
   INSET_TEXT,
   isDecorInk,
   khatam,
+  labelBoxHeight,
   LABEL_GAP,
   LABEL_LEADING,
   labelSize,
   lineCenterY,
   marginLabelsVisible,
   MARKER_INK,
+  MARK_BOOKMARK,
   MARKER_INK_MIN_PX,
   markerBoxHeight,
   markerDrawn,
@@ -44,6 +45,7 @@ import {
   markerHeight,
   markerInk,
   markerInset,
+  markerPrintLabel,
   MEDALLION_APEX,
   MEDALLION_HALF_W,
   medallionGeometry,
@@ -73,6 +75,7 @@ import {
   type Cubic,
   type MarginMarker,
 } from './ornaments'
+import { PRINT_EM, PRINT_METRICS, printLabelShift } from './printLabels'
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Helpers
@@ -514,14 +517,6 @@ describe('division labels (§3.1.2, §8.9)', () => {
       expect(rubShortLabel({ rub, hizb })).toMatch(new RegExp(`^${quarter}الحزب [٠-٩]+$`, 'u'))
     }
   })
-
-  it('picks the juz calligraphy "الجزء …" (U+E001 + juz − 1), clamped to 1–30', () => {
-    expect(decorJuzGlyph(1).codePointAt(0)).toBe(0xe001)
-    expect(decorJuzGlyph(14).codePointAt(0)).toBe(0xe00e)
-    expect(decorJuzGlyph(30).codePointAt(0)).toBe(0xe01e)
-    expect(decorJuzGlyph(99).codePointAt(0)).toBe(0xe01e)
-    expect(decorJuzGlyph(0).codePointAt(0)).toBe(0xe001)
-  })
 })
 
 describe('pageMarkers (§8.9)', () => {
@@ -537,7 +532,7 @@ describe('pageMarkers (§8.9)', () => {
       ['rub', 4, 'نصف الحزب ١٨', ['نصف', 'الحزب ١٨']],
       ['sajda', 15, 'سجدة', ['سجدة']],
     ])
-    expect(markers[0]?.rub).toEqual({ kind: 'quarter', quarter: 2, hizb: 18, juz: 9 })
+    expect(markers[0]?.rub).toEqual({ kind: 'quarter', quarter: 2, hizb: 18, juz: 9, number: 71 })
   })
 
   it('skips a rub whose ayah began on the previous page, and a sajda that ends on the next', () => {
@@ -704,8 +699,8 @@ describe('marker sizes (§8.9)', () => {
   })
 
   it('fills an ornament’s frame with the number of the hizb it opens or divides, fitted and centred', () => {
-    const quarter = { rub: { kind: 'quarter' as const, quarter: 2 as const, hizb: 19, juz: 10 } }
-    const hizb = { rub: { kind: 'juz' as const, quarter: 0 as const, hizb: 27, juz: 14 } }
+    const quarter = { rub: { kind: 'quarter' as const, quarter: 2 as const, hizb: 19, juz: 10, number: 75 } }
+    const hizb = { rub: { kind: 'juz' as const, quarter: 0 as const, hizb: 27, juz: 14, number: 105 } }
     // A quarter's words do not fit its frame: the frame holds its hizb, the label under it names the quarter.
     expect(markerInset(quarter, INK.decorQuarter)).toBe('١٩')
     expect(markerInset(hizb, INK.decorHizb)).toBe('٢٧')
@@ -802,6 +797,104 @@ describe('marker sizes (§8.9)', () => {
   })
 })
 
+describe('the print’s margin labels (§8.9; LEAD 25)', () => {
+  /** A rub-start marker of rub `n` (its kind of label follows from the number). */
+  const rubMarker = (n: number, inline = false) => {
+    const data = page(300, [
+      ayah({ id: 2000, line: 7, flags: 1, rub: n, hizb: Math.ceil(n / 4), juz: Math.ceil(n / 8) }),
+    ])
+    const [m] = pageMarkers(data)
+    if (!m) throw new Error('no marker')
+    return { ...m, inline }
+  }
+
+  it('draws a rub start’s own print label (U+F800 + rub) only with the face, never for a sajda', () => {
+    const data = page(400, [
+      ayah({
+        id: 3000,
+        line: 7,
+        flags: 1,
+        rub: 120,
+        hizb: 30,
+        juz: 15,
+        sajda: 'obligatory',
+        lastWordId: 705,
+      }),
+    ])
+    const [rub, sajda] = pageMarkers(data)
+    if (!rub || !sajda) throw new Error('two markers')
+    expect(rub.rub?.number).toBe(120)
+    expect(markerPrintLabel(rub, true)?.char).toBe(String.fromCodePoint(0xf800 + 120))
+    expect(markerPrintLabel(rub, true)?.family).toBe('qd-print-labels')
+    expect(markerPrintLabel(rub, false)).toBeNull()
+    expect(markerPrintLabel(sajda, true)).toBeNull()
+    expect(labelBoxHeight(sajda, 30, true)).toBeCloseTo(labelSize(30) * LABEL_LEADING)
+  })
+
+  it('sizes a print label at PRINT_EM·qfs in a box as tall as the ink of its kind of label', () => {
+    for (const [n, kind] of [
+      [105, 'marginJuz'],
+      [109, 'marginHizb'],
+      [106, 'marginQuarter1'],
+      [107, 'marginQuarter2'],
+      [108, 'marginQuarter3'],
+    ] as const) {
+      const m = rubMarker(n)
+      const { yMin, yMax } = PRINT_METRICS[kind]
+      const ink = markerPrintLabel(m, true)
+      if (!ink) throw new Error(`rub ${n}: no print label`)
+      const box = markerGlyphBox(30, ink)
+      expect(box.fontSize, `rub ${n}`).toBeCloseTo(PRINT_EM * 30)
+      expect(box.height, `rub ${n}`).toBeCloseTo(((yMax - yMin) / 1000) * PRINT_EM * 30)
+      expect(labelBoxHeight(m, 30, true), `rub ${n}`).toBeCloseTo(box.height)
+      // The ink fills the box: its line starts at the box's top, the ink top `yMax` above the baseline (ascent 0.615).
+      expect(printLabelShift(ink)).toBeCloseTo(yMax / 1000 - 0.615)
+      // Without the face: the Hafs lines (a quarter's two).
+      expect(labelBoxHeight(m, 30, false), `rub ${n}`).toBeCloseTo(
+        m.lines.length * labelSize(30) * LABEL_LEADING,
+      )
+    }
+  })
+
+  it('stacks by the print label’s real extent: glyph, gap and label, or the label alone for an inline ۞', () => {
+    const q = 30
+    const quarter = rubMarker(108)
+    const label = labelBoxHeight(quarter, q, true)
+    expect(markerBoxHeight(quarter, q, true, true, true)).toBeCloseTo(
+      markerGlyphBox(q, INK.decorQuarter).height + LABEL_GAP * q + label,
+    )
+    expect(markerBoxHeight(quarter, q, true, false, true)).toBeCloseTo(
+      markerGlyphBox(q, INK.rub).height + LABEL_GAP * q + label,
+    )
+    expect(markerBoxHeight({ ...quarter, inline: true }, q, true, false, true)).toBeCloseTo(label)
+    // Glyph-only pages draw no label, print face or not.
+    expect(markerBoxHeight(quarter, 20, false, true, true)).toBeCloseTo(markerGlyphBox(20, INK.rub).height)
+
+    // A rub and a sajda on one line: 0.2·qfs apart, the stack centred on the line, its bottom where the marks go on.
+    const data = page(400, [
+      ayah({
+        id: 3000,
+        line: 7,
+        flags: 1,
+        rub: 120,
+        hizb: 30,
+        juz: 15,
+        sajda: 'obligatory',
+        lastWordId: 705,
+      }),
+    ])
+    const { placed, bottoms } = placeMarkers(pageMarkers(data), q, true, true, false, true)
+    const [a, b] = placed
+    if (!a || !b) throw new Error('two markers')
+    expect(a.height).toBeCloseTo(markerBoxHeight(a.item, q, true, true, true))
+    expect(a.height).not.toBeCloseTo(markerBoxHeight(a.item, q, true, true, false))
+    expect(b.height).toBeCloseTo(markerBoxHeight(b.item, q, true, true, false))
+    expect(b.top - (a.top + a.height)).toBeCloseTo(STACK_GAP * q)
+    expect((a.top + b.top + b.height) / 2).toBeCloseTo(lineCenterY(q, 7))
+    expect(bottoms.get(7)).toBeCloseTo(b.top + b.height)
+  })
+})
+
 describe('margin stacking (§8.9)', () => {
   it('centres lines on block top + (line − 1)·LH + LH/2, shifted 3.5 lines on the opening pages', () => {
     expect(lineCenterY(20, 1)).toBeCloseTo((BLOCK_TOP + LH / 2) * 20)
@@ -838,6 +931,22 @@ describe('margin stacking (§8.9)', () => {
     const placed = placeMarks(marks, q, new Map([[3, 200]]))
     expect(placed[0]?.top).toBeCloseTo(200 + STACK_GAP * q)
     expect((placed[1]?.top ?? 0) + (placed[1]?.height ?? 0) / 2).toBeCloseTo(lineCenterY(q, 5))
+  })
+
+  it('starts the marks of a line below a marker stack that reaches into it from the line above', () => {
+    // Page 262: the juz 14 start on line 3, its ornament over the print's two-line label, and a bookmark on line 4.
+    const q = 30
+    const data = page(262, [ayah({ id: 1802, line: 3, flags: 7, firstWordId: 300, lastWordId: 305 })])
+    const { bottoms } = placeMarkers(pageMarkers(data), q, true, true, false, true)
+    const below = bottoms.get(3)
+    if (below === undefined) throw new Error('a marker on line 3')
+    const bookmark = { key: 'bookmark-1804', kind: 'bookmark' as const, ayahId: 1804, line: 4, id: 'b' }
+    // Centred on line 4, the bookmark would start above the stack's bottom.
+    expect(lineCenterY(q, 4) - (MARK_BOOKMARK * q) / 2).toBeLessThan(below)
+    expect(placeMarks([bookmark], q, bottoms)[0]?.top).toBeCloseTo(below + STACK_GAP * q)
+    // A stack that ends within its own line leaves the next line's marks centred.
+    const short = placeMarks([bookmark], q, new Map([[3, lineCenterY(q, 3) + q]]))[0]
+    expect((short?.top ?? 0) + (short?.height ?? 0) / 2).toBeCloseTo(lineCenterY(q, 4))
   })
 
   it('derives the marks of a page from user marks', () => {

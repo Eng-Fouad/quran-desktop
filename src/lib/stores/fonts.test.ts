@@ -106,7 +106,7 @@ const { fontBytes } = await import('$lib/ipc')
 const { app } = await import('./app.svelte')
 const { settings } = await import('./settings.svelte')
 const { ui } = await import('./ui.svelte')
-const { aroundPages, DECOR_FACES, ENSURE_BATCH, fonts, pageFamily, parseFamily } =
+const { aroundPages, DECOR_FACES, ENSURE_BATCH, fonts, pageFamily, parseFamily, printLabelsLoaded } =
   await import('./fonts.svelte')
 const { hasFace } = await import('$lib/mushaf/fontRegistry')
 const { PALETTE_STYLE_ID } = await import('$lib/mushaf/palettes')
@@ -568,6 +568,43 @@ describe('connectivity and packs', () => {
     await settle()
     expect(fonts.isReady('qcf_v2', 88)).toBe(true)
     release()
+  })
+})
+
+describe('the bundled print-labels face (LEAD 25)', () => {
+  /** A FontFaceSet holding these faces (CSS-declared faces report their family quoted in some engines). */
+  function fontSet(list: { family: string; status: string }[]): void {
+    Object.defineProperty(document, 'fonts', {
+      configurable: true,
+      value: { add: () => {}, delete: () => {}, [Symbol.iterator]: () => list[Symbol.iterator]() },
+    })
+  }
+
+  it('is ready once main.ts has loaded it before the app mounted, and never otherwise', () => {
+    fontSet([
+      { family: 'qd-hafs', status: 'loaded' },
+      { family: '"qd-print-labels"', status: 'loaded' },
+    ])
+    expect(printLabelsLoaded()).toBe(true)
+    fonts.init(bootstrap())
+    expect(fonts.printLabelsReady).toBe(true)
+    // A face that failed (a missing file) or never loaded leaves the furniture its Hafs text.
+    for (const status of ['error', 'unloaded', 'loading']) {
+      fontSet([
+        { family: 'qd-hafs', status: 'loaded' },
+        { family: 'qd-print-labels', status },
+      ])
+      fonts.init(bootstrap())
+      expect(fonts.printLabelsReady, status).toBe(false)
+    }
+    fontSet([{ family: 'qd-hafs', status: 'loaded' }])
+    expect(printLabelsLoaded()).toBe(false)
+  })
+
+  it('is not ready where the document has no font set to read (jsdom, a test double)', () => {
+    expect(printLabelsLoaded()).toBe(false)
+    Reflect.deleteProperty(document, 'fonts')
+    expect(printLabelsLoaded()).toBe(false)
   })
 })
 
