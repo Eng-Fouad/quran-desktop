@@ -14,6 +14,13 @@ vitest.config.*.timestamp-*
 src-tauri/target/
 src-tauri/gen/schemas/
 
+# Snap packing (.github/workflows/store.yml copies the release's deb in; snapcraft leaves its work and the snap)
+/snap/local/
+/parts/
+/stage/
+/prime/
+/*.snap
+
 # Generated data and third-party binaries: never committed (BRIEF §4, D10, D23), except the pinned KFGQPC TTF in
 # xtask/assets/ that `cargo xtask fetch-assets` falls back to (LEAD 24); its output here stays ignored.
 # src-tauri/resources/catalog.json IS committed (WP5a).

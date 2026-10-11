@@ -87,8 +87,10 @@ Decision for the first releases (previews), until the quran org provides certifi
 - **Windows: unsigned.** SmartScreen shows "Windows protected your PC" (More info › Run anyway); the release notes say
   so. A public v1 needs Authenticode. Recommended: Azure Trusted Signing or SignPath Foundation (free for open source)
   under the quran org, wired as `bundle.windows.signCommand` in a release-only `--config`. The checklist keeps signing
-  as a release blocker until the lead decides.
+  as a release blocker until the lead decides. **Wired since 2026-10-12** (below): Azure Artifact Signing signs as soon
+  as its secrets exist.
 - **Linux:** deb and AppImage are not signed (usual for direct downloads). Every asset is published with a `.sha256`.
+  Since 2026-10-12 a GPG key, once configured, signs the AppImages and a `SHA256SUMS` over every asset.
 - **Updater:** not in v1 (§15.2: it needs signing keys).
 
 ## Measurements (this machine, 2026-10-10)
@@ -131,3 +133,49 @@ measurement's; each is filed under "Cross-area" in INTEGRATION.md with what the 
   (`act -l`), passes the policy check, and every script it runs is tested.
 - NSIS unpacking (`check-bundles.mjs` needs 7-Zip, which this machine lacks; the windows runners have it). Here the
   check reads tauri's `installer.nsi` and the files it packs instead.
+
+## Owner request 2026-10-12: x64 and arm64 everywhere, portable builds, signing, stores
+
+"GitHub CI jobs for deployment on tagging the main branch: installers and portable executables for Windows, Mac and
+Linux on x64 and arm64, with code signing, and publishing to the Windows Store, the Apple Store and the Ubuntu Store."
+
+1. **Five build jobs** (`release.yml`): windows-x64, windows-arm64 (cross-compiled on `windows-latest`: Visual Studio's
+   ARM64 tools, and clang for `ring` and `aws-lc-sys`, which a local `cargo build --target aarch64-pc-windows-msvc`
+   confirmed: an ARM64 PE, machine 0xAA64), macos-universal (one binary for both architectures, as before),
+   linux-x64 and linux-arm64 (`ubuntu-22.04-arm`, standard in private repositories since 2026-01; an AppImage cannot
+   be cross-built). The 22.04 images retire in April 2027, and the glibc baseline moves with them.
+2. **Portable builds** (`scripts/make-portable.mjs`, tested): `Quran_<version>_<arch>_portable.zip` on Windows
+   (`Quran/quran-desktop.exe` with `data/` beside it, where the exe's resource directory is; a small zip writer, read
+   back by check-artifacts' own reader in the test) and `Quran_<version>_universal.app.zip` on macOS (`ditto`, so the
+   signature and the stapled ticket survive). Linux's portable build is the AppImage. The portable exe needs the
+   WebView2 runtime and keeps its data in the profile like the installed app; a data-beside-the-exe mode is not
+   implemented.
+3. **check-bundles** gains `--arch x64|arm64` (every binary's architecture: the PE machine, the ELF machine, lipo's
+   slices; the deb's Architecture; tauri's `nsis/<arch>/installer.nsi`; the multiarch appindicator path), the
+   `portable` kind (unpacked with Windows' own `tar.exe`, or `ditto` on macOS, and checked like the installers),
+   `--signed` (a valid Authenticode signature on the setup and the exe, or a Developer ID on the app) and `--webview`
+   (the Store installer's `offlineInstaller`). Tests cover the PE/ELF readers, an arm64 deb and the portable finder.
+4. **Signing**, each when its secrets are set: Windows through Azure Artifact Signing (the renamed Trusted Signing;
+   `artifact-signing-cli`, tauri's `signCommand` in a CI-only `--config`, object form, so the exe, the NSIS
+   uninstaller and the setup are signed); macOS as before, plus notarisation with an App Store Connect API key; GPG for
+   the AppImage (`SIGN`, `APPIMAGETOOL_FORCE_SIGN`) and for `SHA256SUMS.asc` (the new `checksums` job). The guarded
+   release upload takes no manifest for those text files and skips their `.sha256`.
+5. **Stores** (`store.yml`, on `release: published` or by hand), each behind a repository variable and its own
+   environment, and none rebuilding anything:
+   - Microsoft Store: tauri requires the offline WebView2 runtime there, which breaks the 8 MB NSIS budget, so
+     `release.yml` re-bundles a second NSIS installer only when `MS_STORE_ENABLED` is set (`tauri bundle`, no
+     rebuild), checks it and attaches it as `*-store-setup.exe`. `store.yml` sends both architectures' public release
+     URLs through the msstore CLI (`microsoft/store-submission` is archived; `microsoft-store-apppublisher` installs
+     the CLI) and submits for certification. The draft's assets are not public, hence the trigger on publication.
+   - Snap Store: the published deb of each architecture, repacked as a strict snap (`snap/snapcraft.yaml`: the gnome
+     extension's WebKitGTK, ALSA routed to PulseAudio, slots for MPRIS and the single-instance D-Bus name), released to
+     `candidate` by default; a person promotes a checked revision.
+   - App Store Connect: the published universal app re-signed with the App Sandbox
+     (`src-tauri/macos/AppStore.entitlements`), the provisioning profile and Apple Distribution, packaged by
+     `productbuild` (Mac Installer Distribution) and uploaded with `altool`. Re-signing the checked app avoids a second
+     build and the QUL secrets in that environment. A person tests it through TestFlight and submits it for review.
+6. **Not verifiable here:** no runner, no QUL archive, no certificates or store accounts. The workflows pass the policy
+   check and Prettier, and every script they run is tested, but the first tag will be the first real run. Points to
+   watch: clang on `windows-latest` for the arm64 crates, `gh` and the snap actions on the arm64 runners, the Store's
+   acceptance of GitHub's redirecting asset URLs, the snap's audio and D-Bus slots under strict confinement, and the
+   sandboxed app's behaviour (downloads, backup dialogs, single instance, tray). Each has a checklist row.

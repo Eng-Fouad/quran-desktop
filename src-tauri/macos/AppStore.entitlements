@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  The Mac App Store build's entitlements (.github/workflows/store.yml re-signs the released Quran.app with them;
+  ARCHITECTURE §13.4). TEAM_ID is replaced with the Apple team ID before signing.
+  - App Sandbox, required by the Mac App Store; the app's data moves into its container.
+  - Outgoing network: recitations, translations, tafsir and page fonts.
+  - Files the user picks: the library backup and restore (Settings › Storage).
+  - The application and team identifiers must match the provisioning profile.
+-->
+<plist version="1.0">
+<dict>
+  <key>com.apple.security.app-sandbox</key>
+  <true/>
+  <key>com.apple.security.network.client</key>
+  <true/>
+  <key>com.apple.security.files.user-selected.read-write</key>
+  <true/>
+  <key>com.apple.application-identifier</key>
+  <string>TEAM_ID.com.quran.labs.desktop</string>
+  <key>com.apple.developer.team-identifier</key>
+  <string>TEAM_ID</string>
+</dict>
+</plist>

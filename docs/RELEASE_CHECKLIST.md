@@ -30,14 +30,19 @@ there.
 - [ ] **Signing and notarisation.** The signing decision in `docs/deviations/WP13b.md` holds: either this release is
       published as a **pre-release** with the unsigned-install notes of `.github/release-notes.md`, or every item
       below is done. Open work until then:
-  - [ ] Windows: an Authenticode certificate in the quran org's name (Azure Trusted Signing, or SignPath Foundation
-        for open source), wired as `bundle.windows.signCommand` in a release-only `--config` (SHA-256 digest, RFC 3161
-        timestamp). `signtool verify /pa /v` passes on the setup exe and, after installing it, on
-        `%LOCALAPPDATA%\Quran\quran-desktop.exe` and `uninstall.exe`.
+  - [ ] Windows: an Azure Artifact Signing account and certificate profile in the quran org's name. In the
+        environment `release`: the secrets `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID` and the
+        variables `AZURE_SIGNING_ENDPOINT`, `AZURE_SIGNING_ACCOUNT`, `AZURE_SIGNING_PROFILE`. `release.yml` then signs
+        through tauri's `signCommand` (`artifact-signing-cli`, SHA-256, RFC 3161 timestamp) and
+        `check-bundles --signed` refuses an unsigned exe. `signtool verify /pa /v` passes on the setup exe, the
+        portable exe and, after installing it, on `%LOCALAPPDATA%\Quran\quran-desktop.exe` and `uninstall.exe`.
   - [ ] macOS: a Developer ID Application certificate of the org's team, and the `APPLE_CERTIFICATE`,
-        `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `APPLE_PASSWORD` (app-specific) and
-        `APPLE_TEAM_ID` secrets in the environment `release`. The draft's app then passes
+        `APPLE_CERTIFICATE_PASSWORD` and `APPLE_SIGNING_IDENTITY` secrets in the environment `release`, with either
+        `APPLE_ID`, `APPLE_PASSWORD` (app-specific) and `APPLE_TEAM_ID`, or an App Store Connect API key
+        (`APPLE_API_ISSUER`, `APPLE_API_KEY`, `APPLE_API_KEY_P8`) for notarisation. The draft's app then passes
         `spctl -a -t exec -vv Quran.app` ("source=Notarized Developer ID") and `xcrun stapler validate Quran.app`.
+  - [ ] GPG: a release key, `GPG_PRIVATE_KEY` and `GPG_PASSPHRASE` in the environment `release` (signed AppImages and
+        `SHA256SUMS.asc`), and its public key published where users can fetch it.
   - [ ] The release notes lose the unsigned-install section, and the release can be marked "Latest".
   - [ ] Updater (§15.2): still out of v1. It needs its own signing key, so revisit it with the certificates.
 
@@ -82,9 +87,13 @@ there.
 ## 2. Tag and build
 
 - [ ] `git tag v<version>` on the release commit, then `git push origin v<version>`.
-- [ ] `release.yml` is green. The draft release `v<version>` holds `Quran_<version>_x64-setup.exe`,
-      `Quran_<version>_universal.dmg`, `Quran_<version>_amd64.deb` and `Quran_<version>_amd64.AppImage`, each with a
-      `.sha256`. Each build job's summary shows the §13.6 table within budget. Windows ships the NSIS installer only:
+- [ ] `release.yml` is green. The draft release `v<version>` holds, each with a `.sha256`:
+      `Quran_<version>_x64-setup.exe` and `Quran_<version>_arm64-setup.exe`, `Quran_<version>_x64_portable.zip` and
+      `Quran_<version>_arm64_portable.zip`, `Quran_<version>_universal.dmg` and `Quran_<version>_universal.app.zip`,
+      `Quran_<version>_amd64.deb`, `Quran_<version>_arm64.deb`, `Quran_<version>_amd64.AppImage` and
+      `Quran_<version>_aarch64.AppImage`; with the Microsoft Store switched on, `Quran_<version>_x64-store-setup.exe`
+      and `Quran_<version>_arm64-store-setup.exe`; and `SHA256SUMS` (with `SHA256SUMS.asc` once GPG is configured).
+      Each build job's summary shows the §13.6 table within budget. Windows ships the NSIS installer only:
       an MSI (`pnpm tauri build --bundles msi`, per-machine, English UI) is not a release asset, and its upgrade code
       is pinned in `src-tauri/tauri.windows.conf.json` should one ever be built for a managed deployment.
 - [ ] To rehearse without a tag, run `release.yml` from the Actions tab on a branch. It runs the same builds and checks
@@ -107,6 +116,8 @@ Install each file from the draft release, not a local build. Use a fresh user pr
 - [ ] Go to 2:255 and close the window at once (×, then again with the taskbar's Close or Alt+F4): the app reopens on
       page 42. While reciting, choose Quit in the tray menu: the dock offers to resume the ayah that was playing. On
       macOS, try Cmd+Q right after a turn too and record whether the page is kept (LEAD 23).
+- [ ] macOS: the app menu shows "Settings… ⌘," after About. Choosing it opens the Settings dialog (and leaves it open
+      when it shows); ⌘, toggles the dialog once per press; with a confirmation open neither does anything.
 - [ ] Turn network use off while a streamed surah plays, so the next surah fails ("Offline — … isn't downloaded"). Turn
       it on again, then press Play on the dock, a media key or the tray: the recitation continues where it stopped, the
       range unchanged.
@@ -116,8 +127,6 @@ Install each file from the draft release, not a local build. Use a fresh user pr
       source and licence.
 - [ ] Dropping a file or a link from another app onto the window does nothing (no navigation, a "not allowed"
       cursor), and the reader stays where it was. A link inside About opens in the default browser, never in the app.
-- [ ] macOS: the app menu shows "Settings… ⌘," after About. Choosing it opens the Settings dialog (and leaves it open
-      when it shows); ⌘, toggles the dialog once per press; with a confirmation open neither does anything.
 - [ ] Uninstall removes the app. User data stays where §2.8.3 says it is.
 - [ ] Upgrade: install the previous release, use it (a bookmark, a downloaded translation), then install this one over
       it. One "Quran" entry remains in the system's app list, and the bookmark and the download are still there.
@@ -139,6 +148,19 @@ Install each file from the draft release, not a local build. Use a fresh user pr
 - [ ] The one-time tray notice appears (with Do Not Disturb off).
 - [ ] On a machine without WebView2 (a clean VM), the installer's bootstrapper installs it.
 - [ ] NVDA with the OneCore Arabic voice reads 1:1–7, 2:255 and 38:24 sensibly (WP8d). Record the result in §12.6.
+
+### Windows on Arm (an arm64 device or VM)
+
+- [ ] `Quran_<version>_arm64-setup.exe` installs and runs natively: Task Manager's Details tab shows the
+      architecture `ARM64` for `quran-desktop.exe`. Pages, recitation, media controls and the tray work.
+
+### Portable builds
+
+- [ ] `Quran_<version>_<arch>_portable.zip`, extracted to a folder that was never installed to (a USB stick too),
+      runs `Quran\quran-desktop.exe` without installing anything and finds its pages (the bundled `data\`). Its data
+      goes to the same profile folder as the installed app's.
+- [ ] `Quran_<version>_universal.app.zip`, unzipped by Finder, opens like the dmg's app and passes the same
+      `codesign` and `spctl` checks.
 
 ### macOS 13.3+ (Apple silicon and Intel)
 
@@ -177,6 +199,10 @@ Install each file from the draft release, not a local build. Use a fresh user pr
 - [ ] Memorisation hide (blur) on a full spread stays smooth on WebKitGTK. If it misses §8.16's 16 ms per frame, file
       the change of the Linux default to `blank` (WP9b deviation 14).
 - [ ] The AppImage runs on a second distribution (for example Fedora) after `chmod +x`.
+- [ ] arm64 (a Raspberry Pi 5 with Raspberry Pi OS or Ubuntu, or an arm64 VM): `Quran_<version>_arm64.deb` installs and
+      `Quran_<version>_aarch64.AppImage` runs; pages, recitation and MPRIS work.
+- [ ] With GPG configured: `gpg --verify SHA256SUMS.asc SHA256SUMS` and the AppImage's own signature
+      (`./Quran_<version>_amd64.AppImage --appimage-signature`) check out against the published key.
 - [ ] Translations in Bengali, Devanagari and Tamil scripts show the install hint when their fonts are missing (R20).
 - [ ] WebKitGTK has no crash hook either: kill the `WebKitWebProcess` and note what the user sees (as on macOS).
 - [ ] While reciting, hide the window to the tray, then minimise it: in the WebKitGTK inspector (a debug build,
@@ -194,5 +220,30 @@ Install each file from the draft release, not a local build. Use a fresh user pr
 
 - [ ] Replace the first paragraph of the draft's notes with the changes in this version. Keep the install notes for
       unsigned builds while they apply.
-- [ ] Download each asset from the draft and check it: `sha256sum -c <file>.sha256`.
-- [ ] Publish the draft. Check that the published release's assets download.
+- [ ] Download each asset from the draft and check it: `sha256sum -c <file>.sha256` (or `sha256sum -c SHA256SUMS`).
+- [ ] Publish the draft. Check that the published release's assets download. Publishing starts `store.yml` for every
+      store switched on (section 5).
+
+## 5. Stores
+
+`store.yml` submits the files of the published release: nothing is rebuilt. Each store has its own environment, so
+it can require an approval of its own, and runs only when its variable is `true`. The identity gate (section 1)
+applies to every store listing.
+
+- [ ] **Microsoft Store** (`MS_STORE_ENABLED`). Once: the app reserved and its first EXE submission made by hand in
+      Partner Center, an Entra ID app with Partner Center access, the `microsoft-store` environment's secrets
+      (`MS_STORE_TENANT_ID`, `MS_STORE_SELLER_ID`, `MS_STORE_CLIENT_ID`, `MS_STORE_CLIENT_SECRET`) and
+      `vars.MS_STORE_PRODUCT_ID`, and Windows signing configured (the Store refuses unsigned PE files). Per release:
+      the job is green and Partner Center shows the submission in certification, then live.
+- [ ] **Snap Store** (`SNAP_STORE_ENABLED`). Once: `snapcraft register quran-desktop` and the `snap-store`
+      environment's `SNAPCRAFT_STORE_CREDENTIALS`; the store may hold the first upload for manual review of its D-Bus
+      slots. Per release, on Ubuntu amd64 and arm64: `sudo snap install quran-desktop --candidate` (or the configured
+      `SNAP_CHANNEL`) runs, pages render, recitation plays (the ALSA-to-PulseAudio route), the tray and MPRIS work, a
+      second launch focuses the first, and a backup can be saved to the home folder. Then
+      `snapcraft release quran-desktop <revision> stable`.
+- [ ] **Mac App Store** (`APP_STORE_ENABLED`). Once: the app record for `com.quran.labs.desktop` in App Store Connect,
+      an Apple Distribution and a Mac Installer Distribution certificate, a Mac App Store provisioning profile, an
+      App Store Connect API key, the `app-store` environment's secrets and `vars.APPLE_TEAM_ID`. Per release: the build
+      appears in App Store Connect; installed through TestFlight, the sandboxed app reads, downloads recitations and
+      translations, saves and restores a backup through the file dialogs, opens `quran-desktop://2:255` links, keeps
+      one instance, and shows the tray and Now Playing. Then submit it for review there.

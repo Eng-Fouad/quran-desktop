@@ -11,6 +11,8 @@ import path from 'node:path'
 import { after, describe, it } from 'node:test'
 import zlib from 'node:zlib'
 import {
+  binaryArch,
+  checkBinaryArch,
   checkBundles,
   checkCore,
   checkDebControl,
@@ -19,6 +21,7 @@ import {
   checkLinuxTree,
   checkNsisScript,
   expectations,
+  findPortable,
   pngSize,
 } from './check-bundles.mjs'
 
@@ -122,11 +125,31 @@ Terminal=false
 Type=Application
 `
 
-/** The installed tree of a correct deb. @param {Buffer} core */
-function debTree(core) {
+/** The first 64 bytes of a little-endian 64-bit ELF for `machine` (62 x86-64, 183 AArch64). @param {number} machine */
+function elf(machine) {
+  const head = Buffer.alloc(64)
+  head.write('\x7fELF', 0, 'latin1')
+  head[4] = 2 // ELFCLASS64
+  head[5] = 1 // little-endian
+  head.writeUInt16LE(machine, 18)
+  return head
+}
+
+/** A minimal PE: the DOS stub's e_lfanew, then `PE\0\0` and the machine. @param {number} machine */
+function pe(machine) {
+  const head = Buffer.alloc(0x100)
+  head.write('MZ', 0, 'latin1')
+  head.writeUInt32LE(0x80, 0x3c)
+  head.write('PE\0\0', 0x80, 'latin1')
+  head.writeUInt16LE(machine, 0x84)
+  return head
+}
+
+/** The installed tree of a correct deb. @param {Buffer} core @param {Buffer} [binary] */
+function debTree(core, binary = elf(62)) {
   /** @type {Record<string, string | Buffer>} */
   const files = {
-    'usr/bin/quran-desktop': Buffer.concat([Buffer.from('\x7fELF', 'latin1'), Buffer.alloc(60)]),
+    'usr/bin/quran-desktop': binary,
     'usr/lib/Quran/data/core.db': core,
     'usr/lib/Quran/data/catalog.json': '{"packs":[]}',
     'usr/share/applications/Quran.desktop': DESKTOP,
@@ -192,6 +215,22 @@ describe('checks', () => {
     assert.match(problems[0] ?? '', /Depends lacks an appindicator library/)
     assert.match(problems[1] ?? '', /Depends lacks libasound2 \| libasound2t64/)
     assert.match(checkDebControl(CONTROL.replace('amd64', 'arm64'), expect)[0] ?? '', /Architecture arm64/)
+    // An arm64 build: the same Depends, Architecture arm64.
+    assert.deepEqual(checkDebControl(CONTROL.replace('amd64', 'arm64'), expect, 'arm64'), [])
+    assert.match(checkDebControl(CONTROL, expect, 'arm64')[0] ?? '', /Architecture amd64, expected arm64/)
+  })
+
+  it('reads the architecture of a PE or ELF binary', () => {
+    assert.equal(binaryArch(pe(0x8664)), 'x64')
+    assert.equal(binaryArch(pe(0xaa64)), 'arm64')
+    assert.equal(binaryArch(pe(0x14c)), 'PE machine 0x14c')
+    assert.equal(binaryArch(elf(62)), 'x64')
+    assert.equal(binaryArch(elf(183)), 'arm64')
+    assert.equal(binaryArch(Buffer.from('#!/bin/sh\n')), 'neither a PE nor an ELF binary')
+    assert.deepEqual(checkBinaryArch(pe(0xaa64), 'arm64', 'quran-desktop.exe'), [])
+    assert.deepEqual(checkBinaryArch(pe(0x8664), 'arm64', 'quran-desktop.exe'), [
+      'quran-desktop.exe is built for x64, expected arm64',
+    ])
   })
 
   it('the Linux tree has the binary, the resources, the desktop entry and every icon', () => {
@@ -205,6 +244,10 @@ describe('checks', () => {
       /bundles no libayatana-appindicator3/,
     )
     appimage.add('usr/lib/libayatana-appindicator3.so.1')
+    assert.deepEqual(checkLinuxTree(appimage, expect, { appimage: true }), [])
+    // An arm64 AppImage keeps the library under its multiarch directory.
+    appimage.delete('usr/lib/libayatana-appindicator3.so.1')
+    appimage.add('usr/lib/aarch64-linux-gnu/libayatana-appindicator3.so.1')
     assert.deepEqual(checkLinuxTree(appimage, expect, { appimage: true }), [])
   })
 
@@ -265,7 +308,13 @@ describe('a deb end to end', () => {
     const file = path.join(bundle, 'deb', `Quran_${expect.version}_amd64.deb`)
     fs.mkdirSync(path.dirname(file), { recursive: true })
     fs.writeFileSync(file, deb(CONTROL, debTree(Buffer.alloc(0))))
-    const [ok] = checkBundles({ bundleDirs: [bundle], core: 'placeholder', universal: false, expect })
+    const [ok] = checkBundles({
+      bundleDirs: [bundle],
+      core: 'placeholder',
+      universal: false,
+      expect,
+      arch: 'x64',
+    })
     assert.equal(ok?.kind, 'deb')
     assert.deepEqual(ok?.problems, [])
     assert.equal(ok?.ok, true)
@@ -276,7 +325,13 @@ describe('a deb end to end', () => {
     tree['usr/share/applications/Quran.desktop'] = DESKTOP.replace('Icon=quran-desktop', 'Icon=quran')
     tree['usr/lib/Quran/fixtures/p1.json'] = '{"ayahId":1,"glyph":"x","isEnd":false}'
     fs.writeFileSync(file, deb(CONTROL.replace(', libgtk-3-0', ''), tree))
-    const [bad] = checkBundles({ bundleDirs: [bundle], core: 'placeholder', universal: false, expect })
+    const [bad] = checkBundles({
+      bundleDirs: [bundle],
+      core: 'placeholder',
+      universal: false,
+      expect,
+      arch: 'x64',
+    })
     const text = bad?.problems.join('\n') ?? ''
     assert.equal(bad?.ok, false)
     assert.match(text, /Depends lacks libgtk-3-0/)
@@ -290,10 +345,42 @@ describe('a deb end to end', () => {
     const file = path.join(bundle, 'deb', `Quran_${expect.version}_amd64.deb`)
     fs.mkdirSync(path.dirname(file), { recursive: true })
     fs.writeFileSync(file, deb(CONTROL, debTree(coreDb('qul'))))
-    assert.equal(checkBundles({ bundleDirs: [bundle], core: 'qul', universal: false, expect })[0]?.ok, true)
+    const opts = /** @type {const} */ ({ core: 'qul', universal: false, expect, arch: 'x64' })
+    assert.equal(checkBundles({ bundleDirs: [bundle], ...opts })[0]?.ok, true)
     fs.writeFileSync(file, deb(CONTROL, debTree(coreDb('qdc'))))
-    const [qdc] = checkBundles({ bundleDirs: [bundle], core: 'qul', universal: false, expect })
+    const [qdc] = checkBundles({ bundleDirs: [bundle], ...opts })
     assert.equal(qdc?.ok, false)
     assert.match(qdc?.problems.join('\n') ?? '', /meta\.source = "qdc"/)
+  })
+
+  it('an arm64 deb passes as arm64, and a binary of the other architecture fails', () => {
+    const bundle = path.join(fresh(), 'bundle')
+    const file = path.join(bundle, 'deb', `Quran_${expect.version}_arm64.deb`)
+    fs.mkdirSync(path.dirname(file), { recursive: true })
+    const control = CONTROL.replace('amd64', 'arm64')
+    fs.writeFileSync(file, deb(control, debTree(Buffer.alloc(0), elf(183))))
+    const opts = /** @type {const} */ ({ core: 'placeholder', universal: false, expect, arch: 'arm64' })
+    const [ok] = checkBundles({ bundleDirs: [bundle], ...opts })
+    assert.deepEqual(ok?.problems, [])
+    fs.writeFileSync(file, deb(control, debTree(Buffer.alloc(0), elf(62))))
+    const [bad] = checkBundles({ bundleDirs: [bundle], ...opts })
+    assert.deepEqual(bad?.problems, ['usr/bin/quran-desktop is built for x64, expected arm64'])
+  })
+})
+
+describe('portable zips', () => {
+  it('finds the newest zip under bundle/portable', () => {
+    const bundle = path.join(fresh(), 'bundle')
+    assert.equal(findPortable([bundle]), undefined)
+    const dir = path.join(bundle, 'portable')
+    fs.mkdirSync(dir, { recursive: true })
+    const older = path.join(dir, 'Quran_0.0.9_x64_portable.zip')
+    const newer = path.join(dir, `Quran_${expect.version}_x64_portable.zip`)
+    fs.writeFileSync(older, 'zip')
+    fs.writeFileSync(newer, 'zip')
+    fs.writeFileSync(path.join(dir, 'notes.txt'), 'not a zip')
+    const past = new Date(Date.now() - 60_000)
+    fs.utimesSync(older, past, past)
+    assert.equal(findPortable([bundle]), newer)
   })
 })

@@ -5,18 +5,26 @@
 
 ### Downloads
 
-| System                                | File                             | Notes                                                                  |
-| ------------------------------------- | -------------------------------- | ---------------------------------------------------------------------- |
-| Windows 10/11 (x64)                   | `Quran_<version>_x64-setup.exe`  | Installs for the current user. WebView2 is installed if it is missing. |
-| macOS 13.3+ (Apple silicon and Intel) | `Quran_<version>_universal.dmg`  | Drag Quran to Applications.                                            |
-| Ubuntu 22.04+ / Debian 12+ (x64)      | `Quran_<version>_amd64.deb`      | `sudo apt install ./Quran_<version>_amd64.deb`                         |
-| Other Linux (x64)                     | `Quran_<version>_amd64.AppImage` | `chmod +x`, then run it.                                               |
+| System                                | Installer                         | Portable (no install)                |
+| ------------------------------------- | --------------------------------- | ------------------------------------ |
+| Windows 10/11, x64                    | `Quran_<version>_x64-setup.exe`   | `Quran_<version>_x64_portable.zip`   |
+| Windows 11 on Arm                     | `Quran_<version>_arm64-setup.exe` | `Quran_<version>_arm64_portable.zip` |
+| macOS 13.3+ (Apple silicon and Intel) | `Quran_<version>_universal.dmg`   | `Quran_<version>_universal.app.zip`  |
+| Ubuntu 22.04+ / Debian 12+, x64       | `Quran_<version>_amd64.deb`       | `Quran_<version>_amd64.AppImage`     |
+| Ubuntu 22.04+ / Debian 12+, arm64     | `Quran_<version>_arm64.deb`       | `Quran_<version>_aarch64.AppImage`   |
 
-Each file has a `.sha256` next to it: `sha256sum -c <file>.sha256` (macOS: `shasum -a 256 -c <file>.sha256`).
+- **Windows**: the setup installs for the current user, and installs WebView2 if it is missing. The portable zip runs
+  `Quran\quran-desktop.exe` from wherever it is extracted; it needs WebView2 (part of Windows 11).
+- **macOS**: drag Quran to Applications. The `.app.zip` holds the same app.
+- **Linux**: `sudo apt install ./Quran_<version>_<arch>.deb`, or `chmod +x` the AppImage and run it.
+
+Checksums: every file has a `.sha256` next to it (`sha256sum -c <file>.sha256`; macOS: `shasum -a 256 -c …`), and
+`SHA256SUMS` lists them all. When the release carries `SHA256SUMS.asc`, check it with the project's public key:
+`gpg --verify SHA256SUMS.asc SHA256SUMS`.
 
 ### First launch of an unsigned build
 
-Code signing is not set up yet (see `docs/deviations/WP13b.md`), so the systems warn on first launch:
+Delete this section once the builds are signed (`docs/RELEASE_CHECKLIST.md`, section 1).
 
 - **Windows**: SmartScreen shows "Windows protected your PC". Choose **More info**, then **Run anyway**.
 - **macOS**: the app is signed ad hoc, not notarised. Open it once, then go to **System Settings › Privacy & Security**

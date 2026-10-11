@@ -1,0 +1,311 @@
+# Stores (ARCHITECTURE §13.4). Owner: WP13b.
+#
+# Publishing a release (a person, after docs/RELEASE_CHECKLIST.md) submits it to every store switched on below. Each
+# store gets files of that very release, which release.yml built and check-bundles verified: nothing is rebuilt here,
+# and no workflow publishes or edits a release (the policy check enforces it).
+#   microsoft-store  vars.MS_STORE_ENABLED   the x64 and arm64 Quran_<version>_<arch>-store-setup.exe (signed, offline
+#                                            WebView2) by their public release URLs, through the msstore CLI. The
+#                                            submission goes to certification; Microsoft publishes it afterwards.
+#   snap-store       vars.SNAP_STORE_ENABLED the amd64 and arm64 debs repacked as strict snaps (snap/snapcraft.yaml),
+#                                            uploaded and released to vars.SNAP_CHANNEL (default `candidate`); a person
+#                                            promotes a checked revision to `stable` (RELEASE_CHECKLIST).
+#   app-store        vars.APP_STORE_ENABLED  the universal Quran.app re-signed for the Mac App Store (App Sandbox, the
+#                                            provisioning profile, Apple Distribution), packaged by productbuild (Mac
+#                                            Installer Distribution) and uploaded to App Store Connect, where a person
+#                                            tests it (TestFlight) and submits it for review.
+# workflow_dispatch submits a published tag again, to one store or all of them.
+#
+# Secrets and variables, per environment:
+#   microsoft-store  secrets MS_STORE_TENANT_ID, MS_STORE_SELLER_ID, MS_STORE_CLIENT_ID, MS_STORE_CLIENT_SECRET (an
+#                    Entra ID app with Partner Center access); vars.MS_STORE_PRODUCT_ID (the app's Store ID). The first
+#                    submission is made by hand in Partner Center: CI updates a listed app.
+#   snap-store       secret SNAPCRAFT_STORE_CREDENTIALS (`snapcraft export-login --snaps=quran-desktop --acls
+#                    package_access,package_push,package_update,package_release -`); the name `quran-desktop` is
+#                    registered first (`snapcraft register`).
+#   app-store        secrets APP_STORE_CERTIFICATE + APP_STORE_CERTIFICATE_PASSWORD (Apple Distribution, base64 .p12),
+#                    APP_STORE_INSTALLER_CERTIFICATE + APP_STORE_INSTALLER_CERTIFICATE_PASSWORD (Mac Installer
+#                    Distribution), APP_STORE_PROVISIONING_PROFILE (base64 Mac App Store profile of
+#                    com.quran.labs.desktop), APP_STORE_CONNECT_KEY_ID, APP_STORE_CONNECT_ISSUER_ID,
+#                    APP_STORE_CONNECT_KEY_P8 (an App Store Connect API key, Developer role); vars.APPLE_TEAM_ID;
+#                    optional vars.APP_STORE_APP_IDENTITY (default "Apple Distribution") and
+#                    vars.APP_STORE_INSTALLER_IDENTITY (default "3rd Party Mac Developer Installer").
+name: Stores
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: A published v* release
+        required: true
+        type: string
+      store:
+        description: The store to submit to
+        required: true
+        type: choice
+        options: [all, microsoft-store, snap-store, app-store]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stores-${{ github.event.release.tag_name || inputs.tag }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  release:
+    name: published release
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    outputs:
+      tag: ${{ steps.release.outputs.tag }}
+      version: ${{ steps.release.outputs.version }}
+    steps:
+      - name: The release is published and its tag a v* version
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          QD_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+        run: |
+          if [[ ! "$QD_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+            echo "::error title=Stores::$QD_TAG is not a v* release tag"
+            exit 1
+          fi
+          draft="$(gh release view "$QD_TAG" --json isDraft --jq .isDraft)"
+          if [ "$draft" != "false" ]; then
+            echo "::error title=Stores::$QD_TAG is not a published release (isDraft=$draft); a person publishes it first"
+            exit 1
+          fi
+          echo "tag=$QD_TAG" >> "$GITHUB_OUTPUT"
+          echo "version=${QD_TAG#v}" >> "$GITHUB_OUTPUT"
+
+  microsoft-store:
+    name: Microsoft Store
+    needs: release
+    if: >-
+      vars.MS_STORE_ENABLED == 'true'
+      && (github.event_name == 'release' || inputs.store == 'all' || inputs.store == 'microsoft-store')
+    environment: microsoft-store
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - name: The Store installers of the release (x64, arm64) and their package entries
+        id: packages
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          QD_TAG: ${{ needs.release.outputs.tag }}
+          QD_VERSION: ${{ needs.release.outputs.version }}
+          QD_SERVER: ${{ github.server_url }}
+        run: |
+          assets="$(gh release view "$QD_TAG" --json assets --jq '.assets[].name')"
+          json="$RUNNER_TEMP/store-packages.json"
+          QD_ASSETS="$assets" node -e '
+            const { QD_ASSETS, QD_VERSION, QD_TAG, QD_SERVER, GH_REPO } = process.env
+            const names = new Set(QD_ASSETS.split("\n"))
+            const packages = []
+            for (const [arch, store] of [["x64", "X64"], ["arm64", "Arm64"]]) {
+              const file = `Quran_${QD_VERSION}_${arch}-store-setup.exe`
+              if (!names.has(file)) {
+                console.error(`::error title=Microsoft Store::${file} is not in ${QD_TAG} (release.yml builds it when vars.MS_STORE_ENABLED is true)`)
+                process.exit(1)
+              }
+              packages.push({
+                packageUrl: `${QD_SERVER}/${GH_REPO}/releases/download/${QD_TAG}/${file}`,
+                languages: ["en", "ar"],
+                architectures: [store],
+                isSilentInstall: false,
+                installerParameters: "/S",
+                packageType: "exe",
+                genericDocUrl: "https://nsis.sourceforge.io/Docs/AppendixD.html#errorlevels",
+              })
+            }
+            require("node:fs").writeFileSync(process.argv[1], JSON.stringify({ packages }))
+            console.log(JSON.stringify({ packages }, null, 2))
+          ' "$json"
+          echo "json=$json" >> "$GITHUB_OUTPUT"
+
+      - name: msstore CLI
+        uses: microsoft/microsoft-store-apppublisher@cc9910a8d59f2eb55cbb83df0a3800cf3b5300e0 # v1.4
+        with:
+          version: v0.4.3
+
+      - name: Sign in to Partner Center
+        env:
+          QD_TENANT: ${{ secrets.MS_STORE_TENANT_ID }}
+          QD_SELLER: ${{ secrets.MS_STORE_SELLER_ID }}
+          QD_CLIENT: ${{ secrets.MS_STORE_CLIENT_ID }}
+          QD_SECRET: ${{ secrets.MS_STORE_CLIENT_SECRET }}
+        run: |
+          msstore reconfigure --tenantId "$QD_TENANT" --sellerId "$QD_SELLER" --clientId "$QD_CLIENT" \
+            --clientSecret "$QD_SECRET"
+
+      - name: Update the packages and submit for certification
+        env:
+          QD_PRODUCT: ${{ vars.MS_STORE_PRODUCT_ID }}
+          QD_PACKAGES: ${{ steps.packages.outputs.json }}
+        run: |
+          msstore submission update "$QD_PRODUCT" "$(cat "$QD_PACKAGES")"
+          msstore submission publish "$QD_PRODUCT"
+
+  snap-store:
+    name: Snap Store (${{ matrix.arch }})
+    needs: release
+    if: >-
+      vars.SNAP_STORE_ENABLED == 'true'
+      && (github.event_name == 'release' || inputs.store == 'all' || inputs.store == 'snap-store')
+    environment: snap-store
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            os: ubuntu-22.04
+          - arch: arm64
+            os: ubuntu-22.04-arm
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: The release's deb (snap/local/quran-desktop.deb) and version
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          QD_TAG: ${{ needs.release.outputs.tag }}
+          QD_VERSION: ${{ needs.release.outputs.version }}
+          QD_ARCH: ${{ matrix.arch }}
+        run: |
+          deb="Quran_${QD_VERSION}_${QD_ARCH}.deb"
+          gh release download "$QD_TAG" --pattern "$deb" --dir "$RUNNER_TEMP/deb"
+          mkdir -p snap/local
+          mv "$RUNNER_TEMP/deb/$deb" snap/local/quran-desktop.deb
+          sed -i "s/^version: .*/version: '$QD_VERSION'/" snap/snapcraft.yaml
+          grep -n '^version:' snap/snapcraft.yaml
+
+      - name: Pack the snap (snapcraft in LXD)
+        id: snap
+        uses: snapcore/action-build@3bdaa03e1ba6bf59a65f84a751d943d549a54e79 # v1.3.0
+
+      - name: Upload it and release it to the channel
+        uses: snapcore/action-publish@214b86e5ca036ead1668c79afb81e550e6c54d40 # v1.2.0
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+        with:
+          snap: ${{ steps.snap.outputs.snap }}
+          release: ${{ vars.SNAP_CHANNEL || 'candidate' }}
+
+  app-store:
+    name: App Store Connect
+    needs: release
+    if: >-
+      vars.APP_STORE_ENABLED == 'true'
+      && (github.event_name == 'release' || inputs.store == 'all' || inputs.store == 'app-store')
+    environment: app-store
+    runs-on: macos-latest
+    timeout-minutes: 45
+    env:
+      QD_APP: ${{ github.workspace }}/../appstore/Quran.app
+      QD_PKG: ${{ github.workspace }}/../appstore/Quran.pkg
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: The release's universal Quran.app
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          QD_TAG: ${{ needs.release.outputs.tag }}
+          QD_VERSION: ${{ needs.release.outputs.version }}
+        run: |
+          zip="Quran_${QD_VERSION}_universal.app.zip"
+          dir="$(dirname "$QD_APP")"
+          mkdir -p "$dir"
+          gh release download "$QD_TAG" --pattern "$zip" --dir "$dir"
+          ditto -x -k "$dir/$zip" "$dir"
+          test -d "$QD_APP"
+          lipo -archs "$QD_APP/Contents/MacOS/quran-desktop"
+
+      - name: A keychain with the Apple Distribution and Mac Installer Distribution certificates
+        env:
+          QD_APP_CERT: ${{ secrets.APP_STORE_CERTIFICATE }}
+          QD_APP_CERT_PASSWORD: ${{ secrets.APP_STORE_CERTIFICATE_PASSWORD }}
+          QD_PKG_CERT: ${{ secrets.APP_STORE_INSTALLER_CERTIFICATE }}
+          QD_PKG_CERT_PASSWORD: ${{ secrets.APP_STORE_INSTALLER_CERTIFICATE_PASSWORD }}
+        run: |
+          keychain="$RUNNER_TEMP/appstore.keychain-db"
+          password="$(uuidgen)"
+          security create-keychain -p "$password" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$password" "$keychain"
+          for name in QD_APP_CERT QD_PKG_CERT; do
+            pass="${name}_PASSWORD"
+            printf '%s' "${!name}" | base64 --decode > "$RUNNER_TEMP/$name.p12"
+            security import "$RUNNER_TEMP/$name.p12" -k "$keychain" -P "${!pass}" -f pkcs12 \
+              -T /usr/bin/codesign -T /usr/bin/productbuild
+            rm -f "$RUNNER_TEMP/$name.p12"
+          done
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$password" "$keychain" >/dev/null
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+          security find-identity -v "$keychain"
+          echo "QD_KEYCHAIN=$keychain" >> "$GITHUB_ENV"
+
+      - name: Re-sign Quran.app for the Mac App Store (App Sandbox, provisioning profile, Apple Distribution)
+        env:
+          QD_PROFILE: ${{ secrets.APP_STORE_PROVISIONING_PROFILE }}
+          QD_TEAM: ${{ vars.APPLE_TEAM_ID }}
+          QD_IDENTITY: ${{ vars.APP_STORE_APP_IDENTITY || 'Apple Distribution' }}
+          QD_BUILD: ${{ github.run_number }}
+        run: |
+          if [[ ! "$QD_TEAM" =~ ^[A-Z0-9]{10}$ ]]; then
+            echo "::error title=App Store::vars.APPLE_TEAM_ID must be the 10-character Apple team ID"
+            exit 1
+          fi
+          plist="$QD_APP/Contents/Info.plist"
+          printf '%s' "$QD_PROFILE" | base64 --decode > "$QD_APP/Contents/embedded.provisionprofile"
+          sed "s/TEAM_ID/$QD_TEAM/g" src-tauri/macos/AppStore.entitlements > "$RUNNER_TEMP/AppStore.entitlements"
+          # App Store Connect needs a new build number for every upload of a version; HTTPS only, so exempt.
+          plutil -replace CFBundleVersion -string "$QD_BUILD" "$plist"
+          plutil -replace ITSAppUsesNonExemptEncryption -bool NO "$plist"
+          # The notarisation ticket stapled to the Developer ID build does not apply to this signature.
+          rm -f "$QD_APP/Contents/CodeResources"
+          codesign --force --timestamp --options runtime --entitlements "$RUNNER_TEMP/AppStore.entitlements" \
+            --keychain "$QD_KEYCHAIN" --sign "$QD_IDENTITY" "$QD_APP"
+          codesign --verify --strict --verbose=2 "$QD_APP"
+          codesign -d --entitlements - --xml "$QD_APP" | plutil -p - | grep -q 'com.apple.security.app-sandbox" => true'
+          codesign -dvv "$QD_APP" 2>&1 | grep -E '^(Authority|TeamIdentifier)='
+
+      - name: Quran.pkg (productbuild, Mac Installer Distribution)
+        env:
+          QD_IDENTITY: ${{ vars.APP_STORE_INSTALLER_IDENTITY || '3rd Party Mac Developer Installer' }}
+        run: |
+          xcrun productbuild --sign "$QD_IDENTITY" --keychain "$QD_KEYCHAIN" --component "$QD_APP" /Applications "$QD_PKG"
+          pkgutil --check-signature "$QD_PKG"
+
+      - name: Validate and upload to App Store Connect (a person submits it for review there)
+        env:
+          QD_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          QD_ISSUER: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          QD_KEY_P8: ${{ secrets.APP_STORE_CONNECT_KEY_P8 }}
+        run: |
+          mkdir -p ~/.appstoreconnect/private_keys
+          printf '%s\n' "$QD_KEY_P8" > ~/.appstoreconnect/private_keys/"AuthKey_$QD_KEY_ID.p8"
+          xcrun altool --validate-app --type macos --file "$QD_PKG" --apiKey "$QD_KEY_ID" --apiIssuer "$QD_ISSUER"
+          xcrun altool --upload-app --type macos --file "$QD_PKG" --apiKey "$QD_KEY_ID" --apiIssuer "$QD_ISSUER"
+
+      - name: Remove the keychain and the API key
+        if: always()
+        run: |
+          if [ -n "${QD_KEYCHAIN:-}" ]; then security delete-keychain "$QD_KEYCHAIN" || true; fi
+          rm -rf ~/.appstoreconnect

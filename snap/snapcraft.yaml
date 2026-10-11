@@ -1,0 +1,86 @@
+# The Snap Store package (.github/workflows/store.yml; ARCHITECTURE §13.4). Owner: WP13b.
+#
+# Nothing is built here: store.yml copies the published release's deb of the runner's architecture to
+# snap/local/quran-desktop.deb, sets `version` from the tag, and snapcraft repacks it under strict confinement. The
+# binary and its qul core.db are the ones release.yml checked (check-bundles) and a person published.
+#   - The gnome extension (core22: the gnome-42-2204 platform) brings GTK and WebKitGTK 4.1 with its own layout for
+#     WebKit's helper processes, so webkit is not staged: library and helpers come from one place.
+#   - Audio: cpal speaks ALSA. Under strict confinement ALSA reaches the sound server through PulseAudio
+#     (`audio-playback`, auto-connected): the pulse ALSA plugin is staged and /etc/asound.conf routes the default
+#     device to it; the layouts give libasound its plugin directory and configuration.
+#   - D-Bus names the app owns: MPRIS (`org.mpris.MediaPlayer2.quran_desktop`, the OS media controls, WP6d) and the
+#     single-instance lock (`com.quran.labs.desktop.SingleInstance`).
+#   - The tray (StatusNotifierItem) talks to the panel through `unity7` / `desktop`.
+# Built on and for amd64 (ubuntu-22.04) and arm64 (ubuntu-22.04-arm), like the debs. docs/RELEASE_CHECKLIST.md has
+# the rows a person checks on a real install before promoting a revision to `stable`.
+name: quran-desktop
+title: Quran
+base: core22
+version: '0.0.0' # store.yml writes the release's version
+summary: Quran reader with recitation
+description: |
+  Quran for Desktop: the Madani Mushaf page by page as printed, recitation with word-by-word highlighting,
+  translations, tafsir, search and memorisation. Offline-first; recitations, translations and tafsir download on
+  request.
+website: https://quran.com
+license: GPL-3.0-or-later
+grade: stable
+confinement: strict
+architectures:
+  - build-on: [amd64]
+    build-for: [amd64]
+  - build-on: [arm64]
+    build-for: [arm64]
+
+layout:
+  /usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/alsa-lib:
+    bind: $SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/alsa-lib
+  /usr/share/alsa:
+    bind: $SNAP/usr/share/alsa
+  /etc/asound.conf:
+    bind-file: $SNAP/etc/asound.conf
+
+slots:
+  mpris:
+    interface: mpris
+    name: quran_desktop
+  single-instance:
+    interface: dbus
+    bus: session
+    name: com.quran.labs.desktop.SingleInstance
+
+apps:
+  quran-desktop:
+    command: usr/bin/quran-desktop
+    desktop: usr/share/applications/Quran.desktop
+    extensions: [gnome]
+    plugs:
+      - network
+      - network-status
+      - audio-playback
+      - home
+      - unity7
+    slots:
+      - mpris
+      - single-instance
+
+parts:
+  app:
+    plugin: dump
+    source: snap/local/quran-desktop.deb
+    source-type: deb
+    stage-packages:
+      - libayatana-appindicator3-1
+      - libasound2
+      - libasound2-plugins
+    override-prime: |
+      craftctl default
+      # The desktop entry names its icon by theme name; a snap's menu entry needs the file.
+      sed -i 's|^Icon=.*|Icon=${SNAP}/usr/share/icons/hicolor/128x128/apps/quran-desktop.png|' \
+        usr/share/applications/Quran.desktop
+
+  alsa-pulse:
+    plugin: nil
+    override-build: |
+      mkdir -p "$CRAFT_PART_INSTALL/etc"
+      printf 'pcm.!default { type pulse }\nctl.!default { type pulse }\n' > "$CRAFT_PART_INSTALL/etc/asound.conf"

@@ -346,10 +346,17 @@ Remove-Item Env:QD_ALLOW_DEV_CORE
 
 ## 10. Releases, budgets and metrics
 
-The release pipeline is `.github/workflows/release.yml` (§13.4): a `v*` tag builds the NSIS installer, one universal
-dmg, a deb and an AppImage from a core.db built from the QUL exports, checks them and uploads them to a draft release.
-A person publishes the draft after [`RELEASE_CHECKLIST.md`](RELEASE_CHECKLIST.md). Decisions on budgets and signing:
-[`deviations/WP13b.md`](deviations/WP13b.md).
+The release pipeline is `.github/workflows/release.yml` (§13.4): a `v*` tag builds, for x64 and arm64, the NSIS
+installers and portable zips (Windows), one universal dmg and `.app` zip (macOS), and the debs and AppImages (Linux)
+from a core.db built from the QUL exports, signs what is configured, checks them and uploads them to a draft release
+with `SHA256SUMS`. A person publishes the draft after [`RELEASE_CHECKLIST.md`](RELEASE_CHECKLIST.md); publishing starts
+`.github/workflows/store.yml`, which submits the release's files to the stores switched on (Microsoft Store, Snap
+Store, App Store Connect). Decisions on budgets, signing and stores: [`deviations/WP13b.md`](deviations/WP13b.md).
+
+- **Portable builds** (`node scripts/make-portable.mjs --arch x64|arm64 [--target <triple>] [--universal]`): after a
+  release build, writes `bundle/portable/Quran_<version>_<arch>_portable.zip` (Windows) or
+  `Quran_<version>_<universal | aarch64 | x64>.app.zip` (macOS) next to the installers; `check-bundles.mjs` checks it as
+  the `portable` kind.
 
 - **Size budgets** (`node scripts/size-budget.mjs`): every §13.6 row it can measure, MB read as MiB. It finds the newest
   installer of each kind under `$CARGO_TARGET_DIR/**/release/bundle`, the install footprint, `dist/` and the runtime
@@ -359,6 +366,9 @@ A person publishes the draft after [`RELEASE_CHECKLIST.md`](RELEASE_CHECKLIST.md
 - **Installer contents** (`node scripts/check-bundles.mjs`): unpacks each installer (7-Zip for NSIS, `hdiutil` on
   macOS, Node for a deb, `--appimage-extract` on Linux) and checks identity, resources, the core.db
   (`--core placeholder` in CI, `qul` for a release), deb `Depends`, the desktop entry, icons and the macOS signature.
+  `--arch x64|arm64` (default: this machine's) checks every binary's architecture, `portable` zips are a kind of their
+  own, `--signed` requires the Authenticode or Developer ID signature, and `--webview offlineInstaller` checks the
+  Microsoft Store installer.
 - **Measuring an installer locally** never bundles a qdc core.db. Build around the placeholder, as CI does:
 
   ```sh

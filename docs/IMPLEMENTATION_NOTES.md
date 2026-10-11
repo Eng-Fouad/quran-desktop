@@ -900,10 +900,18 @@ is the lead's fold-in of every accepted deviation (`docs/deviations/WP*.md`), ev
 - **Release (WP13b):** `release.yml` builds a draft release from a `v*` tag (versions checked by `check-version.mjs`) with a
   core.db built from the private QUL store (`QUL_SOURCES_URL`/`QUL_SOURCES_TOKEN` in the `release` environment; the
   committed manifest's hashes decide); tauri-action is pinned at v1.0.0 and only builds; uploads go through the guarded
-  `release-upload` action; a person publishes after `docs/RELEASE_CHECKLIST.md`.
-- **Signing:** macOS ad hoc with the hardened runtime until a Developer ID exists (then notarised with no workflow
-  change); Windows unsigned until the lead picks Azure Trusted Signing or SignPath Foundation; Linux assets get `.sha256`
-  (WP13b signing).
+  `release-upload` action; a person publishes after `docs/RELEASE_CHECKLIST.md`. Since the owner's request of
+  2026-10-12 it builds x64 and arm64 on every OS (Windows arm64 cross-compiled, Linux arm64 on `ubuntu-22.04-arm`, macOS
+  universal), portable builds (`scripts/make-portable.mjs`: a Windows zip, the macOS `.app` zip; the AppImage on Linux),
+  checks each binary's architecture (`check-bundles --arch`), and writes `SHA256SUMS` (WP13b 2026-10-12).
+- **Signing:** each when its secrets exist, else as before (macOS ad hoc with the hardened runtime, Windows unsigned):
+  Windows through Azure Artifact Signing as tauri's `signCommand`, macOS Developer ID with notarisation (Apple ID or API
+  key), GPG for the AppImages and `SHA256SUMS.asc`; `check-bundles --signed` then refuses an unsigned build (WP13b
+  signing, 2026-10-12).
+- **Stores:** `store.yml` runs when a person publishes a release and submits its files, each store behind a variable
+  and its own environment: the Microsoft Store (an offline-WebView2 NSIS that `release.yml` re-bundles for it, by
+  public release URL), the Snap Store (the debs repacked as strict snaps, `candidate` by default), App Store Connect
+  (the universal app re-signed for the App Sandbox; a person submits it for review) (WP13b 2026-10-12).
 - **Budgets (§13.6):** "MB" means MiB; `BUDGETS` in `scripts/size-budget.mjs` is the single table; runtime rows are measured
   on the debug build (an upper bound): cold start to first contentful paint, idle CPU ≤ 0.5 % (app and webview, no test
   mode), memory as private working sets, playback CPU of the app and webview over 20 s on the null sink (WP13b 1, 5).

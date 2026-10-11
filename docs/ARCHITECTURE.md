@@ -5287,18 +5287,40 @@ Rust toolchain from `rust-toolchain.toml`. Caching: `Swatinem/rust-cache` and th
 (`pnpm bindings:check`) must fail on a PR that changes a DTO without regenerating `bindings.ts`, and pass on a docs-only PR
 (WP-CI acceptance).
 
-### 13.4 `release.yml` (tags `v*`; owner WP13b)
-- Matrix:
-  - windows-latest: NSIS.
-  - macos-latest: `--target universal-apple-darwin`, a single dmg. Add the `aarch64-apple-darwin` and `x86_64-apple-darwin` rustup
-    targets. This avoids depending on retired Intel runner images.
-  - ubuntu-22.04: deb and AppImage. The old glibc baseline is deliberate.
-  
+### 13.4 `release.yml` (tags `v*`) and `store.yml` (published releases); owner WP13b
+- Matrix (x64 and arm64 on every OS; owner request 2026-10-12):
+  - windows-latest, x64: NSIS and a portable zip.
+  - windows-latest, arm64: the same for `aarch64-pc-windows-msvc`, cross-compiled (Visual Studio's ARM64 tools; clang for
+    the C code of `ring` and `aws-lc-sys`).
+  - macos-latest: `--target universal-apple-darwin`, a single dmg and the `.app` zip, each with both architectures in one
+    binary. Add the `aarch64-apple-darwin` and `x86_64-apple-darwin` rustup targets. This avoids depending on retired
+    Intel runner images.
+  - ubuntu-22.04 and ubuntu-22.04-arm: deb and AppImage (the portable build; it cannot be cross-built). The old glibc
+    baseline is deliberate.
+
   Uses `tauri-apps/tauri-action`, pinned to a commit SHA when the workflow is created.
 - `core.db` uses `--source qul`. QUL inputs come from a private store (`QUL_SOURCES_URL` + token secrets) because they are
   not public. **Release is blocked until the QUL/QF permission in FACT §8.1 is obtained.** With `QD_REQUIRE_CORE=1`, the job
   asserts core.db > 1 MB, `verify-core` passes and `meta.source = 'qul'` before `tauri build`.
-- Artifacts are uploaded to a draft GitHub release. Signing and notarisation are open (§15.3).
+- Portable builds (`scripts/make-portable.mjs`): Windows `Quran_<version>_<arch>_portable.zip` (`Quran/quran-desktop.exe`
+  with `data/` beside it, where the exe looks for its resources; it needs the WebView2 runtime and keeps its data in the
+  profile like the installed app); macOS `Quran_<version>_universal.app.zip` (ditto, so the signature survives).
+- Signing, each when its secrets are set (otherwise unsigned, ad hoc on macOS): Windows through Azure Artifact Signing as
+  tauri's `signCommand` (`artifact-signing-cli`; the exe, the uninstaller and the setup), merged from a CI-only
+  `--config`; macOS Developer ID with notarisation (Apple ID or App Store Connect API key); the AppImage and
+  `SHA256SUMS.asc` with GPG. `scripts/check-bundles.mjs --arch <x64|arm64> [--signed]` unpacks every installer and
+  portable build, checks every binary's architecture (PE, ELF, lipo) and, once signing is configured, the signature.
+- Artifacts are uploaded to a draft GitHub release through `./.github/actions/release-upload` (check-artifacts
+  `--release` first), with a `.sha256` per file and a `SHA256SUMS` over all of them. A person publishes the release after
+  `docs/RELEASE_CHECKLIST.md`; no workflow publishes or edits one.
+- Stores (`store.yml`, on `release: published` or by hand for a published tag; each behind a repository variable and its
+  own environment): the Microsoft Store gets the x64 and arm64 `*-store-setup.exe` that `release.yml` re-bundles with the
+  offline WebView2 runtime when `MS_STORE_ENABLED` is set (`tauri bundle`, no rebuild; outside the §13.6 budgets), by
+  their public release URLs through the `msstore` CLI, into certification; the Snap Store gets the amd64 and arm64 debs
+  repacked as strict snaps (`snap/snapcraft.yaml`) on `SNAP_CHANNEL` (default `candidate`); App Store Connect gets the
+  universal `Quran.app` re-signed with the App Sandbox (`src-tauri/macos/AppStore.entitlements`), the provisioning
+  profile and Apple Distribution, as a productbuild pkg, for a person to test and submit for review. Nothing is
+  rebuilt: every store gets files of the published release.
 
 ### 13.5 Bundle configuration
 `tauri.conf.json` (base, WP0A, frozen):
@@ -5973,7 +5995,7 @@ errors (lead visual review is a separate merge gate). Every package also meets �
 | R10 | CLS from font swaps or late data. | D13 two-layer cross-fade; fixed geometry; e2e CLS = 0 assertion. |
 | R11 | `panic = "abort"` turns a stray unwrap, an out-of-bounds slice, a `block_on` in async code or an `Err` from Tauri's setup closure into a crash. | Clippy `unwrap_used`/`expect_used` deny everywhere plus `indexing_slicing`/`panic`/`todo`/`unimplemented`/`unreachable` deny in quran-audio, quran-packs and src-tauri; `thread::Builder`; no `block_on` outside qd-audio-ctl (debug-asserted); setup never returns `Err` and uses a non-blocking dialog (§2.8.2); `catch_unwind` is not relied on. |
 | R12 | Windows MAX_PATH with SQLite. | Short data root (`%LOCALAPPDATA%\com.quran.labs.desktop`); startup check warns if any DB path is ≥ 240 chars. |
-| R13 | Code signing / notarisation not researched (FACT §8.9). | Unsigned builds for internal testing; release blocked on a signing decision (open question). |
+| R13 | Code signing / notarisation not researched (FACT §8.9). | Unsigned builds for internal testing. The pipeline signs once the secrets exist (§13.4: Azure Artifact Signing, Developer ID + notarisation, GPG); `check-bundles --signed` then refuses an unsigned build. The accounts are still to be obtained (open question 3). |
 | R14 | Stream cache grows unbounded. | `stream_cache_cap_mib` + LRU eviction of unpinned files; Disk usage UI. |
 | R15 | A fresh checkout can't compile `src-tauri` (missing `dist/`, missing generated `core.db` listed in `bundle.resources`). | build.rs creates a 0-byte core.db placeholder (fails instead under `QD_REQUIRE_CORE=1`); the shared CI setup runs `pnpm build` and the apt line before any `src-tauri` compile; debug builds degrade to a "core data missing" screen (§5.15, §2.8.2). |
 | R16 | TypeScript 7 or other unpinned upgrades break the toolchain. | Exact pins; `pnpm` lockfile; Renovate rules exclude typescript ≥ 7 until svelte-check supports it. |
@@ -6002,7 +6024,9 @@ errors (lead visual review is a separate merge gate). Every package also meets �
 2. A QF Developer Console account and credit text, required for caching QCF page fonts (FACT §2.1). Confirm the account exists
    and the exact attribution wording for About.
 3. The code-signing approach (Windows Authenticode certificate type, Apple Developer ID + notarisation) and whether to ship the
-   updater in v1.1.
+   updater in v1.1. **Partly answered (owner request 2026-10-12):** `release.yml` signs with Azure Artifact Signing
+   (Windows), a Developer ID with notarisation (macOS) and GPG (AppImage, `SHA256SUMS.asc`) once those secrets exist
+   (§13.4); the accounts and certificates themselves are still to be obtained. The updater stays open.
 4. Decorative fonts (QCF_SurahHeader, quran-common, sura_names) carry no licence string. Confirm on-demand download is acceptable,
    or rely on our SVG/Unicode fallbacks only.
 5. ~~Whether to commit the KFGQPC Hafs V30 TTF to the repo (EULA allows redistribution unmodified) instead of fetching it in CI
