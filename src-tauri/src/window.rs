@@ -109,6 +109,48 @@ pub fn create_main<R: Runtime>(app: &AppHandle<R>) {
     };
     placement::restore(&window, placement::saved_file(app).as_deref());
     attach_recovery(&window);
+    #[cfg(target_os = "macos")]
+    install_app_menu(app);
+}
+
+/// The macOS app menu's Quit ([`install_app_menu`]).
+pub const QUIT_MENU_ID: &str = "qd-menu.quit";
+
+/// macOS: tauri's default menu bar (the app menu, Edit for Cmd+C/V/A in text fields, View, Window) with its Quit
+/// replaced by one that goes through [`quit`], so Cmd+Q lets the page save first like the tray's Quit. The default item
+/// calls `terminate:`, which ends the app without `quit-requested` and lost a turn of the last second (LEAD 23). The
+/// Dock's Quit and logout still terminate directly. A menu that cannot be built leaves the default one.
+#[cfg(target_os = "macos")]
+fn install_app_menu<R: Runtime>(app: &AppHandle<R>) {
+    use tauri::menu::{Menu, MenuItem, MenuItemKind};
+
+    let build = || -> tauri::Result<Menu<R>> {
+        let menu = Menu::default(app)?;
+        // The default menu's first submenu is the app menu; its last item is the predefined Quit.
+        if let Some(MenuItemKind::Submenu(app_menu)) = menu.items()?.into_iter().next() {
+            let last = app_menu.items()?.len().saturating_sub(1);
+            app_menu.remove_at(last)?;
+            let label = format!("Quit {}", app.package_info().name);
+            app_menu.append(&MenuItem::with_id(
+                app,
+                QUIT_MENU_ID,
+                label,
+                true,
+                Some("CmdOrCtrl+Q"),
+            )?)?;
+        }
+        Ok(menu)
+    };
+    if let Err(e) = build().and_then(|menu| app.set_menu(menu)) {
+        log::warn!("app menu: {e}; keeping the default menu");
+        return;
+    }
+    // A global listener: it also hears the tray's items (and the tray's listener hears this one).
+    app.on_menu_event(|app, event| {
+        if event.id().as_ref() == QUIT_MENU_ID {
+            quit(app);
+        }
+    });
 }
 
 /// WebView2 crash recovery for the real (Wry) window; nothing on other platforms or runtimes (tests).
