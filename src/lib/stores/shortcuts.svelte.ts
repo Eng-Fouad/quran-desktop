@@ -53,6 +53,29 @@ import { i18n } from './i18n.svelte'
 import { settings } from './settings.svelte'
 import { ui } from './ui.svelte'
 
+/**
+ * macOS: `Shift+F10` and the Menu key open the focused widget's context menu (a library row, a search hit, a surah), as
+ * the browser does on Windows and Linux; WebKit and Chromium fire no `contextmenu` for them on macOS. The event has no
+ * pointer button and sits at the widget's bottom corner on its inline-start side, like a browser's keyboard menu.
+ */
+function openContextMenuByKey(e: KeyboardEvent): void {
+  const menuKey = e.key === 'ContextMenu' || (e.key === 'F10' && e.shiftKey)
+  const target = e.target
+  if (!menuKey || e.ctrlKey || e.metaKey || e.altKey || !(target instanceof Element)) return
+  e.preventDefault()
+  const r = target.getBoundingClientRect()
+  const rtl = getComputedStyle(target).direction === 'rtl'
+  target.dispatchEvent(
+    new MouseEvent('contextmenu', {
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+      clientX: Math.round(rtl ? r.right - 1 : r.left + 1),
+      clientY: Math.round(r.bottom - 1),
+    }),
+  )
+}
+
 /** Scope specificity for precedence: the narrower context wins. */
 const SCOPE_RANK: Readonly<Record<ShortcutScope, number>> = {
   global: 0,
@@ -178,6 +201,7 @@ class ShortcutsStore implements Store {
     if (e.defaultPrevented || isInertKeyEvent(e)) return
     const hit = this.#resolve(e, false)
     if (hit !== null) this.#run(hit, e)
+    else if (app.isMac) openContextMenuByKey(e)
   }
 
   /** The label of a definition's first chord available on this platform (`Ctrl+K`, `⌘K`); empty if none. */

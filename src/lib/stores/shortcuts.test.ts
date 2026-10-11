@@ -305,6 +305,26 @@ describe('rules', () => {
   })
 })
 
+describe('context-menu keys', () => {
+  it('Shift+F10 and the Menu key open the focused element’s context menu on macOS, as browsers do elsewhere', async () => {
+    const row = el('button')
+    const menus: MouseEvent[] = []
+    row.addEventListener('contextmenu', (e) => menus.push(e))
+    press({ key: 'F10', code: 'F10', shiftKey: true }, row)
+    expect(menus).toEqual([]) // Windows and Linux: the browser fires it itself
+    for (const store of [shortcuts, ui, i18n, settings, app]) store.reset()
+    await boot(undefined, 'macos')
+    const e = press({ key: 'F10', code: 'F10', shiftKey: true }, row)
+    press({ key: 'ContextMenu', code: 'ContextMenu' }, row)
+    press({ key: 'F10', code: 'F10' }, row)
+    press({ key: 'F10', code: 'F10', shiftKey: true, metaKey: true }, row)
+    expect(menus).toHaveLength(2)
+    expect(e.defaultPrevented).toBe(true)
+    // No pointer button: the widgets place a keyboard menu themselves.
+    expect(menus.map((m) => m.button)).toEqual([0, 0])
+  })
+})
+
 describe('precedence', () => {
   it('prefers the more specific scope, then the most recent registration', () => {
     const global = def({ id: 'test.global', keys: ['x'] })
