@@ -1,0 +1,224 @@
+/*
+ * §8.7 highlight layers. Owner: WP8d.
+ *
+ * `.mp-hl` sits behind the glyphs (z 1 under the renditions' z 2) and holds absolutely positioned rects drawn by
+ * `HighlightLayer.svelte` from `planHighlights()` (layout.ts). States are separated by shape and at most one fill is
+ * drawn per word, so glyph ink only ever sits on the page plus one fill (token contrast: layout.contrast.test.ts).
+ * Paint order: fills (user, hover, selection, search, audio, flash) → the audio word pill (opaque, the glide) → rings
+ * (selection, reading cursor) → bars (a demoted user highlight, the search underline).
+ *
+ * The layer reaches 0.3·qfs past the text block on both sides (`HL_OUTSET`), so the pills of a justified line's
+ * outermost words keep their padding inside the paint containment. It is a coordinate space, not text: `direction:
+ * ltr` makes `inset-inline-start` the block's left edge in the RTL block, and every rect is placed with `translate`.
+ */
+@layer mushaf {
+  .mp-hl {
+    position: absolute;
+    inset-block: 0;
+    inset-inline: calc(var(--qfs) * -0.3);
+    z-index: 1;
+    contain: strict;
+    direction: ltr;
+    pointer-events: none;
+  }
+
+  .hl {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    box-sizing: border-box;
+  }
+
+  /* --- fills (one per word) --------------------------------------------------------------------------------------- */
+
+  .hl-user.hl-yellow {
+    background-color: var(--user-hl-yellow);
+  }
+
+  .hl-user.hl-green {
+    background-color: var(--user-hl-green);
+  }
+
+  .hl-user.hl-blue {
+    background-color: var(--user-hl-blue);
+  }
+
+  .hl-user.hl-red {
+    background-color: var(--user-hl-red);
+  }
+
+  .hl-user.hl-purple {
+    background-color: var(--user-hl-purple);
+  }
+
+  .hl-hover {
+    background-color: var(--hl-hover);
+  }
+
+  .hl-selection {
+    background-color: var(--hl-selection);
+  }
+
+  .hl-search {
+    background-color: var(--hl-search);
+  }
+
+  .hl-audio,
+  .hl-flash {
+    background-color: var(--hl-audio);
+  }
+
+  /*
+   * The audio word: opaque, so it replaces whatever fill lies beneath it; moved by transform only. The glide is a Web
+   * Animation of the transform from the old box (a translate and a scale) onto the new one (glide.ts), anchored at the
+   * pill's top-left corner in the layer's LTR coordinates.
+   */
+  .hl-word {
+    background-color: var(--hl-word);
+    transform-origin: 0 0;
+  }
+
+  .hl-word[data-playing] {
+    will-change: transform;
+  }
+
+  /* --- rings ------------------------------------------------------------------------------------------------------ */
+
+  .hl-selection-ring {
+    box-shadow: inset 0 0 0 max(1px, calc(var(--qfs) * 0.05)) var(--hl-selection-ring);
+  }
+
+  /* Layer 7: the reading cursor while DOM focus is on its roving item (§8.15). */
+  .hl-cursor-ring {
+    outline: var(--focus-ring-w) solid var(--focus-ring);
+    outline-offset: 1px;
+  }
+
+  /* --- bars ------------------------------------------------------------------------------------------------------- */
+
+  /* A hairline of page colour sets every bar off the fill it sits on (a yellow bar on an amber word pill, a purple one
+     on a dark audio tint), so the colour reads against the page itself (layout.contrast.test.ts). */
+  .hl-user-bar,
+  .hl-search-bar {
+    box-shadow: 0 0 0 1px var(--surface-page);
+  }
+
+  .hl-user-bar.hl-yellow {
+    background-color: var(--user-hl-yellow-solid);
+  }
+
+  .hl-user-bar.hl-green {
+    background-color: var(--user-hl-green-solid);
+  }
+
+  .hl-user-bar.hl-blue {
+    background-color: var(--user-hl-blue-solid);
+  }
+
+  .hl-user-bar.hl-red {
+    background-color: var(--user-hl-red-solid);
+  }
+
+  .hl-user-bar.hl-purple {
+    background-color: var(--user-hl-purple-solid);
+  }
+
+  .hl-search-bar {
+    background-color: var(--hl-search-solid);
+  }
+
+  /* --- arrival: the search hit pulses twice (§8.7), a jump target flashes and fades -------------------------------- */
+
+  .hl-search[data-pulse],
+  .hl-search-bar[data-pulse] {
+    animation: hl-pulse 600ms var(--ease-standard) 2;
+  }
+
+  .hl-flash {
+    animation: hl-flash var(--hl-flash-ms, 1200ms) var(--ease-standard) both;
+  }
+
+  @keyframes hl-pulse {
+    50% {
+      opacity: 0.3;
+    }
+  }
+
+  @keyframes hl-flash {
+    0%,
+    50% {
+      opacity: 1;
+    }
+
+    25% {
+      opacity: 0.35;
+    }
+
+    100% {
+      opacity: 0;
+    }
+  }
+
+  :root[data-motion='reduce'] :is(.hl-search, .hl-search-bar, .hl-flash) {
+    animation: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion='full']) :is(.hl-search, .hl-search-bar, .hl-flash) {
+      animation: none;
+    }
+  }
+
+  /*
+   * Forced colours (§8.7, §8.15): the fills are transparent (tokens.css) and become 2 px outlines in system colours;
+   * the audio word uses Mark. Bars and rings opt out of the forced background so they keep their system colour.
+   */
+  @media (forced-colors: active) {
+    /*
+     * The layer holds outlines and bars only here, so it goes above the glyphs: forced colours paint a Canvas backplate
+     * behind every text run, which would otherwise cut the outlines into dashes wherever a word's box meets them.
+     */
+    .mp-hl {
+      z-index: 3;
+    }
+
+    .hl-user,
+    .hl-hover,
+    .hl-search,
+    .hl-audio,
+    .hl-flash {
+      outline: 2px solid Highlight;
+      outline-offset: -2px;
+    }
+
+    .hl-hover {
+      outline-style: dotted;
+    }
+
+    /* The selection is outlined by its ring alone (a second outline inside it would read as one heavy band). */
+    .hl-selection {
+      outline: none;
+    }
+
+    .hl-word {
+      outline: 2px solid Mark;
+      outline-offset: -2px;
+    }
+
+    .hl-selection-ring {
+      box-shadow: none;
+      outline: 2px solid Highlight;
+      outline-offset: -2px;
+    }
+
+    .hl-user-bar,
+    .hl-search-bar {
+      forced-color-adjust: none;
+      background-color: Mark;
+    }
+
+    .hl-user-bar {
+      background-color: Highlight;
+    }
+  }
+}

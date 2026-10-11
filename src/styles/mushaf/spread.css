@@ -1,0 +1,168 @@
+/*
+ * §8.10–§8.11: the two-page spread and the single page, the single-page paper shift, the spine shading and fold, and
+ * the page-turn view transition. Owner: WP8e. The containers are rendered by `SpreadStage.svelte`.
+ *
+ * Physical left/right is intentional (§8.1 invariant 6): the odd page is always on the right, the spine between the
+ * pages, and the next page enters from the left in both UI languages.
+ */
+@layer mushaf {
+  /* Only the spread animates on a page turn (§8.11): the title bar and the rest of the chrome update instantly. */
+  :root {
+    view-transition-name: none;
+  }
+
+  .spread,
+  .single {
+    position: relative;
+    flex: none;
+    display: flex;
+    flex-direction: row;
+    direction: rtl;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 0;
+    view-transition-name: qd-spread;
+  }
+
+  /* ── Spread: [odd, even] in RTL order; one shadow for the book, the spine shaded on both pages ──────────────────── */
+
+  /* The book casts one shadow (two sibling page shadows overlap at the spine and read as a one-sided seam). */
+  .spread {
+    border-radius: var(--radius-page);
+    box-shadow: var(--shadow-page);
+  }
+
+  .spread .mp-paper {
+    box-shadow: none;
+  }
+
+  /* Rounded outer corners, square spine corners. */
+  .spread .mp[data-side='right'] .mp-paper {
+    border-radius: 0 var(--radius-page) var(--radius-page) 0; /* physical-ok: outer edge on the right */
+  }
+
+  .spread .mp[data-side='left'] .mp-paper {
+    border-radius: var(--radius-page) 0 0 var(--radius-page); /* physical-ok: outer edge on the left */
+  }
+
+  /* The fold: a hairline down the spine, over both pages' shading. */
+  .spread::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%; /* physical-ok: the spine is the middle of the book */
+    width: 1px;
+    translate: -50% 0;
+    background: var(--border);
+    pointer-events: none;
+  }
+
+  /* ── Spine shading (§8.10): darkest at the fold, easing out over 1.2 qfs like a page curving into the gutter ────── */
+
+  .mp-paper::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: calc(var(--qfs) * 1.2);
+    border-radius: inherit;
+    pointer-events: none;
+  }
+
+  .mp[data-side='right'] .mp-paper::after {
+    left: 0; /* physical-ok: the spine edge of an odd page */
+    background: linear-gradient(
+      to right,
+      rgb(0 0 0 / var(--spine-a)),
+      rgb(0 0 0 / calc(var(--spine-a) * 0.42)) 22%,
+      rgb(0 0 0 / calc(var(--spine-a) * 0.12)) 55%,
+      rgb(0 0 0 / 0)
+    );
+  }
+
+  .mp[data-side='left'] .mp-paper::after {
+    right: 0; /* physical-ok: the spine edge of an even page */
+    background: linear-gradient(
+      to left,
+      rgb(0 0 0 / var(--spine-a)),
+      rgb(0 0 0 / calc(var(--spine-a) * 0.42)) 22%,
+      rgb(0 0 0 / calc(var(--spine-a) * 0.12)) 55%,
+      rgb(0 0 0 / 0)
+    );
+  }
+
+  /* ── Single page (§8.10): move the PAPER, not the text, so the text block stays put across page turns ───────────── */
+
+  .single {
+    width: calc(var(--qfs) * 22); /* SINGLE_W = PW + 2·SHIFT */
+  }
+
+  .single .mp[data-side='right'] {
+    translate: calc(var(--qfs) * 0.5) 0; /* physical-ok: an odd page's outer margin is on the right */
+  }
+
+  .single .mp[data-side='left'] {
+    translate: calc(var(--qfs) * -0.5) 0; /* physical-ok: an even page's outer margin is on the left */
+  }
+
+  /* ── Page turn (§8.11): staggered, never a 50 % double exposure of two calligraphy pages ────────────────────────── */
+
+  html[data-turn]::view-transition-old(qd-spread) {
+    animation: 110ms var(--ease-accelerate) both var(--qd-out);
+  }
+
+  html[data-turn]::view-transition-new(qd-spread) {
+    animation: 180ms var(--ease-decelerate) 80ms both var(--qd-in);
+  }
+
+  /* The book does not move or resize during a turn: only its two snapshots fade and slide. */
+  html[data-turn]::view-transition-group(qd-spread) {
+    animation-duration: 0s;
+  }
+
+  /* RTL book: the next page enters from the left. */
+  html[data-turn='next'] {
+    --qd-out: qd-out-right;
+    --qd-in: qd-in-left;
+  }
+
+  html[data-turn='prev'] {
+    --qd-out: qd-out-left;
+    --qd-in: qd-in-right;
+  }
+
+  @keyframes qd-out-right {
+    to {
+      opacity: 0;
+      transform: translateX(1.5%);
+    }
+  }
+
+  @keyframes qd-in-left {
+    from {
+      opacity: 0;
+      transform: translateX(-1.5%);
+    }
+  }
+
+  @keyframes qd-out-left {
+    to {
+      opacity: 0;
+      transform: translateX(-1.5%);
+    }
+  }
+
+  @keyframes qd-in-right {
+    from {
+      opacity: 0;
+      transform: translateX(1.5%);
+    }
+  }
+
+  @media (forced-colors: active) {
+    .spread::after {
+      background: CanvasText;
+    }
+  }
+}

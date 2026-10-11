@@ -1,0 +1,7 @@
+# @tauri-apps/plugin-os ships no licence text of its own; these reviewed files stand in for it (xtask/licenses/README.md).
+versions = ["2.4.0"]
+
+[[file]]
+name = "LICENSE_MIT"
+kind = "licence"
+source = "https://github.com/tauri-apps/plugins-workspace/blob/a2364a5f216324439feedeb25b2db74e7b1eba90/plugins/os/LICENSE_MIT"

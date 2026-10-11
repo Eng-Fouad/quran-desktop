@@ -1,0 +1,7 @@
+# selectors ships no licence text of its own; these reviewed files stand in for it (xtask/licenses/README.md).
+versions = ["0.38.0"]
+
+[[file]]
+name = "LICENSE"
+kind = "licence"
+source = "SPDX MPL-2.0 text (https://github.com/spdx/license-list-data/blob/v3.29.0/text/MPL-2.0.txt): servo/stylo has no licence file at 572ecba2d1600e7c3d490586692a209faf703baa (the crate's commit); its sources carry the MPL-2.0 Exhibit A notice"

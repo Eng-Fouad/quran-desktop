@@ -1,0 +1,73 @@
+[package]
+name = "quran-desktop"
+description = "Quran for Desktop: a beautiful, offline-first Quran reader with recitation"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+license.workspace = true
+# The bundle's publisher (tauri.conf.json): the deb bundler writes Cargo `authors` as the package Maintainer.
+authors.workspace = true
+
+# Desktop-only app shell: the `quran-desktop` binary links the rlib. (The mobile-only staticlib/cdylib crate types of the
+# tauri template are not built; they tripled link time under release LTO.)
+[lib]
+name = "quran_desktop_lib"
+
+[build-dependencies]
+tauri-build = { workspace = true }
+
+# Final after wave 0 (§14.2): wave-1+ packages request additions from the lead.
+[dependencies]
+# workspace crates (D1: DTOs come from quran-types; the other crates return them directly)
+quran-types = { workspace = true }
+quran-core = { workspace = true }
+quran-audio = { workspace = true }
+quran-packs = { workspace = true }
+media-session = { workspace = true }
+
+# tauri + plugins (§13.5; registered in lib.rs)
+tauri = { workspace = true, features = ["tray-icon", "image-png"] }
+tauri-plugin-single-instance = { workspace = true }
+tauri-plugin-window-state = { workspace = true }
+tauri-plugin-log = { workspace = true }
+tauri-plugin-opener = { workspace = true }
+tauri-plugin-dialog = { workspace = true }
+tauri-plugin-os = { workspace = true }
+
+# typed IPC: all three must be direct dependencies (verified; tauri's own `specta` feature alone does not compile)
+specta = { workspace = true }
+specta-typescript = { workspace = true }
+tauri-specta = { workspace = true }
+
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+log = { workspace = true }
+tokio = { workspace = true }
+parking_lot = { workspace = true }
+dunce = { workspace = true }            # paths sent to JS carry no `\\?\` prefix (§0.2)
+percent-encoding = { workspace = true } # quran:// path decoding (§6.3)
+url = { workspace = true }              # system_open_external scheme check
+fastrand = { workspace = true }         # memo_test_start's random start (§5.13)
+reqwest = { workspace = true }          # lead decision (wave 0 exit): AudioService builds CachingHttpSource with the shared client
+
+# Window chrome hooks (WP6b: Snap Layouts hit-testing via a window subclass, §9.6).
+[target.'cfg(windows)'.dependencies]
+windows = { workspace = true, features = [
+    "Win32_Foundation",
+    "Win32_Graphics_Gdi",
+    "Win32_UI_HiDpi",
+    "Win32_UI_Shell",
+    "Win32_UI_WindowsAndMessaging",
+] }
+# WebView2 crash recovery (`window::webview2`): already in the tree through wry, at the version tauri-runtime-wry 2.12.1
+# pins; no new crate (integration, docs/deviations/INTEGRATION.md).
+webview2-com = { workspace = true }
+
+[dev-dependencies]
+tauri = { workspace = true, features = ["test"] } # tauri::test::mock_app() for setup/protocol tests (§12.1)
+tempfile = { workspace = true }
+
+[lints]
+workspace = true

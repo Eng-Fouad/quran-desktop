@@ -1,0 +1,30 @@
+[package]
+name = "quran-core"
+description = "Quran for Desktop data layer: Arabic normaliser, core/user/content/pack databases, search and timings"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+license.workspace = true
+authors.workspace = true
+
+# Final after wave 0 (docs/ARCHITECTURE.md §2.2, §14.2): wave-1+ packages request additions from the lead.
+[dependencies]
+quran-types = { workspace = true }
+rusqlite = { workspace = true }               # bundled SQLite 3.53 with FTS5; ar_norm() scalar function
+r2d2 = { workspace = true }                   # CoreDb / PackDb read pools
+r2d2_sqlite = { workspace = true }
+rusqlite_migration = { workspace = true }     # user.db and content.db schema migrations
+unicode-normalization = { workspace = true }  # NFKC (normalize_ar) and NFKD (fold_latin)
+serde = { workspace = true }
+serde_json = { workspace = true }             # settings values, search-history scopes, QDC timings payloads
+thiserror = { workspace = true }
+log = { workspace = true }
+uuid = { workspace = true }                   # UUIDv7 ids of user entities (§3.2)
+url = { workspace = true }                    # file:///…/core.db?mode=ro&immutable=1 (§2.2.4)
+
+[dev-dependencies]
+tempfile = { workspace = true }
+
+[lints]
+workspace = true

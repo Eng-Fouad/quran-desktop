@@ -1,0 +1,314 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:quran-desktop:catalog:1",
+  "title": "Quran for Desktop pack catalog",
+  "description": "The curated catalog of installable packs (docs/ARCHITECTURE.md §2.5.4). The app reads it with a strict serde model (crates/quran-packs/src/catalog.rs); `cargo xtask catalog-check` validates the file against this schema, the model and the cross-pack rules (unique sources and titles, requires graph, starter set).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["catalogVersion", "generatedAt", "packs"],
+  "properties": {
+    "$schema": { "type": "string", "description": "Editor hint: ./catalog.schema.json. Ignored by the app." },
+    "catalogVersion": { "const": 1 },
+    "generatedAt": {
+      "type": "string",
+      "description": "ISO date of the last curation.",
+      "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$"
+    },
+    "packs": { "type": "array", "items": { "$ref": "#/$defs/pack" } }
+  },
+  "$defs": {
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^\\s](.*[^\\s])?$",
+      "description": "Non-empty, no leading or trailing whitespace."
+    },
+    "l10n": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["en", "ar"],
+      "properties": {
+        "en": { "$ref": "#/$defs/text" },
+        "ar": {
+          "allOf": [{ "$ref": "#/$defs/text" }, { "pattern": "[\\u0620-\\u064A\\u066E-\\u06D3]" }],
+          "description": "Arabic UI text: must contain Arabic letters."
+        }
+      }
+    },
+    "httpsUrl": { "type": "string", "pattern": "^https://[^\\s/?#]+[^\\s]*$" },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "hostname": {
+      "type": "string",
+      "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$"
+    },
+    "attribution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text", "url", "licence"],
+      "properties": {
+        "text": { "$ref": "#/$defs/l10n" },
+        "url": { "$ref": "#/$defs/httpsUrl" },
+        "licence": { "$ref": "#/$defs/text" }
+      }
+    },
+    "pack": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "kind",
+        "title",
+        "description",
+        "version",
+        "installMode",
+        "sizeBytes",
+        "itemCount",
+        "attribution",
+        "source"
+      ],
+      "properties": {
+        "id": { "type": "string", "pattern": "^decor$|^[a-z0-9]+(\\.[a-z0-9_]+)+$" },
+        "kind": { "enum": ["mushaf_fonts", "decor", "translation", "tafsir", "recitation", "wbw"] },
+        "title": { "$ref": "#/$defs/l10n" },
+        "description": { "$ref": "#/$defs/l10n" },
+        "language": {
+          "type": "string",
+          "description": "BCP-47 tag of the content.",
+          "pattern": "^[a-z]{2,3}(-[A-Za-z0-9]{1,8})*$"
+        },
+        "direction": { "enum": ["ltr", "rtl"] },
+        "version": { "type": "string", "description": "Upstream version, or YYYY.MM.", "pattern": "^[^\\s]{1,32}$" },
+        "installMode": { "enum": ["whole", "on_demand"] },
+        "requires": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^decor$|^[a-z0-9]+(\\.[a-z0-9_]+)+$" }
+        },
+        "sizeBytes": {
+          "type": "integer",
+          "description": "Full-install estimate shown before download (the IPC carries it as u32 KiB).",
+          "minimum": 1,
+          "maximum": 4398046510080
+        },
+        "itemCount": { "type": "integer", "minimum": 1, "maximum": 4294967295 },
+        "recommended": { "type": "boolean", "description": "Starter-set candidate (at most one per kind and language)." },
+        "revalidateDays": {
+          "type": "integer",
+          "description": "Quran Foundation content only: refetched after this many days (QF terms: at most 7).",
+          "minimum": 1,
+          "maximum": 7
+        },
+        "attribution": { "$ref": "#/$defs/attribution" },
+        "source": { "$ref": "#/$defs/source" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "kind": { "const": "mushaf_fonts" } } },
+          "then": {
+            "required": ["requires"],
+            "properties": {
+              "id": { "pattern": "^mushaf\\.(v1|v2|v4)$" },
+              "installMode": { "const": "on_demand" },
+              "itemCount": { "const": 604 },
+              "requires": { "contains": { "const": "decor" } },
+              "source": { "properties": { "adapter": { "const": "qcf_font_pages" } } }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "decor" } } },
+          "then": {
+            "properties": {
+              "id": { "pattern": "^decor(\\.[a-z0-9_]+)?$" },
+              "installMode": { "const": "whole" },
+              "source": { "properties": { "adapter": { "const": "static_files" } } }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "translation" } } },
+          "then": {
+            "required": ["language", "direction"],
+            "properties": {
+              "id": { "pattern": "^tr\\.[a-z]{2,3}\\.[a-z0-9_]+$" },
+              "installMode": { "const": "whole" },
+              "itemCount": { "const": 1 },
+              "source": {
+                "properties": { "adapter": { "const": "quranenc_sqlite" }, "contentKind": { "const": "translation" } }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "tafsir" } } },
+          "then": {
+            "required": ["language", "direction"],
+            "properties": {
+              "id": { "pattern": "^tafsir\\.[a-z]{2,3}\\.[a-z0-9_]+$" },
+              "source": {
+                "properties": {
+                  "adapter": { "enum": ["quranenc_sqlite", "qurancom_v4_tafsir_by_chapter"] },
+                  "contentKind": { "const": "tafsir" }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "recitation" } } },
+          "then": {
+            "properties": {
+              "id": { "pattern": "^audio\\.qdc\\.[1-9][0-9]*$" },
+              "source": { "properties": { "adapter": { "const": "qdc_audio" } } }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "wbw" } } },
+          "then": {
+            "required": ["language", "direction"],
+            "properties": {
+              "id": { "pattern": "^wbw\\.[a-z]{2,3}$" },
+              "source": { "properties": { "adapter": { "const": "qurancom_v4_wbw" } } }
+            }
+          }
+        },
+        {
+          "$comment": "Whole packs: decor files and QuranEnc zips. Neither is revalidated.",
+          "if": { "properties": { "source": { "properties": { "adapter": { "enum": ["static_files", "quranenc_sqlite"] } } } } },
+          "then": { "properties": { "installMode": { "const": "whole" } }, "not": { "required": ["revalidateDays"] } }
+        },
+        {
+          "$comment": "Quran Foundation sources: per-chapter on demand, revalidated within 7 days.",
+          "if": {
+            "properties": {
+              "source": {
+                "properties": { "adapter": { "enum": ["qurancom_v4_tafsir_by_chapter", "qurancom_v4_wbw", "qdc_audio"] } }
+              }
+            }
+          },
+          "then": {
+            "required": ["revalidateDays"],
+            "properties": { "installMode": { "const": "on_demand" }, "itemCount": { "const": 114 } }
+          }
+        },
+        {
+          "if": { "properties": { "source": { "properties": { "adapter": { "const": "quranenc_sqlite" } } } } },
+          "then": { "properties": { "itemCount": { "const": 1 } } }
+        },
+        {
+          "$comment": "A text direction belongs to text packs, and needs a language.",
+          "if": { "required": ["direction"] },
+          "then": { "required": ["language"] }
+        }
+      ]
+    },
+    "source": {
+      "oneOf": [
+        { "$ref": "#/$defs/qcfFontPages" },
+        { "$ref": "#/$defs/staticFiles" },
+        { "$ref": "#/$defs/quranEncSqlite" },
+        { "$ref": "#/$defs/qurancomTafsir" },
+        { "$ref": "#/$defs/qurancomWbw" },
+        { "$ref": "#/$defs/qdcAudio" }
+      ]
+    },
+    "qcfFontPages": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["adapter", "variant", "urlTemplates"],
+      "properties": {
+        "adapter": { "const": "qcf_font_pages" },
+        "variant": { "enum": ["v1", "v2", "v4"] },
+        "urlTemplates": {
+          "type": "array",
+          "description": "Mirrors tried in order; {page} is the page number without padding.",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^https://[^\\s{}]*\\{page\\}[^\\s{}]*\\.woff2$" }
+        }
+      }
+    },
+    "staticFiles": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["adapter", "files"],
+      "properties": {
+        "adapter": { "const": "static_files" },
+        "files": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "urls", "bytes"],
+            "properties": {
+              "path": {
+                "description": "A quran:// decor route (§6.2), stored under packs/decor/.",
+                "enum": ["qcf-surah-header.woff2", "quran-common.ttf", "sura-names.woff2", "noto-nastaliq-urdu.woff2"]
+              },
+              "urls": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/httpsUrl" } },
+              "bytes": { "type": "integer", "minimum": 1 },
+              "sha256": { "$ref": "#/$defs/sha256" }
+            }
+          }
+        }
+      }
+    },
+    "quranEncSqlite": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["adapter", "key", "version", "versionSource", "tokenizer", "contentKind"],
+      "properties": {
+        "adapter": { "const": "quranenc_sqlite" },
+        "key": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+        "version": { "type": "string", "pattern": "^[^\\s]{1,32}$" },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "versionSource": {
+          "description": "list: /api/v1/translations/list; http_validators: conditional HEAD of the zip.",
+          "enum": ["list", "http_validators"]
+        },
+        "tokenizer": { "enum": ["porter_unicode61", "unicode61_remove_diacritics", "arabic_normalized", "like_fallback"] },
+        "contentKind": { "enum": ["translation", "tafsir"] }
+      }
+    },
+    "qurancomTafsir": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["adapter", "resourceId"],
+      "properties": {
+        "adapter": { "const": "qurancom_v4_tafsir_by_chapter" },
+        "resourceId": { "type": "integer", "minimum": 1, "maximum": 4294967295 }
+      }
+    },
+    "qurancomWbw": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["adapter", "language"],
+      "properties": {
+        "adapter": { "const": "qurancom_v4_wbw" },
+        "language": {
+          "description": "Quran.com word-by-word languages; any other silently falls back to English.",
+          "enum": ["en", "ur", "id", "bn", "tr", "fa", "hi", "ta", "inh"]
+        }
+      }
+    },
+    "qdcAudio": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["adapter", "reciterId", "name", "basmalaInFile", "hosts", "wordLevel"],
+      "properties": {
+        "adapter": { "const": "qdc_audio" },
+        "reciterId": { "type": "integer", "minimum": 1, "maximum": 4294967295 },
+        "name": { "$ref": "#/$defs/l10n" },
+        "style": { "$ref": "#/$defs/l10n" },
+        "basmalaInFile": { "type": "boolean" },
+        "hosts": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/hostname" } },
+        "wordLevel": {
+          "type": "boolean",
+          "description": "From the one-time `catalog-check --online` probe; reported until real timings arrive."
+        }
+      }
+    }
+  }
+}

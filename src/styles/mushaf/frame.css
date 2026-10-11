@@ -1,0 +1,761 @@
+/*
+ * §8.8–§8.9 page furniture: the frame, the opening medallion, the page-stack edges, the running heads, the footer, the
+ * surah header and basmala lines, the margin markers and the margin marks. Owner: WP8c.
+ *
+ * Every length derives from `--qfs` (and the `--mp-*` page geometry of page.css), so furniture never moves when a font
+ * swaps (CLS 0, §8.1). Physical left/right is intentional: book geometry never mirrors with the UI language (§8.1
+ * invariant 6); each such line is marked `physical-ok`. Furniture text is Arabic with Arabic-Indic digits (§0.2).
+ */
+@layer mushaf {
+  /*
+   * Furniture text (heads, page numbers, margin labels) is set in the bundled KFGQPC Hafs face, a Naskh that main.ts
+   * loads before the first paint, so it never reflows when a web font arrives (CLS 0, §8.1). The glyphs it lacks (the
+   * fractions ¼ ½ ¾) come from the local system font, never from a web font's lazily loaded subset.
+   */
+  .mp {
+    --mp-furniture-font: 'qd-hafs', system-ui, sans-serif;
+  }
+
+  /* ── The frame (§8.9): one SVG the size of the page, drawn in px by PageFrame ─────────────────────────────────── */
+
+  .mp-frame {
+    position: absolute;
+    inset: 0;
+    overflow: visible;
+    pointer-events: none;
+  }
+
+  .mp-frame .rule {
+    fill: none;
+    stroke: var(--frame-gold);
+  }
+
+  .mp-frame .band {
+    fill: var(--frame-band);
+  }
+
+  .mp-frame .tile {
+    fill: none;
+    stroke: var(--frame-gold);
+    stroke-opacity: 0.8;
+  }
+
+  .mp-frame .star {
+    fill: var(--frame-gold);
+    fill-opacity: 0.2;
+    stroke: var(--frame-green);
+    stroke-linejoin: miter;
+  }
+
+  /* Opening pages (1–2): the illuminated spandrels and the arched medallion (OpeningMedallion). */
+  .mp-frame .spandrel {
+    fill: var(--frame-band);
+  }
+
+  .mp-frame .spandrel-tile {
+    opacity: 0.55;
+  }
+
+  .mp-frame .medallion-field {
+    fill: var(--surface-page);
+  }
+
+  .mp-frame .medallion,
+  .mp-frame .medallion-inner {
+    fill: none;
+    stroke: var(--frame-gold);
+    stroke-linejoin: round;
+  }
+
+  .mp-frame .rosette {
+    fill: var(--surface-page);
+    stroke: var(--frame-gold);
+    stroke-linejoin: round;
+  }
+
+  /* ── Page-stack edges (§8.9): 1–5 hairlines beyond the outer paper edge, in a spread only ──────────────────────── */
+
+  .mp-edges {
+    display: none;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 0;
+    pointer-events: none;
+  }
+
+  .spread .mp-edges {
+    display: block;
+  }
+
+  .mp[data-side='right'] .mp-edges {
+    right: 0; /* physical-ok: the outer edge of an odd page is on the right */
+  }
+
+  .mp[data-side='left'] .mp-edges {
+    left: 0; /* physical-ok: the outer edge of an even page is on the left */
+  }
+
+  /* Hairline i sits (i − 1) × 2.5 px beyond the paper (1 px wide, 1.5 px apart) and recedes 1.5 px at both ends. */
+  .mp-edges > span {
+    position: absolute;
+    top: calc(var(--radius-page) + (var(--i) - 1) * 1.5px);
+    bottom: calc(var(--radius-page) + (var(--i) - 1) * 1.5px);
+    width: 1px;
+    background: var(--border);
+  }
+
+  .mp[data-side='right'] .mp-edges > span {
+    left: calc((var(--i) - 1) * 2.5px + 1.5px); /* physical-ok: outwards from an odd page */
+  }
+
+  .mp[data-side='left'] .mp-edges > span {
+    right: calc((var(--i) - 1) * 2.5px + 1.5px); /* physical-ok: outwards from an even page */
+  }
+
+  /* ── Running heads (§8.9): the HEAD band above the frame ───────────────────────────────────────────────────────── */
+
+  .mp-head {
+    /* The heads' Naskh size (the juz calligraphy aligns its ink to text of this size, below). */
+    --mp-head-fs: max(calc(var(--qfs) * 0.5), 12px);
+
+    position: absolute;
+    top: var(--mp-m-tb);
+    width: calc(var(--mp-tb-w) + 2 * var(--mp-fr));
+    height: var(--mp-head);
+    display: flex;
+    align-items: stretch;
+    justify-content: space-between;
+    gap: 1em;
+    padding-block-end: calc(var(--qfs) * 0.3);
+    padding-inline: calc(var(--qfs) * 0.35);
+    box-sizing: border-box;
+    color: var(--text-muted);
+    font-family: var(--mp-furniture-font);
+    font-size: var(--mp-head-fs);
+    line-height: 1;
+    white-space: nowrap;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .mp[data-side='right'] .mp-head {
+    left: var(--mp-m-in); /* physical-ok: the frame's left edge on an odd page */
+  }
+
+  .mp[data-side='left'] .mp-head {
+    left: var(--mp-m-out); /* physical-ok: the frame's left edge on an even page */
+  }
+
+  .mp-head-surah {
+    display: flex;
+    align-items: flex-end;
+  }
+
+  /*
+   * The juz group sits at the frame's left edge. Laid out left-to-right in reverse (the juz first, on the right), it
+   * keeps its left edge and its height whatever it holds, so the decor calligraphy arriving after the first paint
+   * replaces the "الجزء ١٤" text without moving anything else (CLS 0). The spans keep their RTL text direction.
+   */
+  .mp-head-juz {
+    display: flex;
+    flex-direction: row-reverse;
+    align-items: flex-end;
+    gap: 0.45em;
+    direction: ltr;
+  }
+
+  .mp-head-juz > span {
+    direction: rtl;
+  }
+
+  .mp-head-sep {
+    flex: none;
+    align-self: flex-end;
+    margin-block-end: 0.12em;
+    width: 0.62em;
+    height: 0.62em;
+    fill: var(--frame-gold);
+    fill-opacity: 0.25;
+    stroke: var(--frame-gold);
+    stroke-width: 1;
+  }
+
+  /*
+   * quran-common's "الجزء الرابع عشر" calligraphy (U+E001 + juz − 1), at 0.68·qfs in a 1.17 em line box, bottom-aligned
+   * with the head's Naskh text like the quarter label beside it. Its ink is moved (translate: no layout, CLS 0) so its
+   * centre sits on the text's ink centre, and the three items of a head read as one line:
+   * - calligraphy: ascent 0.80 / descent 0.20 em, so its baseline is 0.285 em above the box bottom; the 30 juz inks are
+   *   centred 0.125–0.265 em above the baseline, median 0.185 → centre 0.47 em above the box bottom;
+   * - head text (qd-hafs, line-height 1: ascent 1.17 / descent 0.59 em): baseline 0.207 em above its box bottom; the
+   *   114 "سورة …" heads are centred 0.20 em above the baseline (median) and the quarter labels 0.23 → ≈ 0.41 em.
+   * Both boxes end at the head's bottom, so the shift is 0.47·fs − 0.41·(head size), 0.17 em down. Measured with the
+   * canvas ink boxes of both faces in Edge over the 602 heads (pages 3–604): the calligraphy's ink centre lies within
+   * 0.03 em of the label's (median) and 0.04 em of the surah name's, whose own centre moves ±0.15 em with its
+   * descenders (ابراهيم, page 256: 0.5 px from the label, 1.0 px from the middle of the two texts at qfs 26.25).
+   * furniture.browser.test.ts checks page 262.
+   */
+  .mp-head-juz-glyph {
+    --fs: max(calc(var(--qfs) * 0.68), 16px);
+
+    display: block;
+    height: calc(var(--fs) * 1.17);
+    font-family: 'qd-quran-common';
+    font-size: var(--fs);
+    line-height: calc(var(--fs) * 1.17);
+    translate: 0 calc(var(--fs) * 0.47 - var(--mp-head-fs) * 0.41);
+  }
+
+  /* ── Footer (§8.9): the page number in a medallion, centred under the text block ──────────────────────────────── */
+
+  .mp-foot {
+    position: absolute;
+    top: calc(var(--mp-ph) - var(--mp-m-tb) - var(--mp-foot));
+    width: var(--mp-tb-w);
+    height: var(--mp-foot);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .mp[data-side='right'] .mp-foot {
+    right: var(--mp-block-outer); /* physical-ok: under the text block of an odd page */
+  }
+
+  .mp[data-side='left'] .mp-foot {
+    left: var(--mp-block-outer); /* physical-ok: under the text block of an even page */
+  }
+
+  .mp-foot-medallion {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: calc(var(--qfs) * 1.1);
+    height: calc(var(--qfs) * 1.1);
+  }
+
+  .mp-foot-medallion > svg {
+    position: absolute;
+    inset: 0;
+    overflow: visible;
+  }
+
+  .mp-foot .ring {
+    fill: var(--surface-page);
+    stroke: var(--frame-gold);
+    stroke-linejoin: round;
+  }
+
+  .mp-foot .disc {
+    fill: var(--frame-gold);
+    fill-opacity: 0.1;
+    stroke: none;
+  }
+
+  .mp-foot-num {
+    position: relative;
+    color: var(--text-muted);
+    font-family: var(--mp-furniture-font);
+    font-size: max(calc(var(--qfs) * 0.55), 12px);
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    /* Naskh digits sit high in their em box: centre their ink in the disc. */
+    translate: 0 calc(var(--qfs) * 0.04);
+  }
+
+  /* ── Surah header line (§8.8) ──────────────────────────────────────────────────────────────────────────────────── */
+
+  .sh-line {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    align-self: stretch;
+    justify-content: center;
+    min-width: 0;
+    user-select: none;
+  }
+
+  /*
+   * Decor: the QCF surah-header font draws frame and name in one glyph, 3.302 em wide and 0.4 em tall (measured), with
+   * its ink centred on the baseline. `--sh-scale` (tunable) sizes it to the line pitch: 4.4·qfs → 14.5 × 1.76 qfs, so it
+   * never reaches the glyphs of the lines above and below (at 16.5 qfs wide it would be 2 qfs tall); on the opening
+   * pages' 12.1 qfs lines 3.62·qfs.
+   */
+  .sh {
+    --sh-scale: 4.4;
+
+    color: var(--surah-header-ink);
+    font-family: 'qd-surah-header';
+    font-size: calc(var(--qfs) * var(--sh-scale));
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .mp[data-opening] .sh {
+    --sh-scale: 3.62;
+  }
+
+  .mp-glyphs[data-interactive] .sh-line {
+    cursor: pointer;
+  }
+
+  .mp-glyphs[data-interactive] .sh-line:hover .sc-body {
+    fill: color-mix(in srgb, var(--frame-gold) 18%, transparent);
+  }
+
+  .mp-glyphs[data-interactive] .sh-line:hover .sh {
+    color: color-mix(in srgb, var(--surah-header-ink) 82%, var(--ink));
+  }
+
+  /* ── The surah cartouche (§8.8 fallback; also the translation-mode SurahCard) ──────────────────────────────────── */
+
+  .sc {
+    position: relative;
+    display: inline-grid;
+    flex: none;
+    place-items: center;
+    vertical-align: middle;
+  }
+
+  .sc-art {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+
+  .sc-body {
+    fill: var(--cartouche-fill);
+    transition: fill var(--dur-quick) linear;
+  }
+
+  .sc-line {
+    fill: none;
+    stroke: var(--frame-gold);
+    stroke-linejoin: round;
+  }
+
+  .sc-medallion {
+    fill: var(--surface-page);
+    stroke: var(--frame-gold);
+  }
+
+  .sc-medallion-inner {
+    fill: none;
+    stroke: var(--frame-gold);
+    stroke-opacity: 0.55;
+  }
+
+  .sc-star {
+    fill: var(--frame-gold);
+    fill-opacity: 0.2;
+    stroke: var(--frame-green);
+    stroke-linejoin: miter;
+  }
+
+  .sc-name {
+    position: relative;
+    color: var(--ink);
+    direction: rtl;
+    font-family: 'qd-hafs', var(--font-naskh);
+    font-size: calc(var(--qfs) * 0.85);
+    line-height: 1;
+    white-space: nowrap;
+    /* qd-hafs reserves deep descent for harakat: lift the name to the cartouche's optical centre. */
+    translate: 0 calc(var(--qfs) * -0.04);
+  }
+
+  /* ── Basmala line (§8.8) ───────────────────────────────────────────────────────────────────────────────────────── */
+
+  /* The line box spans the whole line, so its geometry never depends on which basmala it holds. */
+  .bsm-line {
+    position: relative;
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    align-self: stretch;
+    justify-content: center;
+    min-width: 0;
+    user-select: none;
+  }
+
+  .bsm {
+    position: relative;
+    isolation: isolate;
+    color: var(--ink);
+    font-family: 'qd-hafs', var(--font-naskh);
+    font-size: calc(var(--qfs) * 0.95);
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  /* quran-common's basmala is 6.41 em wide with 0.86 em of ink: 1.4·qfs (tunable) draws it 9.0 qfs wide. */
+  .bsm-decor {
+    --basmala-scale: 1.4;
+
+    font-family: 'qd-quran-common';
+    font-size: calc(var(--qfs) * var(--basmala-scale));
+  }
+
+  /* The audio basmala segment (§8.8): the ayah-pill geometry of §8.7 behind the text, cross-faded like the ayahs. */
+  .bsm-hl {
+    position: absolute;
+    inset-block: calc(var(--lh) * 0.12);
+    inset-inline: calc(var(--qfs) * -0.4);
+    border-radius: calc(var(--qfs) * 0.28);
+    background: var(--hl-audio);
+    opacity: 0;
+    transition: opacity var(--dur-quick) linear;
+    pointer-events: none;
+  }
+
+  .bsm-line[data-playing] .bsm-hl {
+    opacity: 1;
+  }
+
+  /* The pill sits behind the text it wraps, inside the text's own stacking context. */
+  .bsm > .bsm-hl {
+    z-index: -1;
+  }
+
+  /*
+   * Sajda overline (§8.9): no CSS overline. The printed Mushaf overlines the words of the sajda phrase, and both
+   * renditions already draw exactly that: the QCF glyphs carry it, and the KFGQPC Hafs face draws it from the U+06E4
+   * that the QPC Hafs text puts on those words (38:24 وَخَرَّۤ رَاكِعٗاۤ). An overline on the ۩ word would double it there
+   * and mark the wrong word on 38:24 (وَأَنَابَ ۩). Recorded in docs/deviations/WP8c.md.
+   */
+
+  /* ── Margin column (§8.9): markers and marks in the outer margin M_OUT ─────────────────────────────────────────── */
+
+  .mp-margin {
+    position: absolute;
+    top: 0;
+    width: var(--mp-m-out);
+    height: 100%;
+    pointer-events: none;
+  }
+
+  .mp[data-side='right'] .mp-margin {
+    right: 0; /* physical-ok: the outer margin of an odd page */
+  }
+
+  .mp[data-side='left'] .mp-margin {
+    left: 0; /* physical-ok: the outer margin of an even page */
+  }
+
+  .mk,
+  .mm {
+    position: absolute;
+    inset-inline: 0;
+    width: max-content;
+    margin: 0 auto;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    pointer-events: auto;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .mk:disabled,
+  .mm:disabled {
+    cursor: default;
+    pointer-events: none;
+  }
+
+  /* A soft hover halo that never changes the item's box. */
+  .mk::before,
+  .mm::before {
+    content: '';
+    position: absolute;
+    inset: calc(var(--qfs) * -0.08) calc(var(--qfs) * -0.12);
+    border-radius: var(--radius-sm);
+    background: var(--surface-hover);
+    opacity: 0;
+    transition: opacity var(--dur-fast) linear;
+  }
+
+  .mk:hover::before,
+  .mm:hover::before {
+    opacity: 1;
+  }
+
+  .mk {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: calc(var(--qfs) * 0.06);
+    color: var(--marker-ink);
+    user-select: none;
+  }
+
+  /* Height, size and line-height come from the glyph's measured ink (ornaments.ts); the shift centres the ink. */
+  .mk-glyph {
+    position: relative;
+    display: block;
+    font-family: 'qd-hafs', var(--font-naskh);
+    white-space: nowrap;
+    translate: 0 var(--shift, 0);
+  }
+
+  /*
+   * A quran-common ornament (drawn only with its label): its ≈0.01 em hairlines are thickened under the fill
+   * (`--mk-stroke` = max(0.5px, 0.018em), ornaments.ts `decorStroke`), so they read at 3:1 like the solid ۞ (§9.2).
+   * On a 2× screen a hairline already covers whole device pixels: half the thickening keeps the filigree open there.
+   * Not Quran text: the .quran-text rules do not apply.
+   */
+  .mk-glyph[data-ornament] {
+    font-family: 'qd-quran-common';
+    -webkit-text-stroke: calc(var(--mk-stroke, 0.5px) * var(--mk-stroke-k, 1)) currentColor;
+    paint-order: stroke fill;
+  }
+
+  @media (min-resolution: 2dppx) {
+    .mk-glyph[data-ornament] {
+      --mk-stroke-k: 0.5;
+    }
+  }
+
+  /*
+   * The ornament's frame holds the division: the hizb number, or ¼ ½ ¾ (`markerInset`). `top` and the size come from
+   * `insetBox`, which centres the text's ink on the frame in this `line-height: 1` box.
+   */
+  .mk-inset {
+    position: absolute;
+    inset-inline: 0;
+    font-family: var(--mp-furniture-font);
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .mk-label {
+    position: relative;
+    font-family: var(--mp-furniture-font);
+    font-size: var(--mk-label);
+    line-height: 1.3;
+    white-space: nowrap;
+  }
+
+  .mm {
+    display: grid;
+    place-items: center;
+    aspect-ratio: 3 / 4;
+  }
+
+  .mm > svg {
+    position: relative;
+    width: auto;
+    height: 100%;
+    overflow: visible;
+  }
+
+  .mm[data-kind='bookmark'] path {
+    fill: var(--accent);
+  }
+
+  .mm[data-kind='note'] .sheet {
+    fill: var(--surface-page);
+    stroke: var(--text-muted);
+    stroke-width: 1.3;
+    stroke-linejoin: round;
+  }
+
+  .mm[data-kind='note'] .fold,
+  .mm[data-kind='note'] .lines {
+    fill: none;
+    stroke: var(--text-muted);
+    stroke-width: 1.3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  /* Tooltip content of markers and marks (portalled; shared by MarginMarkers and MarginMarks). */
+  .mk-tip {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-width: 260px;
+  }
+
+  .mk-tip-label {
+    color: var(--marker-ink);
+    font-family: var(--font-naskh);
+    font-size: var(--text-md);
+    line-height: 1.5;
+  }
+
+  .mk-tip-text {
+    color: var(--text);
+  }
+
+  .mk-tip-quote {
+    color: var(--text);
+    line-height: var(--leading-ui);
+    unicode-bidi: plaintext;
+  }
+
+  .mk-tip-hint {
+    color: var(--text-muted);
+    font-size: var(--text-2xs);
+  }
+
+  /* ── The reading ribbon (§8.9): silk hanging from the top edge on the spine side ───────────────────────────────── */
+
+  .mp-ribbon {
+    position: absolute;
+    top: 0;
+    left: 0; /* physical-ok: positioned by translate from the page's left edge (book geometry) */
+    z-index: 1;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+    filter: drop-shadow(0 1px 1px rgb(40 20 10 / 0.16)) drop-shadow(0 2px 3px rgb(40 20 10 / 0.1));
+    transition:
+      height var(--dur-gentle) var(--ease-standard),
+      translate var(--dur-gentle) var(--ease-standard);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  @starting-style {
+    .mp-ribbon {
+      height: 0;
+    }
+  }
+
+  .mp-ribbon-edge,
+  .mp-ribbon-silk {
+    position: absolute;
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 50% calc(100% - var(--notch)), 0 100%);
+  }
+
+  .mp-ribbon-edge {
+    inset: 0;
+    background: color-mix(in srgb, var(--ribbon) 70%, black);
+  }
+
+  .mp-ribbon-silk {
+    inset: 0 1px 1px;
+    background: linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--ribbon) 86%, black),
+      var(--ribbon) 26%,
+      color-mix(in srgb, var(--ribbon) 82%, white) 50%,
+      var(--ribbon) 74%,
+      color-mix(in srgb, var(--ribbon) 86%, black)
+    );
+    transition: filter var(--dur-fast) linear;
+  }
+
+  .mp-ribbon:hover .mp-ribbon-silk,
+  .mp-ribbon[data-state='open'] .mp-ribbon-silk {
+    filter: brightness(1.1);
+  }
+
+  /* ── Page bookmark (§8.9): a 1.2·qfs dog-ear at the outer top corner ───────────────────────────────────────────── */
+
+  .mp-dogear {
+    position: absolute;
+    top: 0;
+    z-index: 1;
+    width: calc(var(--qfs) * 1.2);
+    height: calc(var(--qfs) * 1.2);
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .mp[data-side='right'] .mp-dogear {
+    right: 0; /* physical-ok: the outer top corner of an odd page */
+  }
+
+  .mp[data-side='left'] .mp-dogear {
+    left: 0; /* physical-ok: the outer top corner of an even page */
+  }
+
+  /* The folded-away corner shows the canvas behind the page. */
+  .mp-dogear-cut {
+    position: absolute;
+    inset: -1px;
+    background: var(--surface-app);
+  }
+
+  .mp-dogear-shadow {
+    position: absolute;
+    inset: 0;
+    filter: drop-shadow(0 1px 1px rgb(40 20 10 / 0.18)) drop-shadow(0 2px 3px rgb(40 20 10 / 0.12));
+  }
+
+  /* The flap: the back of the paper, tinted with the accent (--accent-soft over the page), lit along the crease. */
+  .mp-dogear-flap {
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(
+        var(--crease),
+        transparent 46%,
+        color-mix(in srgb, var(--surface-page) 70%, transparent) 50%,
+        transparent 54%
+      ),
+      linear-gradient(
+        var(--crease),
+        color-mix(in srgb, var(--accent) 14%, var(--surface-page)),
+        color-mix(in srgb, var(--accent) 30%, var(--surface-page))
+      );
+  }
+
+  .mp[data-side='right'] .mp-dogear {
+    --crease: to top right;
+  }
+
+  .mp[data-side='left'] .mp-dogear {
+    --crease: to top left;
+  }
+
+  .mp[data-side='right'] .mp-dogear-cut {
+    clip-path: polygon(0 0, 100% 0, 100% 100%);
+  }
+
+  .mp[data-side='right'] .mp-dogear-flap {
+    clip-path: polygon(0 0, 0 100%, 100% 100%);
+  }
+
+  .mp[data-side='left'] .mp-dogear-cut {
+    clip-path: polygon(0 0, 100% 0, 0 100%);
+  }
+
+  .mp[data-side='left'] .mp-dogear-flap {
+    clip-path: polygon(100% 0, 100% 100%, 0 100%);
+  }
+
+  .mp-dogear:hover .mp-dogear-flap {
+    filter: brightness(0.97);
+  }
+
+  @media (forced-colors: active) {
+    .mm[data-kind='bookmark'] path {
+      fill: Highlight;
+    }
+
+    .mp-ribbon-silk,
+    .mp-ribbon-edge {
+      background: CanvasText;
+    }
+
+    .mp-dogear-flap {
+      background: Highlight;
+    }
+
+    .mp-dogear-cut {
+      background: Canvas;
+    }
+  }
+}

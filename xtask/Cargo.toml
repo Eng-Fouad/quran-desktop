@@ -1,0 +1,35 @@
+[package]
+name = "xtask"
+description = "Quran for Desktop developer tasks: core.db pipeline, verification gates, fixtures, assets, licences, catalog checks"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+publish = false
+
+# Final after wave 0 (docs/ARCHITECTURE.md §2.7, §4, §14.2): wave-1+ packages request additions from the lead.
+[dependencies]
+quran-core = { workspace = true }
+quran-types = { workspace = true }
+quran-packs = { workspace = true }            # catalog model (catalog-check, fetch-dev-packs)
+rusqlite = { workspace = true }
+reqwest = { workspace = true }                # driven by a local current-thread tokio runtime
+tokio = { workspace = true }
+futures-util = { workspace = true }           # bounded request concurrency (--jobs)
+quick-xml = { workspace = true, features = ["serialize"] } # Tanzil quran-data.xml
+zip = { workspace = true }                    # KFGQPC font archive
+sha2 = { workspace = true }
+hex = { workspace = true }
+toml = { workspace = true }                   # data/sources/qul/manifest.toml, xtask/data/division_exceptions.toml
+clap = { workspace = true }
+anyhow = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+time = { workspace = true }                   # built_at (RFC 3339) from SOURCE_DATE_EPOCH
+
+[dev-dependencies]
+tempfile = { workspace = true }
+
+[lints]
+workspace = true

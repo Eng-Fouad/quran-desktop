@@ -1,0 +1,3950 @@
+{
+  "description": "Copy-text golden vectors (docs/ARCHITECTURE.md §5.5, §12.3), read by both test suites: Rust (quran-core core_db::text unit tests and tests/core_text.rs against a real core.db) and vitest (src/lib/mushaf/copy.ts). Format: the non-end words' text_hafs joined by U+0020 (a word is copied whole, so the space before U+06E9 in 38:24 and 22:77 is kept once); each end marker becomes ' ﴿N﴾' (Arabic-Indic digits) when ayahNumbers, else it is dropped; then '\\n' + reference when includeReference. References: short '(2:255)', '(2:255–257)', '(1:7–2:2)'; long '— Al-Baqarah 2:255', '— Al-Baqarah 2:255–257', '— Al-Fatihah 1:7 – Al-Baqarah 2:2' (surah nameSimple); arabic '[البقرة: ٢٥٥]', '[البقرة: ٢٥٥–٢٥٧]', '[الفاتحة: ٧ – البقرة: ٢]' (surah nameAr). 'words' are the PageWord rows of the range in hafs style (glyph == text); 'reference' is the expected reference line ('' when includeReference is false). Translation text (translationPackId) is appended by the command and is not part of these vectors.",
+  "surahs": {
+    "1": {
+      "nameSimple": "Al-Fatihah",
+      "nameAr": "الفاتحة"
+    },
+    "2": {
+      "nameSimple": "Al-Baqarah",
+      "nameAr": "البقرة"
+    },
+    "22": {
+      "nameSimple": "Al-Hajj",
+      "nameAr": "الحج"
+    },
+    "38": {
+      "nameSimple": "Sad",
+      "nameAr": "ص"
+    },
+    "112": {
+      "nameSimple": "Al-Ikhlas",
+      "nameAr": "الإخلاص"
+    },
+    "113": {
+      "nameSimple": "Al-Falaq",
+      "nameAr": "الفلق"
+    },
+    "114": {
+      "nameSimple": "An-Nas",
+      "nameAr": "الناس"
+    }
+  },
+  "cases": [
+    {
+      "name": "al-fatihah with numbers and a short reference",
+      "fromAyahId": 1,
+      "toAyahId": 7,
+      "options": {
+        "includeReference": true,
+        "referenceStyle": "short",
+        "ayahNumbers": true,
+        "translationPackId": null
+      },
+      "words": [
+        {
+          "id": 1,
+          "ayahId": 1,
+          "surah": 1,
+          "ayah": 1,
+          "position": 1,
+          "isEnd": false,
+          "glyph": "بِسۡمِ",
+          "text": "بِسۡمِ"
+        },
+        {
+          "id": 2,
+          "ayahId": 1,
+          "surah": 1,
+          "ayah": 1,
+          "position": 2,
+          "isEnd": false,
+          "glyph": "ٱللَّهِ",
+          "text": "ٱللَّهِ"
+        },
+        {
+          "id": 3,
+          "ayahId": 1,
+          "surah": 1,
+          "ayah": 1,
+          "position": 3,
+          "isEnd": false,
+          "glyph": "ٱلرَّحۡمَٰنِ",
+          "text": "ٱلرَّحۡمَٰنِ"
+        },
+        {
+          "id": 4,
+          "ayahId": 1,
+          "surah": 1,
+          "ayah": 1,
+          "position": 4,
+          "isEnd": false,
+          "glyph": "ٱلرَّحِيمِ",
+          "text": "ٱلرَّحِيمِ"
+        },
+        {
+          "id": 5,
+          "ayahId": 1,
+          "surah": 1,
+          "ayah": 1,
+          "position": 5,
+          "isEnd": true,
+          "glyph": "۝١",
+          "text": "۝١"
+        },
+        {
+          "id": 6,
+          "ayahId": 2,
+          "surah": 1,
+          "ayah": 2,
+          "position": 1,
+          "isEnd": false,
+          "glyph": "ٱلۡحَمۡدُ",
+          "text": "ٱلۡحَمۡدُ"
+        },
+        {
+          "id": 7,
+          "ayahId": 2,
+          "surah": 1,
+          "ayah": 2,
+          "position": 2,
+          "isEnd": false,
+          "glyph": "لِلَّهِ",
+          "text": "لِلَّهِ"
+        },
+        {
+          "id": 8,
+          "ayahId": 2,
+          "surah": 1,
+          "ayah": 2,
+          "position": 3,
+          "isEnd": false,
+          "glyph": "رَبِّ",
+          "text": "رَبِّ"
+        },
+        {
+          "id": 9,
+          "ayahId": 2,
+          "surah": 1,
+          "ayah": 2,
+          "position": 4,
+          "isEnd": false,
+          "glyph": "ٱلۡعَٰلَمِينَ",
+          "text": "ٱلۡعَٰلَمِينَ"
+        },
+        {
+          "id": 10,
+          "ayahId": 2,
+          "surah": 1,
+          "ayah": 2,
+          "position": 5,
+          "isEnd": true,
+          "glyph": "۝٢",
+          "text": "۝٢"
+        },
+        {
+          "id": 11,
+          "ayahId": 3,
+          "surah": 1,
+          "ayah": 3,
+          "position": 1,
+          "isEnd": false,
+          "glyph": "ٱلرَّحۡمَٰنِ",
+          "text": "ٱلرَّحۡمَٰنِ"
+        },
+        {
+          "id": 12,
+          "ayahId": 3,
+          "surah": 1,
+          "ayah": 3,
+          "position": 2,
+          "isEnd": false,
+          "glyph": "ٱلرَّحِيمِ",
+          "text": "ٱلرَّحِيمِ"
+        },
+        {
+          "id": 13,
+          "ayahId": 3,
+          "surah": 1,
+          "ayah": 3,
+          "position": 3,
+          "isEnd": true,
+          "glyph": "۝٣",
+          "text": "۝٣"
+        },
+        {
+          "id": 14,
+          "ayahId": 4,
+          "surah": 1,
+          "ayah": 4,
+          "position": 1,
+          "isEnd": false,
+          "glyph": "مَٰلِكِ",
+          "text": "مَٰلِكِ"
+        },
+        {
+          "id": 15,
+          "ayahId": 4,
+          "surah": 1,
+          "ayah": 4,
+          "position": 2,
+          "isEnd": false,
+          "glyph": "يَوۡمِ",
+          "text": "يَوۡمِ"
+        },
+        {
+          "id": 16,
+          "ayahId": 4,
+          "surah": 1,
+          "ayah": 4,
+          "position": 3,
+          "isEnd": false,
+          "glyph": "ٱلدِّينِ",
+          "text": "ٱلدِّينِ"
+        },
+        {
+          "id": 17,
+          "ayahId": 4,
+          "surah": 1,
+          "ayah": 4,
+          "position": 4,
+          "isEnd": true,
+          "glyph": "۝٤",
+          "text": "۝٤"
+        },
+        {
+          "id": 18,
+          "ayahId": 5,
+          "surah": 1,
+          "ayah": 5,
+          "position": 1,
+          "isEnd": false,
+          "glyph": "إِيَّاكَ",
+          "text": "إِيَّاكَ"
+        },
+        {
+          "id": 19,
+          "ayahId": 5,
+          "surah": 1,
+          "ayah": 5,
+          "position": 2,
+          "isEnd": false,
+          "glyph": "نَعۡبُدُ",
+          "text": "نَعۡبُدُ"
+        },
+        {
+          "id": 20,
+          "ayahId": 5,
+          "surah": 1,
+          "ayah": 5,
+          "position": 3,
+          "isEnd": false,
+          "glyph": "وَإِيَّاكَ",
+          "text": "وَإِيَّاكَ"
+        },
+        {
+          "id": 21,
+          "ayahId": 5,
+          "surah": 1,
+          "ayah": 5,
+          "position": 4,
+          "isEnd": false,
+          "glyph": "نَسۡتَعِينُ",
+          "text": "نَسۡتَعِينُ"
+        },
+        {
+          "id": 22,
+          "ayahId": 5,
+          "surah": 1,
+          "ayah": 5,
+          "position": 5,
+          "isEnd": true,
+          "glyph": "۝٥",
+          "text": "۝٥"
+        },
+        {
+          "id": 23,
+          "ayahId": 6,
+          "surah": 1,
+          "ayah": 6,
+          "position": 1,
+          "isEnd": false,
+          "glyph": "ٱهۡدِنَا",
+          "text": "ٱهۡدِنَا"
+        },
+        {
+          "id": 24,
+          "ayahId": 6,
+          "surah": 1,
+          "ayah": 6,
+          "position": 2,
+          "isEnd": false,
+          "glyph": "ٱلصِّرَٰطَ",
+          "text": "ٱلصِّرَٰطَ"
+        },
+        {
+          "id": 25,
+          "ayahId": 6,
+          "surah": 1,
+          "ayah": 6,
+          "position": 3,
+          "isEnd": false,
+          "glyph": "ٱلۡمُسۡتَقِيمَ",
+          "text": "ٱلۡمُسۡتَقِيمَ"
+        },
+        {
+          "id": 26,
+          "ayahId": 6,
+          "surah": 1,
+          "ayah": 6,
+          "position": 4,
+          "isEnd": true,
+          "glyph": "۝٦",
+          "text": "۝٦"
+        },
+        {
+          "id": 27,
+          "ayahId": 7,
+          "surah": 1,
+          "ayah": 7,
+          "position": 1,
+          "isEnd": false,
+          "glyph": "صِرَٰطَ",
+          "text": "صِرَٰطَ"
+        },
+        {
+          "id": 28,
+          "ayahId": 7,
+          "surah": 1,
+          "ayah": 7,
+          "position": 2,
+          "isEnd": false,
+          "glyph": "ٱلَّذِينَ",
+          "text": "ٱلَّذِينَ"
+        },
+        {
+          "id": 29,
+          "ayahId": 7,
+          "surah": 1,
+          "ayah": 7,
+          "position": 3,
+          "isEnd": false,
+          "glyph": "أَنۡعَمۡتَ",
+          "text": "أَنۡعَمۡتَ"
+        },
+        {
+          "id": 30,
+          "ayahId": 7,
+          "surah": 1,
+          "ayah": 7,
+          "position": 4,
+          "isEnd": false,
+          "glyph": "عَلَيۡهِمۡ",
+          "text": "عَلَيۡهِمۡ"
+        },
+        {
+          "id": 31,
+          "ayahId": 7,
+          "surah": 1,
+          "ayah": 7,
+          "position": 5,
+          "isEnd": false,
+          "glyph": "غَيۡرِ",
+          "text": "غَيۡرِ"
+        },
+        {
+          "id": 32,
+          "ayahId": 7,
+          "surah": 1,
+          "ayah": 7,
+          "position": 6,
+          "isEnd": false,
+          "glyph": "ٱلۡمَغۡضُوبِ",
+          "text": "ٱلۡمَغۡضُوبِ"
+        },
+        {
+          "id": 33,
+          "ayahId": 7,
+          "surah": 1,
+          "ayah": 7,
+          "position": 7,
+          "isEnd": false,
+          "glyph": "عَلَيۡهِمۡ",
+          "text": "عَلَيۡهِمۡ"
+        },
+        {
+          "id": 34,
+          "ayahId": 7,
+          "surah": 1,
+          "ayah": 7,
+          "position": 8,
+          "isEnd": false,
+          "glyph": "وَلَا",
+          "text": "وَلَا"
+        },
+        {
+          "id": 35,
+          "ayahId": 7,
+          "surah": 1,
+          "ayah": 7,
+          "position": 9,
+          "isEnd": false,
+          "glyph": "ٱلضَّآلِّينَ",
+          "text": "ٱلضَّآلِّينَ"
+        },
+        {
+          "id": 36,
+          "ayahId": 7,
+          "surah": 1,
+          "ayah": 7,
+          "position": 10,
+          "isEnd": true,
+          "glyph": "۝٧",
+          "text": "۝٧"
+        }
+      ],
+      "reference": "(1:1–7)",
+      "expected": "بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ ﴿١﴾ ٱلۡحَمۡدُ لِلَّهِ رَبِّ ٱلۡعَٰلَمِينَ ﴿٢﴾ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ ﴿٣﴾ مَٰلِكِ يَوۡمِ ٱلدِّينِ ﴿٤﴾ إِيَّاكَ نَعۡبُدُ وَإِيَّاكَ نَسۡتَعِينُ ﴿٥﴾ ٱهۡدِنَا ٱلصِّرَٰطَ ٱلۡمُسۡتَقِيمَ ﴿٦﴾ صِرَٰطَ ٱلَّذِينَ أَنۡعَمۡتَ عَلَيۡهِمۡ غَيۡرِ ٱلۡمَغۡضُوبِ عَلَيۡهِمۡ وَلَا ٱلضَّآلِّينَ ﴿٧﴾\n(1:1–7)"
+    },
+    {
+      "name": "al-fatihah plain (markers dropped, no reference)",
+      "fromAyahId": 1,
+      "toAyahId": 7,
+      "options": {
+        "includeReference": false,
+        "referenceStyle": "short",
+        "ayahNumbers": false,
+        "translationPackId": null
+      },
+      "words": [
+        {
+          "id": 1,
+          "ayahId": 1,
+          "surah": 1,
+          "ayah": 1,
+          "position": 1,
+          "isEnd": false,
+          "glyph": "بِسۡمِ",
+          "text": "بِسۡمِ"
+        },
+        {
+          "id": 2,
+          "ayahId": 1,
+          "surah": 1,
+          "ayah": 1,
+          "position": 2,
+          "isEnd": false,
+          "glyph": "ٱللَّهِ",
+          "text": "ٱللَّهِ"
+        },
+        {
+          "id": 3,
+          "ayahId": 1,
+          "surah": 1,
+          "ayah": 1,
+          "position": 3,
+          "isEnd": false,
+          "glyph": "ٱلرَّحۡمَٰنِ",
+          "text": "ٱلرَّحۡمَٰنِ"
+        },
+        {
+          "id": 4,
+          "ayahId": 1,
+          "surah": 1,
+          "ayah": 1,
+          "position": 4,
+          "isEnd": false,
+          "glyph": "ٱلرَّحِيمِ",
+          "text": "ٱلرَّحِيمِ"
+        },
+        {
+          "id": 5,
+          "ayahId": 1,
+          "surah": 1,
+          "ayah": 1,
+          "position": 5,
+          "isEnd": true,
+          "glyph": "۝١",
+          "text": "۝١"
+        },
+        {
+          "id": 6,
+          "ayahId": 2,
+          "surah": 1,
+          "ayah": 2,
+          "position": 1,
+          "isEnd": false,
+          "glyph": "ٱلۡحَمۡدُ",
+          "text": "ٱلۡحَمۡدُ"
+        },
+        {
+          "id": 7,
+          "ayahId": 2,
+          "surah": 1,
+          "ayah": 2,
+          "position": 2,
+          "isEnd": false,
+          "glyph": "لِلَّهِ",
+          "text": "لِلَّهِ"
+        },
+        {
+          "id": 8,
+          "ayahId": 2,
+          "surah": 1,
+          "ayah": 2,
+          "position": 3,
+          "isEnd": false,
+          "glyph": "رَبِّ",
+          "text": "رَبِّ"
+        },
+        {
+          "id": 9,
+          "ayahId": 2,
+          "surah": 1,
+          "ayah": 2,
+          "position": 4,
+          "isEnd": false,
+          "glyph": "ٱلۡعَٰلَمِينَ",
+          "text": "ٱلۡعَٰلَمِينَ"
+        },
+        {
+          "id": 10,
+          "ayahId": 2,
+          "surah": 1,
+          "ayah": 2,
+          "position": 5,
+          "isEnd": true,
+          "glyph": "۝٢",
+          "text": "۝٢"
+        },
+        {
+          "id": 11,
+          "ayahId": 3,
+          "surah": 1,
+          "ayah": 3,
+          "position": 1,
+          "isEnd": false,
+          "glyph": "ٱلرَّحۡمَٰنِ",
+          "text": "ٱلرَّحۡمَٰنِ"
+        },
+        {
+          "id": 12,
+          "ayahId": 3,
+          "surah": 1,
+          "ayah": 3,
+          "position": 2,
+          "isEnd": false,
+          "glyph": "ٱلرَّحِيمِ",
+          "text": "ٱلرَّحِيمِ"
+        },
+        {
+          "id": 13,
+          "ayahId": 3,
+          "surah": 1,
+          "ayah": 3,
+          "position": 3,
+          "isEnd": true,
+          "glyph": "۝٣",
+          "text": "۝٣"
+        },
+        {
+          "id": 14,
+          "ayahId": 4,
+          "surah": 1,
+          "ayah": 4,
+          "position": 1,
+          "isEnd": false,
+          "glyph": "مَٰلِكِ",
+          "text": "مَٰلِكِ"
+        },
+        {
+          "id": 15,
+          "ayahId": 4,
+          "surah": 1,
+          "ayah": 4,
+          "position": 2,
+          "isEnd": false,
+          "glyph": "يَوۡمِ",
+          "text": "يَوۡمِ"
+        },
+        {
+          "id": 16,
+          "ayahId": 4,
+          "surah": 1,
+          "ayah": 4,
+          "position": 3,
+          "isEnd": false,
+          "glyph": "ٱلدِّينِ",
+          "text": "ٱلدِّينِ"
+        },
+        {
+          "id": 17,
+          "ayahId": 4,
+          "surah": 1,
+          "ayah": 4,
+          "position": 4,
+          "isEnd": true,
+          "glyph": "۝٤",
+          "text": "۝٤"
+        },
+        {
+          "id": 18,
+          "ayahId": 5,
+          "surah": 1,
+          "ayah": 5,
+          "position": 1,
+          "isEnd": false,
+          "glyph": "إِيَّاكَ",
+          "text": "إِيَّاكَ"
+        },
+        {
+          "id": 19,
+          "ayahId": 5,
+          "surah": 1,
+          "ayah": 5,
+          "position": 2,
+          "isEnd": false,
+          "glyph": "نَعۡبُدُ",
+          "text": "نَعۡبُدُ"
+        },
+        {
+          "id": 20,
+          "ayahId": 5,
+          "surah": 1,
+          "ayah": 5,
+          "position": 3,
+          "isEnd": false,
+          "glyph": "وَإِيَّاكَ",
+          "text": "وَإِيَّاكَ"
+        },
+        {
+          "id": 21,
+          "ayahId": 5,
+          "surah": 1,
+          "ayah": 5,
+          "position": 4,
+          "isEnd": false,
+          "glyph": "نَسۡتَعِينُ",
+          "text": "نَسۡتَعِينُ"
+        },
+        {
+          "id": 22,
+          "ayahId": 5,
+          "surah": 1,
+          "ayah": 5,
+          "position": 5,
+          "isEnd": true,
+          "glyph": "۝٥",
+          "text": "۝٥"
+        },
+        {
+          "id": 23,
+          "ayahId": 6,
+          "surah": 1,
+          "ayah": 6,
+          "position": 1,
+          "isEnd": false,
+          "glyph": "ٱهۡدِنَا",
+          "text": "ٱهۡدِنَا"
+        },
+        {
+          "id": 24,
+          "ayahId": 6,
+          "surah": 1,
+          "ayah": 6,
+          "position": 2,
+          "isEnd": false,
+          "glyph": "ٱلصِّرَٰطَ",
+          "text": "ٱلصِّرَٰطَ"
+        },
+        {
+          "id": 25,
+          "ayahId": 6,
+          "surah": 1,
+          "ayah": 6,
+          "position": 3,
+          "isEnd": false,
+          "glyph": "ٱلۡمُسۡتَقِيمَ",
+          "text": "ٱلۡمُسۡتَقِيمَ"
+        },
+        {
+          "id": 26,
+          "ayahId": 6,
+          "surah": 1,
+          "ayah": 6,
+          "position": 4,
+          "isEnd": true,
+          "glyph": "۝٦",
+          "text": "۝٦"
+        },
+        {
+          "id": 27,
+          "ayahId": 7,
+          "surah": 1,
+          "ayah": 7,
+          "position": 1,
+          "isEnd": false,
+          "glyph": "صِرَٰطَ",
+          "text": "صِرَٰطَ"
+        },
+        {
+          "id": 28,
+          "ayahId": 7,
+          "surah": 1,
+          "ayah": 7,
+          "position": 2,
+          "isEnd": false,
+          "glyph": "ٱلَّذِينَ",
+          "text": "ٱلَّذِينَ"
+        },
+        {
+          "id": 29,
+          "ayahId": 7,
+          "surah": 1,
+          "ayah": 7,
+          "position": 3,
+          "isEnd": false,
+          "glyph": "أَنۡعَمۡتَ",
+          "text": "أَنۡعَمۡتَ"
+        },
+        {
+          "id": 30,
+          "ayahId": 7,
+          "surah": 1,
+          "ayah": 7,
+          "position": 4,
+          "isEnd": false,
+          "glyph": "عَلَيۡهِمۡ",
+          "text": "عَلَيۡهِمۡ"
+        },
+        {
+          "id": 31,
+          "ayahId": 7,
+          "surah": 1,
+          "ayah": 7,
+          "position": 5,
+          "isEnd": false,
+          "glyph": "غَيۡرِ",
+          "text": "غَيۡرِ"
+        },
+        {
+          "id": 32,
+          "ayahId": 7,
+          "surah": 1,
+          "ayah": 7,
+          "position": 6,
+          "isEnd": false,
+          "glyph": "ٱلۡمَغۡضُوبِ",
+          "text": "ٱلۡمَغۡضُوبِ"
+        },
+        {
+          "id": 33,
+          "ayahId": 7,
+          "surah": 1,
+          "ayah": 7,
+          "position": 7,
+          "isEnd": false,
+          "glyph": "عَلَيۡهِمۡ",
+          "text": "عَلَيۡهِمۡ"
+        },
+        {
+          "id": 34,
+          "ayahId": 7,
+          "surah": 1,
+          "ayah": 7,
+          "position": 8,
+          "isEnd": false,
+          "glyph": "وَلَا",
+          "text": "وَلَا"
+        },
+        {
+          "id": 35,
+          "ayahId": 7,
+          "surah": 1,
+          "ayah": 7,
+          "position": 9,
+          "isEnd": false,
+          "glyph": "ٱلضَّآلِّينَ",
+          "text": "ٱلضَّآلِّينَ"
+        },
+        {
+          "id": 36,
+          "ayahId": 7,
+          "surah": 1,
+          "ayah": 7,
+          "position": 10,
+          "isEnd": true,
+          "glyph": "۝٧",
+          "text": "۝٧"
+        }
+      ],
+      "reference": "",
+      "expected": "بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ ٱلۡحَمۡدُ لِلَّهِ رَبِّ ٱلۡعَٰلَمِينَ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ مَٰلِكِ يَوۡمِ ٱلدِّينِ إِيَّاكَ نَعۡبُدُ وَإِيَّاكَ نَسۡتَعِينُ ٱهۡدِنَا ٱلصِّرَٰطَ ٱلۡمُسۡتَقِيمَ صِرَٰطَ ٱلَّذِينَ أَنۡعَمۡتَ عَلَيۡهِمۡ غَيۡرِ ٱلۡمَغۡضُوبِ عَلَيۡهِمۡ وَلَا ٱلضَّآلِّينَ"
+    },
+    {
+      "name": "ayat al-kursi with a long reference",
+      "fromAyahId": 262,
+      "toAyahId": 262,
+      "options": {
+        "includeReference": true,
+        "referenceStyle": "long",
+        "ayahNumbers": true,
+        "translationPackId": null
+      },
+      "words": [
+        {
+          "id": 5435,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 1,
+          "isEnd": false,
+          "glyph": "ٱللَّهُ",
+          "text": "ٱللَّهُ"
+        },
+        {
+          "id": 5436,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 2,
+          "isEnd": false,
+          "glyph": "لَآ",
+          "text": "لَآ"
+        },
+        {
+          "id": 5437,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 3,
+          "isEnd": false,
+          "glyph": "إِلَٰهَ",
+          "text": "إِلَٰهَ"
+        },
+        {
+          "id": 5438,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 4,
+          "isEnd": false,
+          "glyph": "إِلَّا",
+          "text": "إِلَّا"
+        },
+        {
+          "id": 5439,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 5,
+          "isEnd": false,
+          "glyph": "هُوَ",
+          "text": "هُوَ"
+        },
+        {
+          "id": 5440,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 6,
+          "isEnd": false,
+          "glyph": "ٱلۡحَيُّ",
+          "text": "ٱلۡحَيُّ"
+        },
+        {
+          "id": 5441,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 7,
+          "isEnd": false,
+          "glyph": "ٱلۡقَيُّومُۚ",
+          "text": "ٱلۡقَيُّومُۚ"
+        },
+        {
+          "id": 5442,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 8,
+          "isEnd": false,
+          "glyph": "لَا",
+          "text": "لَا"
+        },
+        {
+          "id": 5443,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 9,
+          "isEnd": false,
+          "glyph": "تَأۡخُذُهُۥ",
+          "text": "تَأۡخُذُهُۥ"
+        },
+        {
+          "id": 5444,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 10,
+          "isEnd": false,
+          "glyph": "سِنَةٞ",
+          "text": "سِنَةٞ"
+        },
+        {
+          "id": 5445,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 11,
+          "isEnd": false,
+          "glyph": "وَلَا",
+          "text": "وَلَا"
+        },
+        {
+          "id": 5446,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 12,
+          "isEnd": false,
+          "glyph": "نَوۡمٞۚ",
+          "text": "نَوۡمٞۚ"
+        },
+        {
+          "id": 5447,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 13,
+          "isEnd": false,
+          "glyph": "لَّهُۥ",
+          "text": "لَّهُۥ"
+        },
+        {
+          "id": 5448,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 14,
+          "isEnd": false,
+          "glyph": "مَا",
+          "text": "مَا"
+        },
+        {
+          "id": 5449,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 15,
+          "isEnd": false,
+          "glyph": "فِي",
+          "text": "فِي"
+        },
+        {
+          "id": 5450,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 16,
+          "isEnd": false,
+          "glyph": "ٱلسَّمَٰوَٰتِ",
+          "text": "ٱلسَّمَٰوَٰتِ"
+        },
+        {
+          "id": 5451,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 17,
+          "isEnd": false,
+          "glyph": "وَمَا",
+          "text": "وَمَا"
+        },
+        {
+          "id": 5452,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 18,
+          "isEnd": false,
+          "glyph": "فِي",
+          "text": "فِي"
+        },
+        {
+          "id": 5453,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 19,
+          "isEnd": false,
+          "glyph": "ٱلۡأَرۡضِۗ",
+          "text": "ٱلۡأَرۡضِۗ"
+        },
+        {
+          "id": 5454,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 20,
+          "isEnd": false,
+          "glyph": "مَن",
+          "text": "مَن"
+        },
+        {
+          "id": 5455,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 21,
+          "isEnd": false,
+          "glyph": "ذَا",
+          "text": "ذَا"
+        },
+        {
+          "id": 5456,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 22,
+          "isEnd": false,
+          "glyph": "ٱلَّذِي",
+          "text": "ٱلَّذِي"
+        },
+        {
+          "id": 5457,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 23,
+          "isEnd": false,
+          "glyph": "يَشۡفَعُ",
+          "text": "يَشۡفَعُ"
+        },
+        {
+          "id": 5458,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 24,
+          "isEnd": false,
+          "glyph": "عِندَهُۥٓ",
+          "text": "عِندَهُۥٓ"
+        },
+        {
+          "id": 5459,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 25,
+          "isEnd": false,
+          "glyph": "إِلَّا",
+          "text": "إِلَّا"
+        },
+        {
+          "id": 5460,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 26,
+          "isEnd": false,
+          "glyph": "بِإِذۡنِهِۦۚ",
+          "text": "بِإِذۡنِهِۦۚ"
+        },
+        {
+          "id": 5461,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 27,
+          "isEnd": false,
+          "glyph": "يَعۡلَمُ",
+          "text": "يَعۡلَمُ"
+        },
+        {
+          "id": 5462,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 28,
+          "isEnd": false,
+          "glyph": "مَا",
+          "text": "مَا"
+        },
+        {
+          "id": 5463,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 29,
+          "isEnd": false,
+          "glyph": "بَيۡنَ",
+          "text": "بَيۡنَ"
+        },
+        {
+          "id": 5464,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 30,
+          "isEnd": false,
+          "glyph": "أَيۡدِيهِمۡ",
+          "text": "أَيۡدِيهِمۡ"
+        },
+        {
+          "id": 5465,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 31,
+          "isEnd": false,
+          "glyph": "وَمَا",
+          "text": "وَمَا"
+        },
+        {
+          "id": 5466,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 32,
+          "isEnd": false,
+          "glyph": "خَلۡفَهُمۡۖ",
+          "text": "خَلۡفَهُمۡۖ"
+        },
+        {
+          "id": 5467,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 33,
+          "isEnd": false,
+          "glyph": "وَلَا",
+          "text": "وَلَا"
+        },
+        {
+          "id": 5468,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 34,
+          "isEnd": false,
+          "glyph": "يُحِيطُونَ",
+          "text": "يُحِيطُونَ"
+        },
+        {
+          "id": 5469,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 35,
+          "isEnd": false,
+          "glyph": "بِشَيۡءٖ",
+          "text": "بِشَيۡءٖ"
+        },
+        {
+          "id": 5470,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 36,
+          "isEnd": false,
+          "glyph": "مِّنۡ",
+          "text": "مِّنۡ"
+        },
+        {
+          "id": 5471,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 37,
+          "isEnd": false,
+          "glyph": "عِلۡمِهِۦٓ",
+          "text": "عِلۡمِهِۦٓ"
+        },
+        {
+          "id": 5472,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 38,
+          "isEnd": false,
+          "glyph": "إِلَّا",
+          "text": "إِلَّا"
+        },
+        {
+          "id": 5473,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 39,
+          "isEnd": false,
+          "glyph": "بِمَا",
+          "text": "بِمَا"
+        },
+        {
+          "id": 5474,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 40,
+          "isEnd": false,
+          "glyph": "شَآءَۚ",
+          "text": "شَآءَۚ"
+        },
+        {
+          "id": 5475,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 41,
+          "isEnd": false,
+          "glyph": "وَسِعَ",
+          "text": "وَسِعَ"
+        },
+        {
+          "id": 5476,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 42,
+          "isEnd": false,
+          "glyph": "كُرۡسِيُّهُ",
+          "text": "كُرۡسِيُّهُ"
+        },
+        {
+          "id": 5477,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 43,
+          "isEnd": false,
+          "glyph": "ٱلسَّمَٰوَٰتِ",
+          "text": "ٱلسَّمَٰوَٰتِ"
+        },
+        {
+          "id": 5478,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 44,
+          "isEnd": false,
+          "glyph": "وَٱلۡأَرۡضَۖ",
+          "text": "وَٱلۡأَرۡضَۖ"
+        },
+        {
+          "id": 5479,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 45,
+          "isEnd": false,
+          "glyph": "وَلَا",
+          "text": "وَلَا"
+        },
+        {
+          "id": 5480,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 46,
+          "isEnd": false,
+          "glyph": "يَـُٔودُهُۥ",
+          "text": "يَـُٔودُهُۥ"
+        },
+        {
+          "id": 5481,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 47,
+          "isEnd": false,
+          "glyph": "حِفۡظُهُمَاۚ",
+          "text": "حِفۡظُهُمَاۚ"
+        },
+        {
+          "id": 5482,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 48,
+          "isEnd": false,
+          "glyph": "وَهُوَ",
+          "text": "وَهُوَ"
+        },
+        {
+          "id": 5483,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 49,
+          "isEnd": false,
+          "glyph": "ٱلۡعَلِيُّ",
+          "text": "ٱلۡعَلِيُّ"
+        },
+        {
+          "id": 5484,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 50,
+          "isEnd": false,
+          "glyph": "ٱلۡعَظِيمُ",
+          "text": "ٱلۡعَظِيمُ"
+        },
+        {
+          "id": 5485,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 51,
+          "isEnd": true,
+          "glyph": "۝٢٥٥",
+          "text": "۝٢٥٥"
+        }
+      ],
+      "reference": "— Al-Baqarah 2:255",
+      "expected": "ٱللَّهُ لَآ إِلَٰهَ إِلَّا هُوَ ٱلۡحَيُّ ٱلۡقَيُّومُۚ لَا تَأۡخُذُهُۥ سِنَةٞ وَلَا نَوۡمٞۚ لَّهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ مَن ذَا ٱلَّذِي يَشۡفَعُ عِندَهُۥٓ إِلَّا بِإِذۡنِهِۦۚ يَعۡلَمُ مَا بَيۡنَ أَيۡدِيهِمۡ وَمَا خَلۡفَهُمۡۖ وَلَا يُحِيطُونَ بِشَيۡءٖ مِّنۡ عِلۡمِهِۦٓ إِلَّا بِمَا شَآءَۚ وَسِعَ كُرۡسِيُّهُ ٱلسَّمَٰوَٰتِ وَٱلۡأَرۡضَۖ وَلَا يَـُٔودُهُۥ حِفۡظُهُمَاۚ وَهُوَ ٱلۡعَلِيُّ ٱلۡعَظِيمُ ﴿٢٥٥﴾\n— Al-Baqarah 2:255"
+    },
+    {
+      "name": "range in one surah with an arabic reference",
+      "fromAyahId": 262,
+      "toAyahId": 264,
+      "options": {
+        "includeReference": true,
+        "referenceStyle": "arabic",
+        "ayahNumbers": true,
+        "translationPackId": null
+      },
+      "words": [
+        {
+          "id": 5435,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 1,
+          "isEnd": false,
+          "glyph": "ٱللَّهُ",
+          "text": "ٱللَّهُ"
+        },
+        {
+          "id": 5436,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 2,
+          "isEnd": false,
+          "glyph": "لَآ",
+          "text": "لَآ"
+        },
+        {
+          "id": 5437,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 3,
+          "isEnd": false,
+          "glyph": "إِلَٰهَ",
+          "text": "إِلَٰهَ"
+        },
+        {
+          "id": 5438,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 4,
+          "isEnd": false,
+          "glyph": "إِلَّا",
+          "text": "إِلَّا"
+        },
+        {
+          "id": 5439,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 5,
+          "isEnd": false,
+          "glyph": "هُوَ",
+          "text": "هُوَ"
+        },
+        {
+          "id": 5440,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 6,
+          "isEnd": false,
+          "glyph": "ٱلۡحَيُّ",
+          "text": "ٱلۡحَيُّ"
+        },
+        {
+          "id": 5441,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 7,
+          "isEnd": false,
+          "glyph": "ٱلۡقَيُّومُۚ",
+          "text": "ٱلۡقَيُّومُۚ"
+        },
+        {
+          "id": 5442,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 8,
+          "isEnd": false,
+          "glyph": "لَا",
+          "text": "لَا"
+        },
+        {
+          "id": 5443,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 9,
+          "isEnd": false,
+          "glyph": "تَأۡخُذُهُۥ",
+          "text": "تَأۡخُذُهُۥ"
+        },
+        {
+          "id": 5444,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 10,
+          "isEnd": false,
+          "glyph": "سِنَةٞ",
+          "text": "سِنَةٞ"
+        },
+        {
+          "id": 5445,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 11,
+          "isEnd": false,
+          "glyph": "وَلَا",
+          "text": "وَلَا"
+        },
+        {
+          "id": 5446,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 12,
+          "isEnd": false,
+          "glyph": "نَوۡمٞۚ",
+          "text": "نَوۡمٞۚ"
+        },
+        {
+          "id": 5447,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 13,
+          "isEnd": false,
+          "glyph": "لَّهُۥ",
+          "text": "لَّهُۥ"
+        },
+        {
+          "id": 5448,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 14,
+          "isEnd": false,
+          "glyph": "مَا",
+          "text": "مَا"
+        },
+        {
+          "id": 5449,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 15,
+          "isEnd": false,
+          "glyph": "فِي",
+          "text": "فِي"
+        },
+        {
+          "id": 5450,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 16,
+          "isEnd": false,
+          "glyph": "ٱلسَّمَٰوَٰتِ",
+          "text": "ٱلسَّمَٰوَٰتِ"
+        },
+        {
+          "id": 5451,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 17,
+          "isEnd": false,
+          "glyph": "وَمَا",
+          "text": "وَمَا"
+        },
+        {
+          "id": 5452,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 18,
+          "isEnd": false,
+          "glyph": "فِي",
+          "text": "فِي"
+        },
+        {
+          "id": 5453,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 19,
+          "isEnd": false,
+          "glyph": "ٱلۡأَرۡضِۗ",
+          "text": "ٱلۡأَرۡضِۗ"
+        },
+        {
+          "id": 5454,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 20,
+          "isEnd": false,
+          "glyph": "مَن",
+          "text": "مَن"
+        },
+        {
+          "id": 5455,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 21,
+          "isEnd": false,
+          "glyph": "ذَا",
+          "text": "ذَا"
+        },
+        {
+          "id": 5456,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 22,
+          "isEnd": false,
+          "glyph": "ٱلَّذِي",
+          "text": "ٱلَّذِي"
+        },
+        {
+          "id": 5457,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 23,
+          "isEnd": false,
+          "glyph": "يَشۡفَعُ",
+          "text": "يَشۡفَعُ"
+        },
+        {
+          "id": 5458,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 24,
+          "isEnd": false,
+          "glyph": "عِندَهُۥٓ",
+          "text": "عِندَهُۥٓ"
+        },
+        {
+          "id": 5459,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 25,
+          "isEnd": false,
+          "glyph": "إِلَّا",
+          "text": "إِلَّا"
+        },
+        {
+          "id": 5460,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 26,
+          "isEnd": false,
+          "glyph": "بِإِذۡنِهِۦۚ",
+          "text": "بِإِذۡنِهِۦۚ"
+        },
+        {
+          "id": 5461,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 27,
+          "isEnd": false,
+          "glyph": "يَعۡلَمُ",
+          "text": "يَعۡلَمُ"
+        },
+        {
+          "id": 5462,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 28,
+          "isEnd": false,
+          "glyph": "مَا",
+          "text": "مَا"
+        },
+        {
+          "id": 5463,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 29,
+          "isEnd": false,
+          "glyph": "بَيۡنَ",
+          "text": "بَيۡنَ"
+        },
+        {
+          "id": 5464,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 30,
+          "isEnd": false,
+          "glyph": "أَيۡدِيهِمۡ",
+          "text": "أَيۡدِيهِمۡ"
+        },
+        {
+          "id": 5465,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 31,
+          "isEnd": false,
+          "glyph": "وَمَا",
+          "text": "وَمَا"
+        },
+        {
+          "id": 5466,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 32,
+          "isEnd": false,
+          "glyph": "خَلۡفَهُمۡۖ",
+          "text": "خَلۡفَهُمۡۖ"
+        },
+        {
+          "id": 5467,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 33,
+          "isEnd": false,
+          "glyph": "وَلَا",
+          "text": "وَلَا"
+        },
+        {
+          "id": 5468,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 34,
+          "isEnd": false,
+          "glyph": "يُحِيطُونَ",
+          "text": "يُحِيطُونَ"
+        },
+        {
+          "id": 5469,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 35,
+          "isEnd": false,
+          "glyph": "بِشَيۡءٖ",
+          "text": "بِشَيۡءٖ"
+        },
+        {
+          "id": 5470,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 36,
+          "isEnd": false,
+          "glyph": "مِّنۡ",
+          "text": "مِّنۡ"
+        },
+        {
+          "id": 5471,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 37,
+          "isEnd": false,
+          "glyph": "عِلۡمِهِۦٓ",
+          "text": "عِلۡمِهِۦٓ"
+        },
+        {
+          "id": 5472,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 38,
+          "isEnd": false,
+          "glyph": "إِلَّا",
+          "text": "إِلَّا"
+        },
+        {
+          "id": 5473,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 39,
+          "isEnd": false,
+          "glyph": "بِمَا",
+          "text": "بِمَا"
+        },
+        {
+          "id": 5474,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 40,
+          "isEnd": false,
+          "glyph": "شَآءَۚ",
+          "text": "شَآءَۚ"
+        },
+        {
+          "id": 5475,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 41,
+          "isEnd": false,
+          "glyph": "وَسِعَ",
+          "text": "وَسِعَ"
+        },
+        {
+          "id": 5476,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 42,
+          "isEnd": false,
+          "glyph": "كُرۡسِيُّهُ",
+          "text": "كُرۡسِيُّهُ"
+        },
+        {
+          "id": 5477,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 43,
+          "isEnd": false,
+          "glyph": "ٱلسَّمَٰوَٰتِ",
+          "text": "ٱلسَّمَٰوَٰتِ"
+        },
+        {
+          "id": 5478,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 44,
+          "isEnd": false,
+          "glyph": "وَٱلۡأَرۡضَۖ",
+          "text": "وَٱلۡأَرۡضَۖ"
+        },
+        {
+          "id": 5479,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 45,
+          "isEnd": false,
+          "glyph": "وَلَا",
+          "text": "وَلَا"
+        },
+        {
+          "id": 5480,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 46,
+          "isEnd": false,
+          "glyph": "يَـُٔودُهُۥ",
+          "text": "يَـُٔودُهُۥ"
+        },
+        {
+          "id": 5481,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 47,
+          "isEnd": false,
+          "glyph": "حِفۡظُهُمَاۚ",
+          "text": "حِفۡظُهُمَاۚ"
+        },
+        {
+          "id": 5482,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 48,
+          "isEnd": false,
+          "glyph": "وَهُوَ",
+          "text": "وَهُوَ"
+        },
+        {
+          "id": 5483,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 49,
+          "isEnd": false,
+          "glyph": "ٱلۡعَلِيُّ",
+          "text": "ٱلۡعَلِيُّ"
+        },
+        {
+          "id": 5484,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 50,
+          "isEnd": false,
+          "glyph": "ٱلۡعَظِيمُ",
+          "text": "ٱلۡعَظِيمُ"
+        },
+        {
+          "id": 5485,
+          "ayahId": 262,
+          "surah": 2,
+          "ayah": 255,
+          "position": 51,
+          "isEnd": true,
+          "glyph": "۝٢٥٥",
+          "text": "۝٢٥٥"
+        },
+        {
+          "id": 5486,
+          "ayahId": 263,
+          "surah": 2,
+          "ayah": 256,
+          "position": 1,
+          "isEnd": false,
+          "glyph": "لَآ",
+          "text": "لَآ"
+        },
+        {
+          "id": 5487,
+          "ayahId": 263,
+          "surah": 2,
+          "ayah": 256,
+          "position": 2,
+          "isEnd": false,
+          "glyph": "إِكۡرَاهَ",
+          "text": "إِكۡرَاهَ"
+        },
+        {
+          "id": 5488,
+          "ayahId": 263,
+          "surah": 2,
+          "ayah": 256,
+          "position": 3,
+          "isEnd": false,
+          "glyph": "فِي",
+          "text": "فِي"
+        },
+        {
+          "id": 5489,
+          "ayahId": 263,
+          "surah": 2,
+          "ayah": 256,
+          "position": 4,
+          "isEnd": false,
+          "glyph": "ٱلدِّينِۖ",
+          "text": "ٱلدِّينِۖ"
+        },
+        {
+          "id": 5490,
+          "ayahId": 263,
+          "surah": 2,
+          "ayah": 256,
+          "position": 5,
+          "isEnd": false,
+          "glyph": "قَد",
+          "text": "قَد"
+        },
+        {
+          "id": 5491,
+          "ayahId": 263,
+          "surah": 2,
+          "ayah": 256,
+          "position": 6,
+          "isEnd": false,
+          "glyph": "تَّبَيَّنَ",
+          "text": "تَّبَيَّنَ"
+        },
+        {
+          "id": 5492,
+          "ayahId": 263,
+          "surah": 2,
+          "ayah": 256,
+          "position": 7,
+          "isEnd": false,
+          "glyph": "ٱلرُّشۡدُ",
+          "text": "ٱلرُّشۡدُ"
+        },
+        {
+          "id": 5493,
+          "ayahId": 263,
+          "surah": 2,
+          "ayah": 256,
+          "position": 8,
+          "isEnd": false,
+          "glyph": "مِنَ",
+          "text": "مِنَ"
+        },
+        {
+          "id": 5494,
+          "ayahId": 263,
+          "surah": 2,
+          "ayah": 256,
+          "position": 9,
+          "isEnd": false,
+          "glyph": "ٱلۡغَيِّۚ",
+          "text": "ٱلۡغَيِّۚ"
+        },
+        {
+          "id": 5495,
+          "ayahId": 263,
+          "surah": 2,
+          "ayah": 256,
+          "position": 10,
+          "isEnd": false,
+          "glyph": "فَمَن",
+          "text": "فَمَن"
+        },
+        {
+          "id": 5496,
+          "ayahId": 263,
+          "surah": 2,
+          "ayah": 256,
+          "position": 11,
+          "isEnd": false,
+          "glyph": "يَكۡفُرۡ",
+          "text": "يَكۡفُرۡ"
+        },
+        {
+          "id": 5497,
+          "ayahId": 263,
+          "surah": 2,
+          "ayah": 256,
+          "position": 12,
+          "isEnd": false,
+          "glyph": "بِٱلطَّٰغُوتِ",
+          "text": "بِٱلطَّٰغُوتِ"
+        },
+        {
+          "id": 5498,
+          "ayahId": 263,
+          "surah": 2,
+          "ayah": 256,
+          "position": 13,
+          "isEnd": false,
+          "glyph": "وَيُؤۡمِنۢ",
+          "text": "وَيُؤۡمِنۢ"
+        },
+        {
+          "id": 5499,
+          "ayahId": 263,
+          "surah": 2,
+          "ayah": 256,
+          "position": 14,
+          "isEnd": false,
+          "glyph": "بِٱللَّهِ",
+          "text": "بِٱللَّهِ"
+        },
+        {
+          "id": 5500,
+          "ayahId": 263,
+          "surah": 2,
+          "ayah": 256,
+          "position": 15,
+          "isEnd": false,
+          "glyph": "فَقَدِ",
+          "text": "فَقَدِ"
+        },
+        {
+          "id": 5501,
+          "ayahId": 263,
+          "surah": 2,
+          "ayah": 256,
+          "position": 16,
+          "isEnd": false,
+          "glyph": "ٱسۡتَمۡسَكَ",
+          "text": "ٱسۡتَمۡسَكَ"
+        },
+        {
+          "id": 5502,
+          "ayahId": 263,
+          "surah": 2,
+          "ayah": 256,
+          "position": 17,
+          "isEnd": false,
+          "glyph": "بِٱلۡعُرۡوَةِ",
+          "text": "بِٱلۡعُرۡوَةِ"
+        },
+        {
+          "id": 5503,
+          "ayahId": 263,
+          "surah": 2,
+          "ayah": 256,
+          "position": 18,
+          "isEnd": false,
+          "glyph": "ٱلۡوُثۡقَىٰ",
+          "text": "ٱلۡوُثۡقَىٰ"
+        },
+        {
+          "id": 5504,
+          "ayahId": 263,
+          "surah": 2,
+          "ayah": 256,
+          "position": 19,
+          "isEnd": false,
+          "glyph": "لَا",
+          "text": "لَا"
+        },
+        {
+          "id": 5505,
+          "ayahId": 263,
+          "surah": 2,
+          "ayah": 256,
+          "position": 20,
+          "isEnd": false,
+          "glyph": "ٱنفِصَامَ",
+          "text": "ٱنفِصَامَ"
+        },
+        {
+          "id": 5506,
+          "ayahId": 263,
+          "surah": 2,
+          "ayah": 256,
+          "position": 21,
+          "isEnd": false,
+          "glyph": "لَهَاۗ",
+          "text": "لَهَاۗ"
+        },
+        {
+          "id": 5507,
+          "ayahId": 263,
+          "surah": 2,
+          "ayah": 256,
+          "position": 22,
+          "isEnd": false,
+          "glyph": "وَٱللَّهُ",
+          "text": "وَٱللَّهُ"
+        },
+        {
+          "id": 5508,
+          "ayahId": 263,
+          "surah": 2,
+          "ayah": 256,
+          "position": 23,
+          "isEnd": false,
+          "glyph": "سَمِيعٌ",
+          "text": "سَمِيعٌ"
+        },
+        {
+          "id": 5509,
+          "ayahId": 263,
+          "surah": 2,
+          "ayah": 256,
+          "position": 24,
+          "isEnd": false,
+          "glyph": "عَلِيمٌ",
+          "text": "عَلِيمٌ"
+        },
+        {
+          "id": 5510,
+          "ayahId": 263,
+          "surah": 2,
+          "ayah": 256,
+          "position": 25,
+          "isEnd": true,
+          "glyph": "۝٢٥٦",
+          "text": "۝٢٥٦"
+        },
+        {
+          "id": 5511,
+          "ayahId": 264,
+          "surah": 2,
+          "ayah": 257,
+          "position": 1,
+          "isEnd": false,
+          "glyph": "ٱللَّهُ",
+          "text": "ٱللَّهُ"
+        },
+        {
+          "id": 5512,
+          "ayahId": 264,
+          "surah": 2,
+          "ayah": 257,
+          "position": 2,
+          "isEnd": false,
+          "glyph": "وَلِيُّ",
+          "text": "وَلِيُّ"
+        },
+        {
+          "id": 5513,
+          "ayahId": 264,
+          "surah": 2,
+          "ayah": 257,
+          "position": 3,
+          "isEnd": false,
+          "glyph": "ٱلَّذِينَ",
+          "text": "ٱلَّذِينَ"
+        },
+        {
+          "id": 5514,
+          "ayahId": 264,
+          "surah": 2,
+          "ayah": 257,
+          "position": 4,
+          "isEnd": false,
+          "glyph": "ءَامَنُواْ",
+          "text": "ءَامَنُواْ"
+        },
+        {
+          "id": 5515,
+          "ayahId": 264,
+          "surah": 2,
+          "ayah": 257,
+          "position": 5,
+          "isEnd": false,
+          "glyph": "يُخۡرِجُهُم",
+          "text": "يُخۡرِجُهُم"
+        },
+        {
+          "id": 5516,
+          "ayahId": 264,
+          "surah": 2,
+          "ayah": 257,
+          "position": 6,
+          "isEnd": false,
+          "glyph": "مِّنَ",
+          "text": "مِّنَ"
+        },
+        {
+          "id": 5517,
+          "ayahId": 264,
+          "surah": 2,
+          "ayah": 257,
+          "position": 7,
+          "isEnd": false,
+          "glyph": "ٱلظُّلُمَٰتِ",
+          "text": "ٱلظُّلُمَٰتِ"
+        },
+        {
+          "id": 5518,
+          "ayahId": 264,
+          "surah": 2,
+          "ayah": 257,
+          "position": 8,
+          "isEnd": false,
+          "glyph": "إِلَى",
+          "text": "إِلَى"
+        },
+        {
+          "id": 5519,
+          "ayahId": 264,
+          "surah": 2,
+          "ayah": 257,
+          "position": 9,
+          "isEnd": false,
+          "glyph": "ٱلنُّورِۖ",
+          "text": "ٱلنُّورِۖ"
+        },
+        {
+          "id": 5520,
+          "ayahId": 264,
+          "surah": 2,
+          "ayah": 257,
+          "position": 10,
+          "isEnd": false,
+          "glyph": "وَٱلَّذِينَ",
+          "text": "وَٱلَّذِينَ"
+        },
+        {
+          "id": 5521,
+          "ayahId": 264,
+          "surah": 2,
+          "ayah": 257,
+          "position": 11,
+          "isEnd": false,
+          "glyph": "كَفَرُوٓاْ",
+          "text": "كَفَرُوٓاْ"
+        },
+        {
+          "id": 5522,
+          "ayahId": 264,
+          "surah": 2,
+          "ayah": 257,
+          "position": 12,
+          "isEnd": false,
+          "glyph": "أَوۡلِيَآؤُهُمُ",
+          "text": "أَوۡلِيَآؤُهُمُ"
+        },
+        {
+          "id": 5523,
+          "ayahId": 264,
+          "surah": 2,
+          "ayah": 257,
+          "position": 13,
+          "isEnd": false,
+          "glyph": "ٱلطَّٰغُوتُ",
+          "text": "ٱلطَّٰغُوتُ"
+        },
+        {
+          "id": 5524,
+          "ayahId": 264,
+          "surah": 2,
+          "ayah": 257,
+          "position": 14,
+          "isEnd": false,
+          "glyph": "يُخۡرِجُونَهُم",
+          "text": "يُخۡرِجُونَهُم"
+        },
+        {
+          "id": 5525,
+          "ayahId": 264,
+          "surah": 2,
+          "ayah": 257,
+          "position": 15,
+          "isEnd": false,
+          "glyph": "مِّنَ",
+          "text": "مِّنَ"
+        },
+        {
+          "id": 5526,
+          "ayahId": 264,
+          "surah": 2,
+          "ayah": 257,
+          "position": 16,
+          "isEnd": false,
+          "glyph": "ٱلنُّورِ",
+          "text": "ٱلنُّورِ"
+        },
+        {
+          "id": 5527,
+          "ayahId": 264,
+          "surah": 2,
+          "ayah": 257,
+          "position": 17,
+          "isEnd": false,
+          "glyph": "إِلَى",
+          "text": "إِلَى"
+        },
+        {
+          "id": 5528,
+          "ayahId": 264,
+          "surah": 2,
+          "ayah": 257,
+          "position": 18,
+          "isEnd": false,
+          "glyph": "ٱلظُّلُمَٰتِۗ",
+          "text": "ٱلظُّلُمَٰتِۗ"
+        },
+        {
+          "id": 5529,
+          "ayahId": 264,
+          "surah": 2,
+          "ayah": 257,
+          "position": 19,
+          "isEnd": false,
+          "glyph": "أُوْلَٰٓئِكَ",
+          "text": "أُوْلَٰٓئِكَ"
+        },
+        {
+          "id": 5530,
+          "ayahId": 264,
+          "surah": 2,
+          "ayah": 257,
+          "position": 20,
+          "isEnd": false,
+          "glyph": "أَصۡحَٰبُ",
+          "text": "أَصۡحَٰبُ"
+        },
+        {
+          "id": 5531,
+          "ayahId": 264,
+          "surah": 2,
+          "ayah": 257,
+          "position": 21,
+          "isEnd": false,
+          "glyph": "ٱلنَّارِۖ",
+          "text": "ٱلنَّارِۖ"
+        },
+        {
+          "id": 5532,
+          "ayahId": 264,
+          "surah": 2,
+          "ayah": 257,
+          "position": 22,
+          "isEnd": false,
+          "glyph": "هُمۡ",
+          "text": "هُمۡ"
+        },
+        {
+          "id": 5533,
+          "ayahId": 264,
+          "surah": 2,
+          "ayah": 257,
+          "position": 23,
+          "isEnd": false,
+          "glyph": "فِيهَا",
+          "text": "فِيهَا"
+        },
+        {
+          "id": 5534,
+          "ayahId": 264,
+          "surah": 2,
+          "ayah": 257,
+          "position": 24,
+          "isEnd": false,
+          "glyph": "خَٰلِدُونَ",
+          "text": "خَٰلِدُونَ"
+        },
+        {
+          "id": 5535,
+          "ayahId": 264,
+          "surah": 2,
+          "ayah": 257,
+          "position": 25,
+          "isEnd": true,
+          "glyph": "۝٢٥٧",
+          "text": "۝٢٥٧"
+        }
+      ],
+      "reference": "[البقرة: ٢٥٥–٢٥٧]",
+      "expected": "ٱللَّهُ لَآ إِلَٰهَ إِلَّا هُوَ ٱلۡحَيُّ ٱلۡقَيُّومُۚ لَا تَأۡخُذُهُۥ سِنَةٞ وَلَا نَوۡمٞۚ لَّهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ مَن ذَا ٱلَّذِي يَشۡفَعُ عِندَهُۥٓ إِلَّا بِإِذۡنِهِۦۚ يَعۡلَمُ مَا بَيۡنَ أَيۡدِيهِمۡ وَمَا خَلۡفَهُمۡۖ وَلَا يُحِيطُونَ بِشَيۡءٖ مِّنۡ عِلۡمِهِۦٓ إِلَّا بِمَا شَآءَۚ وَسِعَ كُرۡسِيُّهُ ٱلسَّمَٰوَٰتِ وَٱلۡأَرۡضَۖ وَلَا يَـُٔودُهُۥ حِفۡظُهُمَاۚ وَهُوَ ٱلۡعَلِيُّ ٱلۡعَظِيمُ ﴿٢٥٥﴾ لَآ إِكۡرَاهَ فِي ٱلدِّينِۖ قَد تَّبَيَّنَ ٱلرُّشۡدُ مِنَ ٱلۡغَيِّۚ فَمَن يَكۡفُرۡ بِٱلطَّٰغُوتِ وَيُؤۡمِنۢ بِٱللَّهِ فَقَدِ ٱسۡتَمۡسَكَ بِٱلۡعُرۡوَةِ ٱلۡوُثۡقَىٰ لَا ٱنفِصَامَ لَهَاۗ وَٱللَّهُ سَمِيعٌ عَلِيمٌ ﴿٢٥٦﴾ ٱللَّهُ وَلِيُّ ٱلَّذِينَ ءَامَنُواْ يُخۡرِجُهُم مِّنَ ٱلظُّلُمَٰتِ إِلَى ٱلنُّورِۖ وَٱلَّذِينَ كَفَرُوٓاْ أَوۡلِيَآؤُهُمُ ٱلطَّٰغُوتُ يُخۡرِجُونَهُم مِّنَ ٱلنُّورِ إِلَى ٱلظُّلُمَٰتِۗ أُوْلَٰٓئِكَ أَصۡحَٰبُ ٱلنَّارِۖ هُمۡ فِيهَا خَٰلِدُونَ ﴿٢٥٧﴾\n[البقرة: ٢٥٥–٢٥٧]"
+    },
+    {
+      "name": "range across surahs with a short reference",
+      "fromAyahId": 7,
+      "toAyahId": 9,
+      "options": {
+        "includeReference": true,
+        "referenceStyle": "short",
+        "ayahNumbers": true,
+        "translationPackId": null
+      },
+      "words": [
+        {
+          "id": 27,
+          "ayahId": 7,
+          "surah": 1,
+          "ayah": 7,
+          "position": 1,
+          "isEnd": false,
+          "glyph": "صِرَٰطَ",
+          "text": "صِرَٰطَ"
+        },
+        {
+          "id": 28,
+          "ayahId": 7,
+          "surah": 1,
+          "ayah": 7,
+          "position": 2,
+          "isEnd": false,
+          "glyph": "ٱلَّذِينَ",
+          "text": "ٱلَّذِينَ"
+        },
+        {
+          "id": 29,
+          "ayahId": 7,
+          "surah": 1,
+          "ayah": 7,
+          "position": 3,
+          "isEnd": false,
+          "glyph": "أَنۡعَمۡتَ",
+          "text": "أَنۡعَمۡتَ"
+        },
+        {
+          "id": 30,
+          "ayahId": 7,
+          "surah": 1,
+          "ayah": 7,
+          "position": 4,
+          "isEnd": false,
+          "glyph": "عَلَيۡهِمۡ",
+          "text": "عَلَيۡهِمۡ"
+        },
+        {
+          "id": 31,
+          "ayahId": 7,
+          "surah": 1,
+          "ayah": 7,
+          "position": 5,
+          "isEnd": false,
+          "glyph": "غَيۡرِ",
+          "text": "غَيۡرِ"
+        },
+        {
+          "id": 32,
+          "ayahId": 7,
+          "surah": 1,
+          "ayah": 7,
+          "position": 6,
+          "isEnd": false,
+          "glyph": "ٱلۡمَغۡضُوبِ",
+          "text": "ٱلۡمَغۡضُوبِ"
+        },
+        {
+          "id": 33,
+          "ayahId": 7,
+          "surah": 1,
+          "ayah": 7,
+          "position": 7,
+          "isEnd": false,
+          "glyph": "عَلَيۡهِمۡ",
+          "text": "عَلَيۡهِمۡ"
+        },
+        {
+          "id": 34,
+          "ayahId": 7,
+          "surah": 1,
+          "ayah": 7,
+          "position": 8,
+          "isEnd": false,
+          "glyph": "وَلَا",
+          "text": "وَلَا"
+        },
+        {
+          "id": 35,
+          "ayahId": 7,
+          "surah": 1,
+          "ayah": 7,
+          "position": 9,
+          "isEnd": false,
+          "glyph": "ٱلضَّآلِّينَ",
+          "text": "ٱلضَّآلِّينَ"
+        },
+        {
+          "id": 36,
+          "ayahId": 7,
+          "surah": 1,
+          "ayah": 7,
+          "position": 10,
+          "isEnd": true,
+          "glyph": "۝٧",
+          "text": "۝٧"
+        },
+        {
+          "id": 37,
+          "ayahId": 8,
+          "surah": 2,
+          "ayah": 1,
+          "position": 1,
+          "isEnd": false,
+          "glyph": "الٓمٓ",
+          "text": "الٓمٓ"
+        },
+        {
+          "id": 38,
+          "ayahId": 8,
+          "surah": 2,
+          "ayah": 1,
+          "position": 2,
+          "isEnd": true,
+          "glyph": "۝١",
+          "text": "۝١"
+        },
+        {
+          "id": 39,
+          "ayahId": 9,
+          "surah": 2,
+          "ayah": 2,
+          "position": 1,
+          "isEnd": false,
+          "glyph": "ذَٰلِكَ",
+          "text": "ذَٰلِكَ"
+        },
+        {
+          "id": 40,
+          "ayahId": 9,
+          "surah": 2,
+          "ayah": 2,
+          "position": 2,
+          "isEnd": false,
+          "glyph": "ٱلۡكِتَٰبُ",
+          "text": "ٱلۡكِتَٰبُ"
+        },
+        {
+          "id": 41,
+          "ayahId": 9,
+          "surah": 2,
+          "ayah": 2,
+          "position": 3,
+          "isEnd": false,
+          "glyph": "لَا",
+          "text": "لَا"
+        },
+        {
+          "id": 42,
+          "ayahId": 9,
+          "surah": 2,
+          "ayah": 2,
+          "position": 4,
+          "isEnd": false,
+          "glyph": "رَيۡبَۛ",
+          "text": "رَيۡبَۛ"
+        },
+        {
+          "id": 43,
+          "ayahId": 9,
+          "surah": 2,
+          "ayah": 2,
+          "position": 5,
+          "isEnd": false,
+          "glyph": "فِيهِۛ",
+          "text": "فِيهِۛ"
+        },
+        {
+          "id": 44,
+          "ayahId": 9,
+          "surah": 2,
+          "ayah": 2,
+          "position": 6,
+          "isEnd": false,
+          "glyph": "هُدٗى",
+          "text": "هُدٗى"
+        },
+        {
+          "id": 45,
+          "ayahId": 9,
+          "surah": 2,
+          "ayah": 2,
+          "position": 7,
+          "isEnd": false,
+          "glyph": "لِّلۡمُتَّقِينَ",
+          "text": "لِّلۡمُتَّقِينَ"
+        },
+        {
+          "id": 46,
+          "ayahId": 9,
+          "surah": 2,
+          "ayah": 2,
+          "position": 8,
+          "isEnd": true,
+          "glyph": "۝٢",
+          "text": "۝٢"
+        }
+      ],
+      "reference": "(1:7–2:2)",
+      "expected": "صِرَٰطَ ٱلَّذِينَ أَنۡعَمۡتَ عَلَيۡهِمۡ غَيۡرِ ٱلۡمَغۡضُوبِ عَلَيۡهِمۡ وَلَا ٱلضَّآلِّينَ ﴿٧﴾ الٓمٓ ﴿١﴾ ذَٰلِكَ ٱلۡكِتَٰبُ لَا رَيۡبَۛ فِيهِۛ هُدٗى لِّلۡمُتَّقِينَ ﴿٢﴾\n(1:7–2:2)"
+    },
+    {
+      "name": "range across surahs, plain, arabic reference",
+      "fromAyahId": 6,
+      "toAyahId": 8,
+      "options": {
+        "includeReference": true,
+        "referenceStyle": "arabic",
+        "ayahNumbers": false,
+        "translationPackId": null
+      },
+      "words": [
+        {
+          "id": 23,
+          "ayahId": 6,
+          "surah": 1,
+          "ayah": 6,
+          "position": 1,
+          "isEnd": false,
+          "glyph": "ٱهۡدِنَا",
+          "text": "ٱهۡدِنَا"
+        },
+        {
+          "id": 24,
+          "ayahId": 6,
+          "surah": 1,
+          "ayah": 6,
+          "position": 2,
+          "isEnd": false,
+          "glyph": "ٱلصِّرَٰطَ",
+          "text": "ٱلصِّرَٰطَ"
+        },
+        {
+          "id": 25,
+          "ayahId": 6,
+          "surah": 1,
+          "ayah": 6,
+          "position": 3,
+          "isEnd": false,
+          "glyph": "ٱلۡمُسۡتَقِيمَ",
+          "text": "ٱلۡمُسۡتَقِيمَ"
+        },
+        {
+          "id": 26,
+          "ayahId": 6,
+          "surah": 1,
+          "ayah": 6,
+          "position": 4,
+          "isEnd": true,
+          "glyph": "۝٦",
+          "text": "۝٦"
+        },
+        {
+          "id": 27,
+          "ayahId": 7,
+          "surah": 1,
+          "ayah": 7,
+          "position": 1,
+          "isEnd": false,
+          "glyph": "صِرَٰطَ",
+          "text": "صِرَٰطَ"
+        },
+        {
+          "id": 28,
+          "ayahId": 7,
+          "surah": 1,
+          "ayah": 7,
+          "position": 2,
+          "isEnd": false,
+          "glyph": "ٱلَّذِينَ",
+          "text": "ٱلَّذِينَ"
+        },
+        {
+          "id": 29,
+          "ayahId": 7,
+          "surah": 1,
+          "ayah": 7,
+          "position": 3,
+          "isEnd": false,
+          "glyph": "أَنۡعَمۡتَ",
+          "text": "أَنۡعَمۡتَ"
+        },
+        {
+          "id": 30,
+          "ayahId": 7,
+          "surah": 1,
+          "ayah": 7,
+          "position": 4,
+          "isEnd": false,
+          "glyph": "عَلَيۡهِمۡ",
+          "text": "عَلَيۡهِمۡ"
+        },
+        {
+          "id": 31,
+          "ayahId": 7,
+          "surah": 1,
+          "ayah": 7,
+          "position": 5,
+          "isEnd": false,
+          "glyph": "غَيۡرِ",
+          "text": "غَيۡرِ"
+        },
+        {
+          "id": 32,
+          "ayahId": 7,
+          "surah": 1,
+          "ayah": 7,
+          "position": 6,
+          "isEnd": false,
+          "glyph": "ٱلۡمَغۡضُوبِ",
+          "text": "ٱلۡمَغۡضُوبِ"
+        },
+        {
+          "id": 33,
+          "ayahId": 7,
+          "surah": 1,
+          "ayah": 7,
+          "position": 7,
+          "isEnd": false,
+          "glyph": "عَلَيۡهِمۡ",
+          "text": "عَلَيۡهِمۡ"
+        },
+        {
+          "id": 34,
+          "ayahId": 7,
+          "surah": 1,
+          "ayah": 7,
+          "position": 8,
+          "isEnd": false,
+          "glyph": "وَلَا",
+          "text": "وَلَا"
+        },
+        {
+          "id": 35,
+          "ayahId": 7,
+          "surah": 1,
+          "ayah": 7,
+          "position": 9,
+          "isEnd": false,
+          "glyph": "ٱلضَّآلِّينَ",
+          "text": "ٱلضَّآلِّينَ"
+        },
+        {
+          "id": 36,
+          "ayahId": 7,
+          "surah": 1,
+          "ayah": 7,
+          "position": 10,
+          "isEnd": true,
+          "glyph": "۝٧",
+          "text": "۝٧"
+        },
+        {
+          "id": 37,
+          "ayahId": 8,
+          "surah": 2,
+          "ayah": 1,
+          "position": 1,
+          "isEnd": false,
+          "glyph": "الٓمٓ",
+          "text": "الٓمٓ"
+        },
+        {
+          "id": 38,
+          "ayahId": 8,
+          "surah": 2,
+          "ayah": 1,
+          "position": 2,
+          "isEnd": true,
+          "glyph": "۝١",
+          "text": "۝١"
+        }
+      ],
+      "reference": "[الفاتحة: ٦ – البقرة: ١]",
+      "expected": "ٱهۡدِنَا ٱلصِّرَٰطَ ٱلۡمُسۡتَقِيمَ صِرَٰطَ ٱلَّذِينَ أَنۡعَمۡتَ عَلَيۡهِمۡ غَيۡرِ ٱلۡمَغۡضُوبِ عَلَيۡهِمۡ وَلَا ٱلضَّآلِّينَ الٓمٓ\n[الفاتحة: ٦ – البقرة: ١]"
+    },
+    {
+      "name": "sajda word with space + U+06E9 (38:24)",
+      "fromAyahId": 3994,
+      "toAyahId": 3994,
+      "options": {
+        "includeReference": true,
+        "referenceStyle": "short",
+        "ayahNumbers": true,
+        "translationPackId": null
+      },
+      "words": [
+        {
+          "id": 62466,
+          "ayahId": 3994,
+          "surah": 38,
+          "ayah": 24,
+          "position": 1,
+          "isEnd": false,
+          "glyph": "قَالَ",
+          "text": "قَالَ"
+        },
+        {
+          "id": 62467,
+          "ayahId": 3994,
+          "surah": 38,
+          "ayah": 24,
+          "position": 2,
+          "isEnd": false,
+          "glyph": "لَقَدۡ",
+          "text": "لَقَدۡ"
+        },
+        {
+          "id": 62468,
+          "ayahId": 3994,
+          "surah": 38,
+          "ayah": 24,
+          "position": 3,
+          "isEnd": false,
+          "glyph": "ظَلَمَكَ",
+          "text": "ظَلَمَكَ"
+        },
+        {
+          "id": 62469,
+          "ayahId": 3994,
+          "surah": 38,
+          "ayah": 24,
+          "position": 4,
+          "isEnd": false,
+          "glyph": "بِسُؤَالِ",
+          "text": "بِسُؤَالِ"
+        },
+        {
+          "id": 62470,
+          "ayahId": 3994,
+          "surah": 38,
+          "ayah": 24,
+          "position": 5,
+          "isEnd": false,
+          "glyph": "نَعۡجَتِكَ",
+          "text": "نَعۡجَتِكَ"
+        },
+        {
+          "id": 62471,
+          "ayahId": 3994,
+          "surah": 38,
+          "ayah": 24,
+          "position": 6,
+          "isEnd": false,
+          "glyph": "إِلَىٰ",
+          "text": "إِلَىٰ"
+        },
+        {
+          "id": 62472,
+          "ayahId": 3994,
+          "surah": 38,
+          "ayah": 24,
+          "position": 7,
+          "isEnd": false,
+          "glyph": "نِعَاجِهِۦۖ",
+          "text": "نِعَاجِهِۦۖ"
+        },
+        {
+          "id": 62473,
+          "ayahId": 3994,
+          "surah": 38,
+          "ayah": 24,
+          "position": 8,
+          "isEnd": false,
+          "glyph": "وَإِنَّ",
+          "text": "وَإِنَّ"
+        },
+        {
+          "id": 62474,
+          "ayahId": 3994,
+          "surah": 38,
+          "ayah": 24,
+          "position": 9,
+          "isEnd": false,
+          "glyph": "كَثِيرٗا",
+          "text": "كَثِيرٗا"
+        },
+        {
+          "id": 62475,
+          "ayahId": 3994,
+          "surah": 38,
+          "ayah": 24,
+          "position": 10,
+          "isEnd": false,
+          "glyph": "مِّنَ",
+          "text": "مِّنَ"
+        },
+        {
+          "id": 62476,
+          "ayahId": 3994,
+          "surah": 38,
+          "ayah": 24,
+          "position": 11,
+          "isEnd": false,
+          "glyph": "ٱلۡخُلَطَآءِ",
+          "text": "ٱلۡخُلَطَآءِ"
+        },
+        {
+          "id": 62477,
+          "ayahId": 3994,
+          "surah": 38,
+          "ayah": 24,
+          "position": 12,
+          "isEnd": false,
+          "glyph": "لَيَبۡغِي",
+          "text": "لَيَبۡغِي"
+        },
+        {
+          "id": 62478,
+          "ayahId": 3994,
+          "surah": 38,
+          "ayah": 24,
+          "position": 13,
+          "isEnd": false,
+          "glyph": "بَعۡضُهُمۡ",
+          "text": "بَعۡضُهُمۡ"
+        },
+        {
+          "id": 62479,
+          "ayahId": 3994,
+          "surah": 38,
+          "ayah": 24,
+          "position": 14,
+          "isEnd": false,
+          "glyph": "عَلَىٰ",
+          "text": "عَلَىٰ"
+        },
+        {
+          "id": 62480,
+          "ayahId": 3994,
+          "surah": 38,
+          "ayah": 24,
+          "position": 15,
+          "isEnd": false,
+          "glyph": "بَعۡضٍ",
+          "text": "بَعۡضٍ"
+        },
+        {
+          "id": 62481,
+          "ayahId": 3994,
+          "surah": 38,
+          "ayah": 24,
+          "position": 16,
+          "isEnd": false,
+          "glyph": "إِلَّا",
+          "text": "إِلَّا"
+        },
+        {
+          "id": 62482,
+          "ayahId": 3994,
+          "surah": 38,
+          "ayah": 24,
+          "position": 17,
+          "isEnd": false,
+          "glyph": "ٱلَّذِينَ",
+          "text": "ٱلَّذِينَ"
+        },
+        {
+          "id": 62483,
+          "ayahId": 3994,
+          "surah": 38,
+          "ayah": 24,
+          "position": 18,
+          "isEnd": false,
+          "glyph": "ءَامَنُواْ",
+          "text": "ءَامَنُواْ"
+        },
+        {
+          "id": 62484,
+          "ayahId": 3994,
+          "surah": 38,
+          "ayah": 24,
+          "position": 19,
+          "isEnd": false,
+          "glyph": "وَعَمِلُواْ",
+          "text": "وَعَمِلُواْ"
+        },
+        {
+          "id": 62485,
+          "ayahId": 3994,
+          "surah": 38,
+          "ayah": 24,
+          "position": 20,
+          "isEnd": false,
+          "glyph": "ٱلصَّٰلِحَٰتِ",
+          "text": "ٱلصَّٰلِحَٰتِ"
+        },
+        {
+          "id": 62486,
+          "ayahId": 3994,
+          "surah": 38,
+          "ayah": 24,
+          "position": 21,
+          "isEnd": false,
+          "glyph": "وَقَلِيلٞ",
+          "text": "وَقَلِيلٞ"
+        },
+        {
+          "id": 62487,
+          "ayahId": 3994,
+          "surah": 38,
+          "ayah": 24,
+          "position": 22,
+          "isEnd": false,
+          "glyph": "مَّا",
+          "text": "مَّا"
+        },
+        {
+          "id": 62488,
+          "ayahId": 3994,
+          "surah": 38,
+          "ayah": 24,
+          "position": 23,
+          "isEnd": false,
+          "glyph": "هُمۡۗ",
+          "text": "هُمۡۗ"
+        },
+        {
+          "id": 62489,
+          "ayahId": 3994,
+          "surah": 38,
+          "ayah": 24,
+          "position": 24,
+          "isEnd": false,
+          "glyph": "وَظَنَّ",
+          "text": "وَظَنَّ"
+        },
+        {
+          "id": 62490,
+          "ayahId": 3994,
+          "surah": 38,
+          "ayah": 24,
+          "position": 25,
+          "isEnd": false,
+          "glyph": "دَاوُۥدُ",
+          "text": "دَاوُۥدُ"
+        },
+        {
+          "id": 62491,
+          "ayahId": 3994,
+          "surah": 38,
+          "ayah": 24,
+          "position": 26,
+          "isEnd": false,
+          "glyph": "أَنَّمَا",
+          "text": "أَنَّمَا"
+        },
+        {
+          "id": 62492,
+          "ayahId": 3994,
+          "surah": 38,
+          "ayah": 24,
+          "position": 27,
+          "isEnd": false,
+          "glyph": "فَتَنَّٰهُ",
+          "text": "فَتَنَّٰهُ"
+        },
+        {
+          "id": 62493,
+          "ayahId": 3994,
+          "surah": 38,
+          "ayah": 24,
+          "position": 28,
+          "isEnd": false,
+          "glyph": "فَٱسۡتَغۡفَرَ",
+          "text": "فَٱسۡتَغۡفَرَ"
+        },
+        {
+          "id": 62494,
+          "ayahId": 3994,
+          "surah": 38,
+          "ayah": 24,
+          "position": 29,
+          "isEnd": false,
+          "glyph": "رَبَّهُۥ",
+          "text": "رَبَّهُۥ"
+        },
+        {
+          "id": 62495,
+          "ayahId": 3994,
+          "surah": 38,
+          "ayah": 24,
+          "position": 30,
+          "isEnd": false,
+          "glyph": "وَخَرَّۤ",
+          "text": "وَخَرَّۤ"
+        },
+        {
+          "id": 62496,
+          "ayahId": 3994,
+          "surah": 38,
+          "ayah": 24,
+          "position": 31,
+          "isEnd": false,
+          "glyph": "رَاكِعٗاۤ",
+          "text": "رَاكِعٗاۤ"
+        },
+        {
+          "id": 62497,
+          "ayahId": 3994,
+          "surah": 38,
+          "ayah": 24,
+          "position": 32,
+          "isEnd": false,
+          "glyph": "وَأَنَابَ ۩",
+          "text": "وَأَنَابَ ۩"
+        },
+        {
+          "id": 62498,
+          "ayahId": 3994,
+          "surah": 38,
+          "ayah": 24,
+          "position": 33,
+          "isEnd": true,
+          "glyph": "۝٢٤",
+          "text": "۝٢٤"
+        }
+      ],
+      "reference": "(38:24)",
+      "expected": "قَالَ لَقَدۡ ظَلَمَكَ بِسُؤَالِ نَعۡجَتِكَ إِلَىٰ نِعَاجِهِۦۖ وَإِنَّ كَثِيرٗا مِّنَ ٱلۡخُلَطَآءِ لَيَبۡغِي بَعۡضُهُمۡ عَلَىٰ بَعۡضٍ إِلَّا ٱلَّذِينَ ءَامَنُواْ وَعَمِلُواْ ٱلصَّٰلِحَٰتِ وَقَلِيلٞ مَّا هُمۡۗ وَظَنَّ دَاوُۥدُ أَنَّمَا فَتَنَّٰهُ فَٱسۡتَغۡفَرَ رَبَّهُۥ وَخَرَّۤ رَاكِعٗاۤ وَأَنَابَ ۩ ﴿٢٤﴾\n(38:24)"
+    },
+    {
+      "name": "sajda word with space + U+06E9 (22:77), plain",
+      "fromAyahId": 2672,
+      "toAyahId": 2672,
+      "options": {
+        "includeReference": true,
+        "referenceStyle": "arabic",
+        "ayahNumbers": false,
+        "translationPackId": null
+      },
+      "words": [
+        {
+          "id": 46478,
+          "ayahId": 2672,
+          "surah": 22,
+          "ayah": 77,
+          "position": 1,
+          "isEnd": false,
+          "glyph": "يَٰٓأَيُّهَا",
+          "text": "يَٰٓأَيُّهَا"
+        },
+        {
+          "id": 46479,
+          "ayahId": 2672,
+          "surah": 22,
+          "ayah": 77,
+          "position": 2,
+          "isEnd": false,
+          "glyph": "ٱلَّذِينَ",
+          "text": "ٱلَّذِينَ"
+        },
+        {
+          "id": 46480,
+          "ayahId": 2672,
+          "surah": 22,
+          "ayah": 77,
+          "position": 3,
+          "isEnd": false,
+          "glyph": "ءَامَنُواْ",
+          "text": "ءَامَنُواْ"
+        },
+        {
+          "id": 46481,
+          "ayahId": 2672,
+          "surah": 22,
+          "ayah": 77,
+          "position": 4,
+          "isEnd": false,
+          "glyph": "ٱرۡكَعُواْ",
+          "text": "ٱرۡكَعُواْ"
+        },
+        {
+          "id": 46482,
+          "ayahId": 2672,
+          "surah": 22,
+          "ayah": 77,
+          "position": 5,
+          "isEnd": false,
+          "glyph": "وَٱسۡجُدُواْۤ",
+          "text": "وَٱسۡجُدُواْۤ"
+        },
+        {
+          "id": 46483,
+          "ayahId": 2672,
+          "surah": 22,
+          "ayah": 77,
+          "position": 6,
+          "isEnd": false,
+          "glyph": "وَٱعۡبُدُواْ",
+          "text": "وَٱعۡبُدُواْ"
+        },
+        {
+          "id": 46484,
+          "ayahId": 2672,
+          "surah": 22,
+          "ayah": 77,
+          "position": 7,
+          "isEnd": false,
+          "glyph": "رَبَّكُمۡ",
+          "text": "رَبَّكُمۡ"
+        },
+        {
+          "id": 46485,
+          "ayahId": 2672,
+          "surah": 22,
+          "ayah": 77,
+          "position": 8,
+          "isEnd": false,
+          "glyph": "وَٱفۡعَلُواْ",
+          "text": "وَٱفۡعَلُواْ"
+        },
+        {
+          "id": 46486,
+          "ayahId": 2672,
+          "surah": 22,
+          "ayah": 77,
+          "position": 9,
+          "isEnd": false,
+          "glyph": "ٱلۡخَيۡرَ",
+          "text": "ٱلۡخَيۡرَ"
+        },
+        {
+          "id": 46487,
+          "ayahId": 2672,
+          "surah": 22,
+          "ayah": 77,
+          "position": 10,
+          "isEnd": false,
+          "glyph": "لَعَلَّكُمۡ",
+          "text": "لَعَلَّكُمۡ"
+        },
+        {
+          "id": 46488,
+          "ayahId": 2672,
+          "surah": 22,
+          "ayah": 77,
+          "position": 11,
+          "isEnd": false,
+          "glyph": "تُفۡلِحُونَ ۩",
+          "text": "تُفۡلِحُونَ ۩"
+        },
+        {
+          "id": 46489,
+          "ayahId": 2672,
+          "surah": 22,
+          "ayah": 77,
+          "position": 12,
+          "isEnd": true,
+          "glyph": "۝٧٧",
+          "text": "۝٧٧"
+        }
+      ],
+      "reference": "[الحج: ٧٧]",
+      "expected": "يَٰٓأَيُّهَا ٱلَّذِينَ ءَامَنُواْ ٱرۡكَعُواْ وَٱسۡجُدُواْۤ وَٱعۡبُدُواْ رَبَّكُمۡ وَٱفۡعَلُواْ ٱلۡخَيۡرَ لَعَلَّكُمۡ تُفۡلِحُونَ ۩\n[الحج: ٧٧]"
+    },
+    {
+      "name": "the last three surahs with a long reference",
+      "fromAyahId": 6222,
+      "toAyahId": 6236,
+      "options": {
+        "includeReference": true,
+        "referenceStyle": "long",
+        "ayahNumbers": true,
+        "translationPackId": null
+      },
+      "words": [
+        {
+          "id": 83593,
+          "ayahId": 6222,
+          "surah": 112,
+          "ayah": 1,
+          "position": 1,
+          "isEnd": false,
+          "glyph": "قُلۡ",
+          "text": "قُلۡ"
+        },
+        {
+          "id": 83594,
+          "ayahId": 6222,
+          "surah": 112,
+          "ayah": 1,
+          "position": 2,
+          "isEnd": false,
+          "glyph": "هُوَ",
+          "text": "هُوَ"
+        },
+        {
+          "id": 83595,
+          "ayahId": 6222,
+          "surah": 112,
+          "ayah": 1,
+          "position": 3,
+          "isEnd": false,
+          "glyph": "ٱللَّهُ",
+          "text": "ٱللَّهُ"
+        },
+        {
+          "id": 83596,
+          "ayahId": 6222,
+          "surah": 112,
+          "ayah": 1,
+          "position": 4,
+          "isEnd": false,
+          "glyph": "أَحَدٌ",
+          "text": "أَحَدٌ"
+        },
+        {
+          "id": 83597,
+          "ayahId": 6222,
+          "surah": 112,
+          "ayah": 1,
+          "position": 5,
+          "isEnd": true,
+          "glyph": "۝١",
+          "text": "۝١"
+        },
+        {
+          "id": 83598,
+          "ayahId": 6223,
+          "surah": 112,
+          "ayah": 2,
+          "position": 1,
+          "isEnd": false,
+          "glyph": "ٱللَّهُ",
+          "text": "ٱللَّهُ"
+        },
+        {
+          "id": 83599,
+          "ayahId": 6223,
+          "surah": 112,
+          "ayah": 2,
+          "position": 2,
+          "isEnd": false,
+          "glyph": "ٱلصَّمَدُ",
+          "text": "ٱلصَّمَدُ"
+        },
+        {
+          "id": 83600,
+          "ayahId": 6223,
+          "surah": 112,
+          "ayah": 2,
+          "position": 3,
+          "isEnd": true,
+          "glyph": "۝٢",
+          "text": "۝٢"
+        },
+        {
+          "id": 83601,
+          "ayahId": 6224,
+          "surah": 112,
+          "ayah": 3,
+          "position": 1,
+          "isEnd": false,
+          "glyph": "لَمۡ",
+          "text": "لَمۡ"
+        },
+        {
+          "id": 83602,
+          "ayahId": 6224,
+          "surah": 112,
+          "ayah": 3,
+          "position": 2,
+          "isEnd": false,
+          "glyph": "يَلِدۡ",
+          "text": "يَلِدۡ"
+        },
+        {
+          "id": 83603,
+          "ayahId": 6224,
+          "surah": 112,
+          "ayah": 3,
+          "position": 3,
+          "isEnd": false,
+          "glyph": "وَلَمۡ",
+          "text": "وَلَمۡ"
+        },
+        {
+          "id": 83604,
+          "ayahId": 6224,
+          "surah": 112,
+          "ayah": 3,
+          "position": 4,
+          "isEnd": false,
+          "glyph": "يُولَدۡ",
+          "text": "يُولَدۡ"
+        },
+        {
+          "id": 83605,
+          "ayahId": 6224,
+          "surah": 112,
+          "ayah": 3,
+          "position": 5,
+          "isEnd": true,
+          "glyph": "۝٣",
+          "text": "۝٣"
+        },
+        {
+          "id": 83606,
+          "ayahId": 6225,
+          "surah": 112,
+          "ayah": 4,
+          "position": 1,
+          "isEnd": false,
+          "glyph": "وَلَمۡ",
+          "text": "وَلَمۡ"
+        },
+        {
+          "id": 83607,
+          "ayahId": 6225,
+          "surah": 112,
+          "ayah": 4,
+          "position": 2,
+          "isEnd": false,
+          "glyph": "يَكُن",
+          "text": "يَكُن"
+        },
+        {
+          "id": 83608,
+          "ayahId": 6225,
+          "surah": 112,
+          "ayah": 4,
+          "position": 3,
+          "isEnd": false,
+          "glyph": "لَّهُۥ",
+          "text": "لَّهُۥ"
+        },
+        {
+          "id": 83609,
+          "ayahId": 6225,
+          "surah": 112,
+          "ayah": 4,
+          "position": 4,
+          "isEnd": false,
+          "glyph": "كُفُوًا",
+          "text": "كُفُوًا"
+        },
+        {
+          "id": 83610,
+          "ayahId": 6225,
+          "surah": 112,
+          "ayah": 4,
+          "position": 5,
+          "isEnd": false,
+          "glyph": "أَحَدُۢ",
+          "text": "أَحَدُۢ"
+        },
+        {
+          "id": 83611,
+          "ayahId": 6225,
+          "surah": 112,
+          "ayah": 4,
+          "position": 6,
+          "isEnd": true,
+          "glyph": "۝٤",
+          "text": "۝٤"
+        },
+        {
+          "id": 83612,
+          "ayahId": 6226,
+          "surah": 113,
+          "ayah": 1,
+          "position": 1,
+          "isEnd": false,
+          "glyph": "قُلۡ",
+          "text": "قُلۡ"
+        },
+        {
+          "id": 83613,
+          "ayahId": 6226,
+          "surah": 113,
+          "ayah": 1,
+          "position": 2,
+          "isEnd": false,
+          "glyph": "أَعُوذُ",
+          "text": "أَعُوذُ"
+        },
+        {
+          "id": 83614,
+          "ayahId": 6226,
+          "surah": 113,
+          "ayah": 1,
+          "position": 3,
+          "isEnd": false,
+          "glyph": "بِرَبِّ",
+          "text": "بِرَبِّ"
+        },
+        {
+          "id": 83615,
+          "ayahId": 6226,
+          "surah": 113,
+          "ayah": 1,
+          "position": 4,
+          "isEnd": false,
+          "glyph": "ٱلۡفَلَقِ",
+          "text": "ٱلۡفَلَقِ"
+        },
+        {
+          "id": 83616,
+          "ayahId": 6226,
+          "surah": 113,
+          "ayah": 1,
+          "position": 5,
+          "isEnd": true,
+          "glyph": "۝١",
+          "text": "۝١"
+        },
+        {
+          "id": 83617,
+          "ayahId": 6227,
+          "surah": 113,
+          "ayah": 2,
+          "position": 1,
+          "isEnd": false,
+          "glyph": "مِن",
+          "text": "مِن"
+        },
+        {
+          "id": 83618,
+          "ayahId": 6227,
+          "surah": 113,
+          "ayah": 2,
+          "position": 2,
+          "isEnd": false,
+          "glyph": "شَرِّ",
+          "text": "شَرِّ"
+        },
+        {
+          "id": 83619,
+          "ayahId": 6227,
+          "surah": 113,
+          "ayah": 2,
+          "position": 3,
+          "isEnd": false,
+          "glyph": "مَا",
+          "text": "مَا"
+        },
+        {
+          "id": 83620,
+          "ayahId": 6227,
+          "surah": 113,
+          "ayah": 2,
+          "position": 4,
+          "isEnd": false,
+          "glyph": "خَلَقَ",
+          "text": "خَلَقَ"
+        },
+        {
+          "id": 83621,
+          "ayahId": 6227,
+          "surah": 113,
+          "ayah": 2,
+          "position": 5,
+          "isEnd": true,
+          "glyph": "۝٢",
+          "text": "۝٢"
+        },
+        {
+          "id": 83622,
+          "ayahId": 6228,
+          "surah": 113,
+          "ayah": 3,
+          "position": 1,
+          "isEnd": false,
+          "glyph": "وَمِن",
+          "text": "وَمِن"
+        },
+        {
+          "id": 83623,
+          "ayahId": 6228,
+          "surah": 113,
+          "ayah": 3,
+          "position": 2,
+          "isEnd": false,
+          "glyph": "شَرِّ",
+          "text": "شَرِّ"
+        },
+        {
+          "id": 83624,
+          "ayahId": 6228,
+          "surah": 113,
+          "ayah": 3,
+          "position": 3,
+          "isEnd": false,
+          "glyph": "غَاسِقٍ",
+          "text": "غَاسِقٍ"
+        },
+        {
+          "id": 83625,
+          "ayahId": 6228,
+          "surah": 113,
+          "ayah": 3,
+          "position": 4,
+          "isEnd": false,
+          "glyph": "إِذَا",
+          "text": "إِذَا"
+        },
+        {
+          "id": 83626,
+          "ayahId": 6228,
+          "surah": 113,
+          "ayah": 3,
+          "position": 5,
+          "isEnd": false,
+          "glyph": "وَقَبَ",
+          "text": "وَقَبَ"
+        },
+        {
+          "id": 83627,
+          "ayahId": 6228,
+          "surah": 113,
+          "ayah": 3,
+          "position": 6,
+          "isEnd": true,
+          "glyph": "۝٣",
+          "text": "۝٣"
+        },
+        {
+          "id": 83628,
+          "ayahId": 6229,
+          "surah": 113,
+          "ayah": 4,
+          "position": 1,
+          "isEnd": false,
+          "glyph": "وَمِن",
+          "text": "وَمِن"
+        },
+        {
+          "id": 83629,
+          "ayahId": 6229,
+          "surah": 113,
+          "ayah": 4,
+          "position": 2,
+          "isEnd": false,
+          "glyph": "شَرِّ",
+          "text": "شَرِّ"
+        },
+        {
+          "id": 83630,
+          "ayahId": 6229,
+          "surah": 113,
+          "ayah": 4,
+          "position": 3,
+          "isEnd": false,
+          "glyph": "ٱلنَّفَّٰثَٰتِ",
+          "text": "ٱلنَّفَّٰثَٰتِ"
+        },
+        {
+          "id": 83631,
+          "ayahId": 6229,
+          "surah": 113,
+          "ayah": 4,
+          "position": 4,
+          "isEnd": false,
+          "glyph": "فِي",
+          "text": "فِي"
+        },
+        {
+          "id": 83632,
+          "ayahId": 6229,
+          "surah": 113,
+          "ayah": 4,
+          "position": 5,
+          "isEnd": false,
+          "glyph": "ٱلۡعُقَدِ",
+          "text": "ٱلۡعُقَدِ"
+        },
+        {
+          "id": 83633,
+          "ayahId": 6229,
+          "surah": 113,
+          "ayah": 4,
+          "position": 6,
+          "isEnd": true,
+          "glyph": "۝٤",
+          "text": "۝٤"
+        },
+        {
+          "id": 83634,
+          "ayahId": 6230,
+          "surah": 113,
+          "ayah": 5,
+          "position": 1,
+          "isEnd": false,
+          "glyph": "وَمِن",
+          "text": "وَمِن"
+        },
+        {
+          "id": 83635,
+          "ayahId": 6230,
+          "surah": 113,
+          "ayah": 5,
+          "position": 2,
+          "isEnd": false,
+          "glyph": "شَرِّ",
+          "text": "شَرِّ"
+        },
+        {
+          "id": 83636,
+          "ayahId": 6230,
+          "surah": 113,
+          "ayah": 5,
+          "position": 3,
+          "isEnd": false,
+          "glyph": "حَاسِدٍ",
+          "text": "حَاسِدٍ"
+        },
+        {
+          "id": 83637,
+          "ayahId": 6230,
+          "surah": 113,
+          "ayah": 5,
+          "position": 4,
+          "isEnd": false,
+          "glyph": "إِذَا",
+          "text": "إِذَا"
+        },
+        {
+          "id": 83638,
+          "ayahId": 6230,
+          "surah": 113,
+          "ayah": 5,
+          "position": 5,
+          "isEnd": false,
+          "glyph": "حَسَدَ",
+          "text": "حَسَدَ"
+        },
+        {
+          "id": 83639,
+          "ayahId": 6230,
+          "surah": 113,
+          "ayah": 5,
+          "position": 6,
+          "isEnd": true,
+          "glyph": "۝٥",
+          "text": "۝٥"
+        },
+        {
+          "id": 83640,
+          "ayahId": 6231,
+          "surah": 114,
+          "ayah": 1,
+          "position": 1,
+          "isEnd": false,
+          "glyph": "قُلۡ",
+          "text": "قُلۡ"
+        },
+        {
+          "id": 83641,
+          "ayahId": 6231,
+          "surah": 114,
+          "ayah": 1,
+          "position": 2,
+          "isEnd": false,
+          "glyph": "أَعُوذُ",
+          "text": "أَعُوذُ"
+        },
+        {
+          "id": 83642,
+          "ayahId": 6231,
+          "surah": 114,
+          "ayah": 1,
+          "position": 3,
+          "isEnd": false,
+          "glyph": "بِرَبِّ",
+          "text": "بِرَبِّ"
+        },
+        {
+          "id": 83643,
+          "ayahId": 6231,
+          "surah": 114,
+          "ayah": 1,
+          "position": 4,
+          "isEnd": false,
+          "glyph": "ٱلنَّاسِ",
+          "text": "ٱلنَّاسِ"
+        },
+        {
+          "id": 83644,
+          "ayahId": 6231,
+          "surah": 114,
+          "ayah": 1,
+          "position": 5,
+          "isEnd": true,
+          "glyph": "۝١",
+          "text": "۝١"
+        },
+        {
+          "id": 83645,
+          "ayahId": 6232,
+          "surah": 114,
+          "ayah": 2,
+          "position": 1,
+          "isEnd": false,
+          "glyph": "مَلِكِ",
+          "text": "مَلِكِ"
+        },
+        {
+          "id": 83646,
+          "ayahId": 6232,
+          "surah": 114,
+          "ayah": 2,
+          "position": 2,
+          "isEnd": false,
+          "glyph": "ٱلنَّاسِ",
+          "text": "ٱلنَّاسِ"
+        },
+        {
+          "id": 83647,
+          "ayahId": 6232,
+          "surah": 114,
+          "ayah": 2,
+          "position": 3,
+          "isEnd": true,
+          "glyph": "۝٢",
+          "text": "۝٢"
+        },
+        {
+          "id": 83648,
+          "ayahId": 6233,
+          "surah": 114,
+          "ayah": 3,
+          "position": 1,
+          "isEnd": false,
+          "glyph": "إِلَٰهِ",
+          "text": "إِلَٰهِ"
+        },
+        {
+          "id": 83649,
+          "ayahId": 6233,
+          "surah": 114,
+          "ayah": 3,
+          "position": 2,
+          "isEnd": false,
+          "glyph": "ٱلنَّاسِ",
+          "text": "ٱلنَّاسِ"
+        },
+        {
+          "id": 83650,
+          "ayahId": 6233,
+          "surah": 114,
+          "ayah": 3,
+          "position": 3,
+          "isEnd": true,
+          "glyph": "۝٣",
+          "text": "۝٣"
+        },
+        {
+          "id": 83651,
+          "ayahId": 6234,
+          "surah": 114,
+          "ayah": 4,
+          "position": 1,
+          "isEnd": false,
+          "glyph": "مِن",
+          "text": "مِن"
+        },
+        {
+          "id": 83652,
+          "ayahId": 6234,
+          "surah": 114,
+          "ayah": 4,
+          "position": 2,
+          "isEnd": false,
+          "glyph": "شَرِّ",
+          "text": "شَرِّ"
+        },
+        {
+          "id": 83653,
+          "ayahId": 6234,
+          "surah": 114,
+          "ayah": 4,
+          "position": 3,
+          "isEnd": false,
+          "glyph": "ٱلۡوَسۡوَاسِ",
+          "text": "ٱلۡوَسۡوَاسِ"
+        },
+        {
+          "id": 83654,
+          "ayahId": 6234,
+          "surah": 114,
+          "ayah": 4,
+          "position": 4,
+          "isEnd": false,
+          "glyph": "ٱلۡخَنَّاسِ",
+          "text": "ٱلۡخَنَّاسِ"
+        },
+        {
+          "id": 83655,
+          "ayahId": 6234,
+          "surah": 114,
+          "ayah": 4,
+          "position": 5,
+          "isEnd": true,
+          "glyph": "۝٤",
+          "text": "۝٤"
+        },
+        {
+          "id": 83656,
+          "ayahId": 6235,
+          "surah": 114,
+          "ayah": 5,
+          "position": 1,
+          "isEnd": false,
+          "glyph": "ٱلَّذِي",
+          "text": "ٱلَّذِي"
+        },
+        {
+          "id": 83657,
+          "ayahId": 6235,
+          "surah": 114,
+          "ayah": 5,
+          "position": 2,
+          "isEnd": false,
+          "glyph": "يُوَسۡوِسُ",
+          "text": "يُوَسۡوِسُ"
+        },
+        {
+          "id": 83658,
+          "ayahId": 6235,
+          "surah": 114,
+          "ayah": 5,
+          "position": 3,
+          "isEnd": false,
+          "glyph": "فِي",
+          "text": "فِي"
+        },
+        {
+          "id": 83659,
+          "ayahId": 6235,
+          "surah": 114,
+          "ayah": 5,
+          "position": 4,
+          "isEnd": false,
+          "glyph": "صُدُورِ",
+          "text": "صُدُورِ"
+        },
+        {
+          "id": 83660,
+          "ayahId": 6235,
+          "surah": 114,
+          "ayah": 5,
+          "position": 5,
+          "isEnd": false,
+          "glyph": "ٱلنَّاسِ",
+          "text": "ٱلنَّاسِ"
+        },
+        {
+          "id": 83661,
+          "ayahId": 6235,
+          "surah": 114,
+          "ayah": 5,
+          "position": 6,
+          "isEnd": true,
+          "glyph": "۝٥",
+          "text": "۝٥"
+        },
+        {
+          "id": 83662,
+          "ayahId": 6236,
+          "surah": 114,
+          "ayah": 6,
+          "position": 1,
+          "isEnd": false,
+          "glyph": "مِنَ",
+          "text": "مِنَ"
+        },
+        {
+          "id": 83663,
+          "ayahId": 6236,
+          "surah": 114,
+          "ayah": 6,
+          "position": 2,
+          "isEnd": false,
+          "glyph": "ٱلۡجِنَّةِ",
+          "text": "ٱلۡجِنَّةِ"
+        },
+        {
+          "id": 83664,
+          "ayahId": 6236,
+          "surah": 114,
+          "ayah": 6,
+          "position": 3,
+          "isEnd": false,
+          "glyph": "وَٱلنَّاسِ",
+          "text": "وَٱلنَّاسِ"
+        },
+        {
+          "id": 83665,
+          "ayahId": 6236,
+          "surah": 114,
+          "ayah": 6,
+          "position": 4,
+          "isEnd": true,
+          "glyph": "۝٦",
+          "text": "۝٦"
+        }
+      ],
+      "reference": "— Al-Ikhlas 112:1 – An-Nas 114:6",
+      "expected": "قُلۡ هُوَ ٱللَّهُ أَحَدٌ ﴿١﴾ ٱللَّهُ ٱلصَّمَدُ ﴿٢﴾ لَمۡ يَلِدۡ وَلَمۡ يُولَدۡ ﴿٣﴾ وَلَمۡ يَكُن لَّهُۥ كُفُوًا أَحَدُۢ ﴿٤﴾ قُلۡ أَعُوذُ بِرَبِّ ٱلۡفَلَقِ ﴿١﴾ مِن شَرِّ مَا خَلَقَ ﴿٢﴾ وَمِن شَرِّ غَاسِقٍ إِذَا وَقَبَ ﴿٣﴾ وَمِن شَرِّ ٱلنَّفَّٰثَٰتِ فِي ٱلۡعُقَدِ ﴿٤﴾ وَمِن شَرِّ حَاسِدٍ إِذَا حَسَدَ ﴿٥﴾ قُلۡ أَعُوذُ بِرَبِّ ٱلنَّاسِ ﴿١﴾ مَلِكِ ٱلنَّاسِ ﴿٢﴾ إِلَٰهِ ٱلنَّاسِ ﴿٣﴾ مِن شَرِّ ٱلۡوَسۡوَاسِ ٱلۡخَنَّاسِ ﴿٤﴾ ٱلَّذِي يُوَسۡوِسُ فِي صُدُورِ ٱلنَّاسِ ﴿٥﴾ مِنَ ٱلۡجِنَّةِ وَٱلنَّاسِ ﴿٦﴾\n— Al-Ikhlas 112:1 – An-Nas 114:6"
+    }
+  ]
+}

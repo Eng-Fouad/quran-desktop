@@ -1,0 +1,48 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "create": false,
+        "title": "Quran",
+        "width": 1440,
+        "height": 940,
+        "minWidth": 760,
+        "minHeight": 600,
+        "center": true,
+        "visible": false,
+        "decorations": false,
+        "transparent": true,
+        "shadow": true,
+        "noRedirectionBitmap": true,
+        "windowEffects": { "effects": ["mica"] },
+        "scrollBarStyle": "fluentOverlay",
+        "dragDropEnabled": false,
+        "zoomHotkeysEnabled": false
+      }
+    ]
+  },
+  "bundle": {
+    "targets": ["nsis"],
+    "icon": [
+      "icons/windows/icon.ico",
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png"
+    ],
+    "windows": {
+      "webviewInstallMode": { "type": "downloadBootstrapper" },
+      "nsis": {
+        "installMode": "currentUser",
+        "compression": "lzma",
+        "languages": ["English", "Arabic"],
+        "installerIcon": "icons/windows/icon.ico",
+        "uninstallerIcon": "icons/windows/icon.ico"
+      },
+      "wix": {
+        "upgradeCode": "aac524f6-dd12-56b5-9a7a-14fe4e2a7d28"
+      }
+    }
+  }
+}

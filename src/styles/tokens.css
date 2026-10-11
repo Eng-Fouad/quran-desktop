@@ -1,0 +1,611 @@
+/*
+ * Design tokens (ARCHITECTURE §9.1–§9.4, §8.6–§8.7). Owner: WP7a.
+ *
+ * Inputs on <html>, written by the settings store (§9.1):
+ *   data-theme="paper|sepia|night|black|high_contrast"   data-hc="light|dark" (high contrast only)
+ *   data-accent="teal|emerald|blue|indigo|rose|amber"     data-motion="reduce|full"
+ *   data-chrome="vibrant" (translucent chrome, §9.6)      lang="en|ar"
+ *   data-platform="windows|macos|linux" (translucency rule, §9.4)
+ *   style="--ink-alpha: 0.88" (inkBrightnessPct / 100, §9.2)
+ * Before the settings store runs (index.html ships data-theme="paper"), the defaults below are paper + teal.
+ *
+ * Rules for consumers:
+ *   - Components use the semantic tokens only, never raw colours. Accent-coloured TEXT uses --accent-text, never --accent.
+ *   - Tokens whose name starts with `--_` are private inputs of this file. Never read or set them elsewhere.
+ *   - Every derived token is computed on :root, so overriding an input (e.g. --accent) on a subtree does NOT re-derive
+ *     --accent-soft or the highlight fills there.
+ *
+ * Sub-layers of `tokens` (later wins, whatever the specificity):
+ *   scale       theme-independent type, spacing, radius, motion, z-index and focus geometry (+ the Arabic type column)
+ *   theme       colours, shadows, the six accents, derived highlight fills and the translucent-chrome rule
+ *   preference  user and OS preferences that override any theme: reduced motion, prefers-contrast, forced colours,
+ *               reduced transparency and the Linux translucency rule
+ *
+ * The contrast test (src/styles/tokens.test.ts) parses this file and checks every §9.2 pair for every theme × accent,
+ * the §8.7 highlight composites at ink 65/88/100 %, and that the §9.2 tables are reproduced exactly.
+ */
+@layer reset, tokens, base, components, mushaf, utilities;
+
+@layer tokens {
+  @layer scale, theme, preference;
+
+  /* ─────────────────────────────── §9.3, §9.4 scale ─────────────────────────────── */
+  @layer scale {
+    :root {
+      /* Typography (§9.3). The root font-size stays 16px: UI scale is webview zoom (D27). */
+      --font-latin:
+        'Inter Variable', 'Segoe UI Variable Text', 'Segoe UI', -apple-system, BlinkMacSystemFont, system-ui,
+        sans-serif;
+      --font-arabic: 'IBM Plex Sans Arabic', 'Noto Naskh Arabic Variable', 'Segoe UI', system-ui, sans-serif;
+      --font-ui: var(--font-latin), 'IBM Plex Sans Arabic';
+      --font-naskh: 'Noto Naskh Arabic Variable', 'IBM Plex Sans Arabic', serif;
+      --font-nastaliq: 'qd-nastaliq', var(--font-naskh);
+      --font-quran: 'qd-hafs';
+      --font-mono: ui-monospace, 'Cascadia Code', 'SF Mono', Menlo, monospace;
+
+      --text-2xs: 11px;
+      --text-xs: 12px;
+      --text-sm: 13px;
+      --text-md: 14px;
+      --text-lg: 16px;
+      --text-xl: 18px;
+      --text-2xl: 22px;
+      --text-3xl: 28px;
+      --text-4xl: 36px;
+      /* Reading bases (§9.3): multiply by translationFontPct / 100 where they are used. */
+      --text-reading: 18px;
+      --text-quran-reading: 28px;
+
+      --leading-ui: 1.45;
+      --leading-title: 1.25;
+      --leading-reading: 1.7;
+      --leading-naskh: 2;
+      --leading-quran: 2.25;
+      --leading-nastaliq: 2.4;
+
+      /* Weights (§9.3): 400 body, 500 labels and buttons, 600 titles. */
+      --weight-body: 400;
+      --weight-label: 500;
+      --weight-title: 600;
+
+      /* Spacing (4 px grid) */
+      --space-0: 0;
+      --space-0_5: 2px;
+      --space-1: 4px;
+      --space-2: 8px;
+      --space-3: 12px;
+      --space-4: 16px;
+      --space-5: 20px;
+      --space-6: 24px;
+      --space-8: 32px;
+      --space-10: 40px;
+      --space-12: 48px;
+      --space-16: 64px;
+
+      /* Radius */
+      --radius-xs: 4px;
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --radius-xl: 20px;
+      --radius-full: 999px;
+      --radius-page: 3px;
+
+      /* Motion. Every Svelte transition still wraps its duration as `settings.reducedMotion ? 0 : d` (§9.4). */
+      --dur-instant: 50ms;
+      --dur-fast: 100ms;
+      --dur-quick: 150ms;
+      --dur-normal: 200ms;
+      --dur-gentle: 250ms;
+      --dur-slow: 300ms;
+      --dur-page: 260ms;
+      --dur-glyph-swap: 180ms;
+      --ease-standard: cubic-bezier(0.33, 0, 0.67, 1);
+      --ease-decelerate: cubic-bezier(0.1, 0.9, 0.2, 1);
+      --ease-accelerate: cubic-bezier(0.9, 0.1, 1, 0.2);
+      --ease-emphasized: cubic-bezier(0.2, 0, 0, 1);
+
+      /* Stacking */
+      --z-canvas: 0;
+      --z-chrome: 10;
+      --z-sidebar: 20;
+      --z-player: 30;
+      --z-popover: 40;
+      --z-menu: 50;
+      --z-dialog: 60;
+      --z-palette: 70;
+      --z-toast: 80;
+      --z-tooltip: 90;
+      --z-drag: 100;
+
+      /* Focus geometry (colour: --focus-ring, per theme) */
+      --focus-ring-w: 2px;
+      --focus-ring-offset: 2px;
+    }
+
+    /* Arabic UI column (§9.3): Arabic needs ≈ 12 % more size than Latin for equal legibility. */
+    :root[lang='ar'] {
+      --font-ui: var(--font-arabic), 'Inter Variable';
+      --text-2xs: 13px;
+      --text-xs: 14px;
+      --text-sm: 15px;
+      --text-md: 16px;
+      --text-lg: 18px;
+      --text-xl: 21px;
+      --text-2xl: 26px;
+      --text-3xl: 32px;
+      --text-4xl: 40px;
+      --leading-ui: 1.6;
+      --leading-title: 1.4;
+      --leading-reading: 1.9;
+    }
+  }
+
+  /* ─────────────────────────────── §9.2 colour, §9.4 elevation ─────────────────────────────── */
+  @layer theme {
+    /* Accents, raw (§9.2 accent table). The themes below map them to --accent / --accent-text / --accent-strong.
+       --accent-text is the accent darkened to ≥ 4.5:1 on the theme's darkest text surface, which is --surface-hover over
+       the chrome (sidebar rows), not --surface-sunken; values marked † were re-derived that way (docs/deviations/WP7a.md). */
+    :root,
+    :root[data-accent='teal'] {
+      --_accent-light: #1f7a6d;
+      --_accent-text-paper: #1d7265; /* † */
+      --_accent-text-sepia: #186056; /* † */
+      --_accent-dark: #4fb8a8;
+      --_accent-strong-dark: #6fd3c3;
+    }
+
+    :root[data-accent='emerald'] {
+      --_accent-light: #1e7b4a;
+      --_accent-text-paper: #1d7447; /* † */
+      --_accent-text-sepia: #18623b; /* † */
+      --_accent-dark: #4cc38a;
+      --_accent-strong-dark: #74dba7;
+    }
+
+    :root[data-accent='blue'] {
+      --_accent-light: #2563a8;
+      --_accent-text-paper: #2563a8;
+      --_accent-text-sepia: #215794; /* † */
+      --_accent-dark: #6ea8e8;
+      --_accent-strong-dark: #92c0f2;
+    }
+
+    :root[data-accent='indigo'] {
+      --_accent-light: #4b4fae;
+      --_accent-text-paper: #4b4fae;
+      --_accent-text-sepia: #484ca7; /* † */
+      --_accent-dark: #9196f0;
+      --_accent-strong-dark: #b0b4f6;
+    }
+
+    :root[data-accent='rose'] {
+      --_accent-light: #b0405d;
+      --_accent-text-paper: #ad3f5c; /* † */
+      --_accent-text-sepia: #93354e; /* † */
+      --_accent-dark: #ec8aa4;
+      --_accent-strong-dark: #f3a9bc;
+    }
+
+    :root[data-accent='amber'] {
+      --_accent-light: #9a6410;
+      --_accent-text-paper: #8d5b0f; /* † */
+      --_accent-text-sepia: #764d0c; /* † */
+      --_accent-dark: #e3a948;
+      --_accent-strong-dark: #efc275;
+    }
+
+    /* Paper (also the default before the settings store runs). Values marked † differ from the §9.2 table so that the
+       table's own contrast rules hold; each is the smallest change that does (docs/deviations/WP7a.md). */
+    :root,
+    :root[data-theme='paper'] {
+      color-scheme: light;
+      --surface-app: #f3efe6;
+      --surface-chrome: var(--surface-app);
+      --surface-page: #fdf8ec;
+      --surface-raised: #ffffff;
+      --surface-sunken: #ebe5d8;
+      --surface-hover: rgb(60 45 20 / 0.06);
+      --surface-overlay: rgb(255 255 255 / 0.86);
+      --ink: #1c1a16;
+      --text: #24211c;
+      --text-muted: #6b6457;
+      --text-faint: #8b8273;
+      --border: #e2dac9;
+      --border-strong: #cbbfa6;
+      --border-input: #8a8371; /* † ≥ 3:1 on sunken (was #908876, 2.80) */
+      --frame-gold: #ac8a55;
+      --frame-green: #2f6b5e;
+      --marker-ink: #2f6b5e;
+      --ribbon: #8c2f39;
+      --frame-band: rgb(176 141 87 / 0.08);
+      --cartouche-fill: rgb(176 141 87 / 0.1);
+      --surah-header-ink: #2f6b5e;
+      --spine-a: 0.1;
+      --danger: #b3261e;
+      --success: #2e7d32;
+      --warning: #a86400;
+      /* Status colours as TEXT (≥ 4.5:1 on every text surface and on their -soft fills); the base colours are for
+         icons, borders and fills (≥ 3:1). */
+      --danger-text: #b3261e;
+      --success-text: #29712d;
+      --warning-text: #905600;
+      --danger-ink: #ffffff;
+
+      --accent: var(--_accent-light);
+      --accent-text: var(--_accent-text-paper);
+      --accent-strong: color-mix(in srgb, var(--_accent-light) 85%, #000000);
+      --accent-ink: #ffffff;
+      --focus-ring: var(--accent);
+
+      --shadow-1: 0 1px 2px rgb(60 45 20 / 0.08), 0 0 0 1px rgb(60 45 20 / 0.04);
+      --shadow-2: 0 4px 12px rgb(60 45 20 / 0.1), 0 0 0 1px rgb(60 45 20 / 0.05);
+      --shadow-3: 0 16px 40px rgb(60 45 20 / 0.16), 0 0 0 1px rgb(60 45 20 / 0.06);
+      --shadow-page: 0 1px 1px rgb(60 45 20 / 0.06), 0 8px 28px rgb(60 45 20 / 0.1);
+    }
+
+    :root[data-theme='sepia'] {
+      color-scheme: light;
+      --surface-app: #e9dcc3;
+      --surface-chrome: #e4d5b8;
+      --surface-page: #f6ead2;
+      --surface-raised: #fbf3e4;
+      --surface-sunken: #e2d3b6;
+      --surface-hover: rgb(70 45 10 / 0.07);
+      --surface-overlay: rgb(251 243 228 / 0.9);
+      --ink: #2e2418;
+      --text: #3a2f22;
+      --text-muted: #625441; /* † ≥ 4.5:1 on hover over chrome (was #695a45, 4.10) */
+      --text-faint: #86755a;
+      --border: #dccaa8;
+      --border-strong: #c7b08a;
+      --border-input: #85755d; /* † ≥ 3:1 on sunken and chrome (was #8b7b61, 2.79) */
+      --frame-gold: #9c7638;
+      --frame-green: #4b5d3a;
+      --marker-ink: #4b5d3a;
+      --ribbon: #7d2a2a;
+      --frame-band: rgb(156 118 56 / 0.1);
+      --cartouche-fill: rgb(156 118 56 / 0.12);
+      --surah-header-ink: #5a4128;
+      --spine-a: 0.12;
+      --danger: #a3361f;
+      --success: #4b6b2a;
+      --warning: #9a5a00;
+      --danger-text: #95311c;
+      --success-text: #415c24;
+      --warning-text: #7c4800;
+      --accent-text: var(--_accent-text-sepia);
+    }
+
+    /* Night and black share the dark accent mapping, ink formula, status colours and highlight alphas. */
+    :root[data-theme='night'],
+    :root[data-theme='black'] {
+      color-scheme: dark;
+      --surface-app: #111315;
+      --surface-chrome: var(--surface-app);
+      --surface-page: #1a1c1f;
+      --surface-raised: #222529;
+      --surface-sunken: #0c0d0f;
+      --surface-hover: rgb(255 255 255 / 0.06);
+      --surface-overlay: rgb(34 37 41 / 0.86);
+      /* Always opaque (§8.6): a translucent ink would composite twice where glyph parts or COLR layers overlap.
+         --_ink-level is --ink-alpha, or 1 under prefers-contrast: more (preference layer). */
+      --_ink-level: var(--ink-alpha);
+      --ink: color-mix(in srgb, #e9e4d8 calc(var(--_ink-level) * 100%), var(--surface-page));
+      --text: #e3ded2;
+      --text-muted: #a39d90;
+      --text-faint: #736e65;
+      --border: #2c3035;
+      --border-strong: #3a3f45;
+      --border-input: #6b6f74;
+      --frame-gold: #8f7444;
+      --frame-green: #3f8a7b;
+      --marker-ink: #499082;
+      --ribbon: #a34c54;
+      --frame-band: rgb(143 116 68 / 0.1);
+      --cartouche-fill: rgb(143 116 68 / 0.12);
+      --surah-header-ink: #c9b98f;
+      --spine-a: 0.35;
+      --danger: #f2827a;
+      --success: #6fcf7a;
+      --warning: #f0b24a;
+      --danger-text: var(--danger);
+      --success-text: var(--success);
+      --warning-text: var(--warning);
+      --danger-ink: #1f0b09;
+
+      --accent: var(--_accent-dark);
+      --accent-text: var(--_accent-dark);
+      --accent-strong: var(--_accent-strong-dark);
+      --accent-ink: #0b1513;
+      --focus-ring: var(--accent-strong);
+
+      --shadow-1: 0 0 0 1px rgb(255 255 255 / 0.05);
+      --shadow-2: 0 0 0 1px rgb(255 255 255 / 0.06), 0 8px 24px rgb(0 0 0 / 0.45);
+      --shadow-3: 0 0 0 1px rgb(255 255 255 / 0.07), 0 20px 50px rgb(0 0 0 / 0.6);
+      --shadow-page: 0 0 0 1px rgb(255 255 255 / 0.04);
+
+      /* §8.7: explicit dark user-highlight alphas, and EVERY highlight alpha × --ink-alpha. The word pill mixes 26 %
+         (§9.2: 28 %), which keeps ink ≥ 4.5:1 on it for every accent at ink 65 % (amber: 4.46 at 28 %). */
+      --_hl-ink: var(--_ink-level);
+      --_hl-word-p: 26%;
+      --_user-hl-yellow-a: 0.18;
+      --_user-hl-green-a: 0.22;
+      --_user-hl-blue-a: 0.24;
+      --_user-hl-red-a: 0.24;
+      --_user-hl-purple-a: 0.26;
+      --hl-search-solid: #e8b020;
+    }
+
+    :root[data-theme='black'] {
+      --surface-app: #000000;
+      --surface-chrome: #000000;
+      --surface-page: #000000;
+      --surface-raised: #161616;
+      --surface-sunken: #0a0a0a;
+      --surface-hover: rgb(255 255 255 / 0.08);
+      --surface-overlay: rgb(22 22 22 / 0.94);
+      --text: #d6d1c5;
+      --text-muted: #938f85; /* † ≥ 4.5:1 on hover over raised (was #8f8a80, 4.26) */
+      --text-faint: #6b6761;
+      --border: #2a2a2a;
+      --border-strong: #3d3d3d;
+      --border-input: #636363; /* † ≥ 3:1 on raised and overlay (was #606060, 2.88) */
+      --frame-gold: #6e5a36;
+      --frame-green: #2f6b5e;
+      --marker-ink: #4a7e73;
+      --ribbon: #854a4f;
+      --frame-band: rgb(110 90 54 / 0.1);
+      --cartouche-fill: rgb(110 90 54 / 0.14);
+      --surah-header-ink: #a8996f;
+      --spine-a: 0.5;
+      --shadow-1: 0 0 0 1px #2a2a2a;
+      --shadow-2: 0 0 0 1px #333333;
+      --shadow-3: 0 0 0 1px #3d3d3d;
+      --shadow-page: none;
+    }
+
+    /* High contrast, light (`data-hc="light"`, or no data-hc). The accent is forced, whatever data-accent says. */
+    :root[data-theme='high_contrast'] {
+      color-scheme: light;
+      --surface-app: #ffffff;
+      --surface-chrome: #ffffff;
+      --surface-page: #ffffff;
+      --surface-raised: #ffffff;
+      --surface-sunken: #f0f0f0;
+      --surface-hover: rgb(0 0 0 / 0.08);
+      --surface-overlay: #ffffff;
+      --ink: #000000;
+      --text: #000000;
+      --text-muted: #1a1a1a;
+      --text-faint: #3a3a3a;
+      --border: #000000;
+      --border-strong: #000000;
+      --border-input: #000000;
+      --frame-gold: #000000;
+      --frame-green: #000000;
+      --marker-ink: #000000;
+      --ribbon: #000000;
+      --frame-band: transparent;
+      --cartouche-fill: #ffffff;
+      --surah-header-ink: #000000;
+      --spine-a: 0;
+      --danger: #a00000;
+      --success: #005a00;
+      --warning: #7a4a00;
+      --danger-text: var(--danger);
+      --success-text: var(--success);
+      --warning-text: var(--warning);
+      --danger-ink: #ffffff;
+
+      --accent: #0040c0;
+      --accent-text: #0040c0;
+      --accent-strong: #0040c0;
+      --accent-ink: #ffffff;
+      --focus-ring: #0040c0;
+      --focus-ring-w: 3px;
+
+      --shadow-1: 0 0 0 2px #000000;
+      --shadow-2: 0 0 0 2px #000000;
+      --shadow-3: 0 0 0 2px #000000;
+      --shadow-page: 0 0 0 2px currentColor;
+    }
+
+    /* High contrast, dark (`data-hc="dark"`: high_contrast while the OS prefers dark). */
+    :root[data-theme='high_contrast'][data-hc='dark'] {
+      color-scheme: dark;
+      --surface-app: #000000;
+      --surface-chrome: #000000;
+      --surface-page: #000000;
+      --surface-raised: #000000;
+      --surface-sunken: #000000;
+      --surface-hover: rgb(255 255 255 / 0.14);
+      --surface-overlay: #000000;
+      --ink: #ffffff;
+      --text: #ffffff;
+      --text-muted: #e6e6e6;
+      --text-faint: #bdbdbd;
+      --border: #ffffff;
+      --border-strong: #ffffff;
+      --border-input: #ffffff;
+      --frame-gold: #ffffff;
+      --frame-green: #ffffff;
+      --marker-ink: #ffffff;
+      --ribbon: #ffffff;
+      --cartouche-fill: #000000;
+      --surah-header-ink: #ffffff;
+      --danger: #ff8a80;
+      --success: #7ee787;
+      --warning: #ffb74d;
+      --danger-ink: #000000;
+
+      --accent: #ffd600;
+      --accent-text: #ffd600;
+      --accent-strong: #ffd600;
+      --accent-ink: #000000;
+      --focus-ring: #ffd600;
+
+      --shadow-1: 0 0 0 2px #ffffff;
+      --shadow-2: 0 0 0 2px #ffffff;
+      --shadow-3: 0 0 0 2px #ffffff;
+
+      --_user-hl-yellow-a: 0.18;
+      --_user-hl-green-a: 0.22;
+      --_user-hl-blue-a: 0.24;
+      --_user-hl-red-a: 0.24;
+      --_user-hl-purple-a: 0.26;
+      --hl-search-solid: #ffb000;
+    }
+
+    /* §9.2 note 1: translucent chrome only while Mica / the macOS sidebar material is active (§9.6). */
+    :root[data-chrome='vibrant']:where([data-theme='paper'], :not([data-theme])) {
+      --surface-chrome: rgb(243 239 230 / 0.72);
+    }
+
+    :root[data-chrome='vibrant'][data-theme='night'] {
+      --surface-chrome: rgb(17 19 21 / 0.7);
+    }
+
+    /* Derived tokens (§9.2), computed once from the theme and accent above. */
+    :root {
+      /* Night/black ink brightness (§9.2); the settings store overrides it inline with inkBrightnessPct / 100. */
+      --ink-alpha: 0.88;
+
+      /* Highlight strength: --ink-alpha in night/black (§8.7), × 1.6 under prefers-contrast: more (§9.2). */
+      --_hl-ink: 1;
+      --_hl-contrast: 1;
+      --_hl-k: calc(var(--_hl-ink) * var(--_hl-contrast));
+      --_user-hl-yellow-a: 0.3;
+      --_user-hl-green-a: 0.24;
+      --_user-hl-blue-a: 0.22;
+      --_user-hl-red-a: 0.2;
+      --_user-hl-purple-a: 0.2;
+
+      --accent-soft: color-mix(in srgb, var(--accent) 12%, transparent);
+      --danger-soft: color-mix(in srgb, var(--danger) 12%, transparent);
+      --success-soft: color-mix(in srgb, var(--success) 12%, transparent);
+      --warning-soft: color-mix(in srgb, var(--warning) 12%, transparent);
+      --selection-bg: color-mix(in srgb, var(--accent) 24%, transparent);
+
+      --hl-hover: color-mix(in srgb, var(--ink) calc(6% * var(--_hl-k)), transparent);
+      --hl-selection: color-mix(in srgb, var(--accent) calc(6% * var(--_hl-k)), transparent);
+      --hl-selection-ring: var(--accent);
+      --hl-audio: color-mix(in srgb, var(--accent) calc(14% * var(--_hl-k)), transparent);
+      --_hl-word-p: 28%;
+      --hl-word: color-mix(
+        in srgb,
+        var(--accent) calc(var(--_hl-word-p) * var(--_hl-k)),
+        var(--surface-page)
+      );
+      --hl-search: rgb(232 176 32 / calc(0.18 * var(--_hl-k)));
+      --hl-search-solid: #c98a00;
+
+      --user-hl-yellow: rgb(249 168 37 / calc(var(--_user-hl-yellow-a) * var(--_hl-k)));
+      --user-hl-green: rgb(46 125 50 / calc(var(--_user-hl-green-a) * var(--_hl-k)));
+      --user-hl-blue: rgb(21 101 192 / calc(var(--_user-hl-blue-a) * var(--_hl-k)));
+      --user-hl-red: rgb(198 40 40 / calc(var(--_user-hl-red-a) * var(--_hl-k)));
+      --user-hl-purple: rgb(106 27 154 / calc(var(--_user-hl-purple-a) * var(--_hl-k)));
+      --user-hl-yellow-solid: #f9a825;
+      --user-hl-green-solid: #2e7d32;
+      --user-hl-blue-solid: #1565c0;
+      --user-hl-red-solid: #c62828;
+      --user-hl-purple-solid: #6a1b9a;
+
+      /* Translucency rule (§9.4): floating glass (dock, palette) blurs only where allowed; see the preference layer. */
+      --glass-fill: var(--surface-overlay);
+      --backdrop-dock: blur(24px) saturate(1.4);
+      --backdrop-palette: blur(20px) saturate(1.4);
+    }
+  }
+
+  /* ─────────────────────────────── preferences (win over every theme) ─────────────────────────────── */
+  @layer preference {
+    /* Reduced motion (§9.4): the setting, or the OS preference unless the user chose full motion. */
+    :root[data-motion='reduce'] {
+      --dur-instant: 0ms;
+      --dur-fast: 0ms;
+      --dur-quick: 0ms;
+      --dur-normal: 0ms;
+      --dur-gentle: 0ms;
+      --dur-slow: 0ms;
+      --dur-page: 0ms;
+      --dur-glyph-swap: 0ms;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      :root:not([data-motion='full']) {
+        --dur-instant: 0ms;
+        --dur-fast: 0ms;
+        --dur-quick: 0ms;
+        --dur-normal: 0ms;
+        --dur-gentle: 0ms;
+        --dur-slow: 0ms;
+        --dur-page: 0ms;
+        --dur-glyph-swap: 0ms;
+      }
+    }
+
+    /* §9.2: more contrast in any theme. (V4 tajweed switches to the HC palette overrides in palettes.ts, §8.6.) */
+    @media (prefers-contrast: more) {
+      :root {
+        --text-muted: var(--text);
+        --border: var(--border-strong);
+        --_hl-contrast: 1.6;
+        /* Night/black ink at full brightness: the stronger fills must not take the glyphs below 4.5:1. */
+        --_ink-level: 1;
+      }
+    }
+
+    /* Translucency rule (§9.4): never under reduced transparency, never on Linux (WebKitGTK often blurs in software). */
+    @media (prefers-reduced-transparency: reduce) {
+      :root {
+        --glass-fill: var(--surface-raised);
+        --backdrop-dock: none;
+        --backdrop-palette: none;
+      }
+    }
+
+    :root[data-platform='linux'] {
+      --glass-fill: var(--surface-raised);
+      --backdrop-dock: none;
+      --backdrop-palette: none;
+    }
+
+    /* Forced colours (§9.2, §8.15): system colours; highlight fills become transparent (WP8d draws outlines). */
+    @media (forced-colors: active) {
+      :root {
+        --ink: CanvasText;
+        --surface-page: Canvas;
+        --focus-ring: Highlight;
+        --frame-gold: CanvasText;
+        --frame-green: CanvasText;
+        --marker-ink: CanvasText;
+        --surah-header-ink: CanvasText;
+        --ribbon: CanvasText;
+        --frame-band: transparent;
+        --cartouche-fill: Canvas;
+        --spine-a: 0;
+        --accent-soft: transparent;
+        --danger-soft: transparent;
+        --success-soft: transparent;
+        --warning-soft: transparent;
+        --selection-bg: Highlight;
+        --hl-hover: transparent;
+        --hl-selection: transparent;
+        --hl-selection-ring: Highlight;
+        --hl-audio: transparent;
+        --hl-word: transparent;
+        --hl-search: transparent;
+        --hl-search-solid: Mark;
+        --user-hl-yellow: transparent;
+        --user-hl-green: transparent;
+        --user-hl-blue: transparent;
+        --user-hl-red: transparent;
+        --user-hl-purple: transparent;
+        --glass-fill: Canvas;
+        --backdrop-dock: none;
+        --backdrop-palette: none;
+      }
+    }
+  }
+}

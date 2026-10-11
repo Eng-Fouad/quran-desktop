@@ -1,0 +1,29 @@
+# Text is stored and checked out with LF on every OS (core.autocrlf is ignored), so the LF-generated bindings.ts never
+# shows as drifted on Windows and prettier's endOfLine: lf agrees (ARCHITECTURE §5.15).
+* text=auto eol=lf
+
+# cmd.exe needs CRLF.
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# Binary assets: never normalised or diffed as text.
+*.png binary
+*.jpg binary
+*.ico binary
+*.icns binary
+*.ttf binary
+*.otf binary
+*.woff binary
+*.woff2 binary
+*.mp3 binary
+*.wav binary
+*.db binary
+*.sqlite binary
+*.zip binary
+*.gz binary
+
+# Generated files: collapsed in GitHub diffs.
+src/lib/ipc/bindings.ts linguist-generated=true
+src/lib/about/thirdparty.json linguist-generated=true
+pnpm-lock.yaml linguist-generated=true
+Cargo.lock linguist-generated=true

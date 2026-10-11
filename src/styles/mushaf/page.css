@@ -1,0 +1,85 @@
+/*
+ * §8.3 page box and §8.4 `.mp`, `.mp-paper`, `.mp-block`, `.mp-glyphs` geometry. Owner: WP8a.
+ *
+ * Every length is a multiple of `--qfs` (set inline by MushafPage), so a page never changes size when its font swaps
+ * (CLS 0, §8.1). The `--mp-*` properties mirror the constants of `src/lib/mushaf/geometry.ts` (a unit test keeps them
+ * in step) for every layer drawn on the page: the frame and running heads (WP8c), highlights (WP8d), the spread (WP8e).
+ * Physical left/right is intentional: book geometry never mirrors with the UI language (§8.1 invariant 6).
+ */
+@layer mushaf {
+  .mp {
+    /* Page geometry (qfs units, §8.2). */
+    --mp-pw: calc(var(--qfs) * 21);
+    --mp-ph: calc(var(--qfs) * 31.95);
+    --mp-tb-w: calc(var(--qfs) * 16.5);
+    --mp-lh: calc(var(--qfs) * 1.75);
+    --mp-tb-h: calc(var(--mp-lh) * 15);
+    --mp-fr: calc(var(--qfs) * 0.85);
+    --mp-head: calc(var(--qfs) * 1.4);
+    --mp-foot: calc(var(--qfs) * 1.4);
+    --mp-m-out: calc(var(--qfs) * 1.9);
+    --mp-m-in: calc(var(--qfs) * 0.9);
+    --mp-m-tb: calc(var(--qfs) * 0.6);
+    /* The text block: from the top paper edge (M_TB + HEAD + FR), the outer edge (M_OUT + FR), the spine (M_IN + FR). */
+    --mp-block-top: calc(var(--qfs) * 2.85);
+    --mp-block-outer: calc(var(--qfs) * 2.75);
+    --mp-block-inner: calc(var(--qfs) * 1.75);
+    /* Opening pages (1–2): the 8 lines sit inside the medallion. */
+    --mp-opening-inset: calc(var(--qfs) * 2.2);
+    /* The §8.4 line pitch. */
+    --lh: var(--mp-lh);
+
+    position: relative;
+    flex: none;
+    width: var(--mp-pw);
+    height: var(--mp-ph);
+    contain: layout paint style;
+    /* Paint containment clips at the page box; the paper's shadow (and the stack edges) may paint just outside it. */
+    overflow-clip-margin: 40px;
+    color: var(--ink);
+  }
+
+  /* Cream paper with the page shadow. Spread corners and the spine shading are added by spread.css (WP8e, §8.10). */
+  .mp-paper {
+    position: absolute;
+    inset: 0;
+    border-radius: var(--radius-page);
+    background: var(--surface-page);
+    box-shadow: var(--shadow-page);
+  }
+
+  /* The 16.5 × 26.25 qfs text block, against the outer margin of its page's side. */
+  .mp-block {
+    position: absolute;
+    top: var(--mp-block-top);
+    width: var(--mp-tb-w);
+    height: var(--mp-tb-h);
+    /* Highlights (z 1) and glyph layers (z 2) stack inside the block, never against the furniture. */
+    isolation: isolate;
+  }
+
+  .mp[data-side='right'] .mp-block {
+    right: var(--mp-block-outer); /* physical-ok: outer margin on the right of an odd page */
+  }
+
+  .mp[data-side='left'] .mp-block {
+    left: var(--mp-block-outer); /* physical-ok: outer margin on the left of an even page */
+  }
+
+  /* One rendition of the page's glyphs (§8.3). Renditions stack and cross-fade on a font swap (D13, §8.5). */
+  .mp-glyphs {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    color: var(--ink);
+    transition: opacity var(--dur-glyph-swap) linear;
+  }
+
+  @media (forced-colors: active) {
+    /* The page shadow is dropped in forced colours; an outline keeps the paper's edge visible. */
+    .mp-paper {
+      outline: 1px solid CanvasText;
+      outline-offset: -1px;
+    }
+  }
+}

@@ -1,0 +1,266 @@
+# Release (ARCHITECTURE §13.4, §13.6; risk R19). Owner: WP13b.
+#
+# A `v*` tag builds the installers on three runners and uploads them to a DRAFT GitHub release. A person publishes it
+# after docs/RELEASE_CHECKLIST.md; nothing here ever publishes a release.
+#   windows-latest  NSIS (current-user install, WebView2 bootstrapper)
+#   macos-latest    one universal dmg (aarch64 + x86_64, so no Intel runner image is needed), signed ad hoc with the
+#                   hardened runtime, or with a Developer ID and notarised when the APPLE_* secrets exist (WP13b.md)
+#   ubuntu-22.04    deb + AppImage (the old glibc baseline is deliberate)
+# Each build job:
+#   1. builds core.db from the QUL exports in the private store (never qdc) and asserts it: > 1 MiB, the core tables,
+#      meta.source = 'qul', verify-core (./.github/actions/core with source: qul);
+#   2. builds with tauri-action (pinned; build only, it uploads nothing itself) under QD_REQUIRE_CORE=1;
+#   3. unpacks and checks every installer (scripts/check-bundles.mjs --core qul: identity, resources, the qul core.db,
+#      deb Depends and desktop entry, the macOS signature, …) and enforces §13.6 (scripts/size-budget.mjs);
+#   4. uploads through ./.github/actions/release-upload, which runs check-artifacts --release first and refuses to
+#      touch a release that is no longer a draft.
+# Release is blocked until the QUL/QF permission exists (FACT §8.1, §15.3 item 1): without the QUL_SOURCES_URL and
+# QUL_SOURCES_TOKEN secrets step 1 fails and says so. workflow_dispatch on a branch is a dry run: the same builds and
+# checks, nothing uploaded. On a v* tag it (re)fills that tag's draft.
+#
+# Secrets (environment `release`):
+#   QUL_SOURCES_URL, QUL_SOURCES_TOKEN   required: a tar.gz of the files named in data/sources/qul/manifest.toml
+#   APPLE_CERTIFICATE, APPLE_CERTIFICATE_PASSWORD, APPLE_SIGNING_IDENTITY, APPLE_ID, APPLE_PASSWORD, APPLE_TEAM_ID
+#                                        optional: Developer ID signing and notarisation (otherwise ad hoc)
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: '0'
+  RUST_BACKTRACE: '1'
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  draft:
+    name: draft release
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    outputs:
+      publish: ${{ steps.mode.outputs.publish }}
+      tag: ${{ steps.mode.outputs.tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Mode (a v* tag fills its draft release; any other ref is a dry run)
+        id: mode
+        env:
+          QD_REF: ${{ github.ref }}
+          QD_REF_NAME: ${{ github.ref_name }}
+        run: |
+          if [[ "$QD_REF" == refs/tags/v* ]]; then
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+            echo "tag=$QD_REF_NAME" >> "$GITHUB_OUTPUT"
+            echo "Release $QD_REF_NAME: the installers go to its draft release."
+          else
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            echo "Dry run on $QD_REF: everything is built and checked, nothing is uploaded."
+          fi
+
+      - name: The tag is the version of package.json, tauri.conf.json and Cargo.toml
+        if: steps.mode.outputs.publish == 'true'
+        env:
+          QD_TAG: ${{ steps.mode.outputs.tag }}
+        run: node scripts/check-version.mjs "$QD_TAG"
+
+      - name: Create the draft release (or reuse this tag's draft)
+        if: steps.mode.outputs.publish == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          QD_TAG: ${{ steps.mode.outputs.tag }}
+        run: |
+          if gh release view "$QD_TAG" >/dev/null 2>&1; then
+            draft="$(gh release view "$QD_TAG" --json isDraft --jq .isDraft)"
+            if [ "$draft" != "true" ]; then
+              echo "::error title=Release::$QD_TAG is already published; tag a new version instead"
+              exit 1
+            fi
+            echo "Reusing the draft release $QD_TAG."
+          else
+            gh release create "$QD_TAG" --draft --verify-tag --title "Quran ${QD_TAG#v}" \
+              --notes-file .github/release-notes.md
+          fi
+
+  build:
+    name: build (${{ matrix.name }})
+    needs: draft
+    environment: release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: windows
+            os: windows-latest
+            args: ''
+            kinds: nsis
+            budgets: nsis,installed
+            universal: 'false'
+          - name: macos-universal
+            os: macos-latest
+            args: --target universal-apple-darwin
+            kinds: dmg
+            budgets: dmg,installed
+            universal: 'true'
+          - name: linux
+            os: ubuntu-22.04
+            args: ''
+            kinds: deb,appimage
+            budgets: deb,appimage,installed
+            universal: 'false'
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 150
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup
+        uses: ./.github/actions/setup
+        with:
+          fonts: required
+
+      - name: Rust targets of the universal macOS binary
+        if: matrix.universal == 'true'
+        run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
+
+      - name: core.db (qul from the private store; > 1 MiB, meta.source = qul, verify-core)
+        uses: ./.github/actions/core
+        with:
+          source: qul
+          qul-sources-url: ${{ secrets.QUL_SOURCES_URL }}
+          qul-sources-token: ${{ secrets.QUL_SOURCES_TOKEN }}
+
+      - name: macOS signing (Developer ID and notarisation when configured, else ad hoc)
+        if: runner.os == 'macOS'
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          # tauri-bundler reads these from the environment; an empty APPLE_CERTIFICATE would make it fail, so a
+          # variable is exported only when its secret is set.
+          if [ -n "$APPLE_CERTIFICATE" ] && [ -n "$APPLE_SIGNING_IDENTITY" ]; then
+            for name in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_SIGNING_IDENTITY APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID; do
+              value="${!name}"
+              if [ -n "$value" ]; then
+                { echo "$name<<QD_EOF"; echo "$value"; echo "QD_EOF"; } >> "$GITHUB_ENV"
+              fi
+            done
+            echo "macOS signing: Developer ID (notarised when APPLE_ID, APPLE_PASSWORD and APPLE_TEAM_ID are set)"
+          else
+            echo "APPLE_SIGNING_IDENTITY=-" >> "$GITHUB_ENV"
+            echo "macOS signing: ad hoc with the hardened runtime (no Developer ID configured; docs/deviations/WP13b.md)"
+          fi
+
+      - name: Build the installers (tauri-action; build only, it uploads nothing)
+        id: tauri
+        uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f # v1.0.0
+        env:
+          QD_REQUIRE_CORE: '1'
+        with:
+          tauriScript: pnpm tauri
+          args: ${{ matrix.args }}
+          uploadWorkflowArtifacts: false
+
+      - name: The bundled core.db is still the qul build
+        run: node .github/actions/core/assert-core.mjs --db src-tauri/resources/core.db --source qul
+
+      - name: Installer contents (scripts/check-bundles.mjs --core qul)
+        env:
+          QD_KINDS: ${{ matrix.kinds }}
+          QD_UNIVERSAL: ${{ matrix.universal }}
+          QD_ARTIFACTS: ${{ steps.tauri.outputs.artifactPaths }}
+        run: |
+          echo "tauri-action built: $QD_ARTIFACTS"
+          set -- --core qul --require "$QD_KINDS" --manifest "$RUNNER_TEMP/bundle-check.json"
+          if [ "$QD_UNIVERSAL" = "true" ]; then set -- "$@" --universal; fi
+          node scripts/check-bundles.mjs "$@"
+
+      - name: §13.6 budgets (scripts/size-budget.mjs)
+        env:
+          QD_BUDGETS: ${{ matrix.budgets }}
+        run: node scripts/size-budget.mjs --require "$QD_BUDGETS"
+
+      - name: The installers check-bundles verified
+        id: files
+        run: |
+          {
+            echo 'files<<QD_EOF'
+            node -e '
+              const m = JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8"))
+              for (const i of m.installers) if (i.ok) console.log(i.file)
+            ' "$RUNNER_TEMP/bundle-check.json"
+            echo 'QD_EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Upload to the draft release (check-artifacts --release first)
+        if: needs.draft.outputs.publish == 'true'
+        uses: ./.github/actions/release-upload
+        with:
+          tag: ${{ needs.draft.outputs.tag }}
+          manifest: ${{ runner.temp }}/bundle-check.json
+          files: ${{ steps.files.outputs.files }}
+          token: ${{ github.token }}
+
+      - name: Scrub build outputs
+        if: always()
+        uses: ./.github/actions/scrub
+
+  result:
+    name: Release result
+    if: always()
+    needs: [draft, build]
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    steps:
+      - name: Every job passed
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+          QD_PUBLISH: ${{ needs.draft.outputs.publish }}
+          QD_TAG: ${{ needs.draft.outputs.tag }}
+          QD_SERVER: ${{ github.server_url }}
+          QD_REPO: ${{ github.repository }}
+        run: |
+          node -e '
+            const needs = JSON.parse(process.env.NEEDS)
+            let ok = true
+            for (const [job, { result }] of Object.entries(needs)) {
+              console.log(`${job.padEnd(6)} ${result}`)
+              if (result !== "success") ok = false
+            }
+            process.exit(ok ? 0 : 1)
+          '
+          if [ "$QD_PUBLISH" = "true" ]; then
+            {
+              echo "### Draft release $QD_TAG"
+              echo
+              echo "$QD_SERVER/$QD_REPO/releases/tag/$QD_TAG is ready for review."
+              echo "Publish it only after every item of docs/RELEASE_CHECKLIST.md is done."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi

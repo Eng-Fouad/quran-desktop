@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+  <!-- EmptyState 8-point star (ARCHITECTURE §9.5). Decorative: use it as a CSS mask over the frame-gold token. Geometric source (kept from the first identity; not part of the github.com/quran mark), copied to src/assets by assets/brand/tools/build.mjs. -->
+  <g fill="none" stroke="#b08d57" stroke-width="2" stroke-linejoin="miter">
+    <path d="M24 2.79L45.21 24L24 45.21L2.79 24Z"/>
+    <path d="M9 9H39V39H9Z"/>
+  </g>
+  <g fill="#b08d57">
+    <path d="M24 19.76L28.24 24L24 28.24L19.76 24Z"/>
+    <path d="M21 21H27V27H21Z"/>
+  </g>
+</svg>

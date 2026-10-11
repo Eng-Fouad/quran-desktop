@@ -1,0 +1,458 @@
+{
+"surah-1": {
+"text": "ﱅ ",
+"codepoints": "U+FC45 U+0020"
+},
+"surah-2": {
+"text": "ﱆ ",
+"codepoints": "U+FC46 U+0020"
+},
+"surah-3": {
+"text": "ﱇ ",
+"codepoints": "U+FC47 U+0020"
+},
+"surah-4": {
+"text": "ﱊ ",
+"codepoints": "U+FC4A U+0020"
+},
+"surah-5": {
+"text": "ﱋ ",
+"codepoints": "U+FC4B U+0020"
+},
+"surah-6": {
+"text": "ﱎ ",
+"codepoints": "U+FC4E U+0020"
+},
+"surah-7": {
+"text": "ﱏ ",
+"codepoints": "U+FC4F U+0020"
+},
+"surah-8": {
+"text": "ﱑ ",
+"codepoints": "U+FC51 U+0020"
+},
+"surah-9": {
+"text": "ﱒ ",
+"codepoints": "U+FC52 U+0020"
+},
+"surah-10": {
+"text": "ﱓ ",
+"codepoints": "U+FC53 U+0020"
+},
+"surah-11": {
+"text": "ﱕ ",
+"codepoints": "U+FC55 U+0020"
+},
+"surah-12": {
+"text": "ﱖ ",
+"codepoints": "U+FC56 U+0020"
+},
+"surah-13": {
+"text": "ﱘ ",
+"codepoints": "U+FC58 U+0020"
+},
+"surah-14": {
+"text": "ﱚ ",
+"codepoints": "U+FC5A U+0020"
+},
+"surah-15": {
+"text": "ﱛ ",
+"codepoints": "U+FC5B U+0020"
+},
+"surah-16": {
+"text": "ﱜ ",
+"codepoints": "U+FC5C U+0020"
+},
+"surah-17": {
+"text": "ﱝ ",
+"codepoints": "U+FC5D U+0020"
+},
+"surah-18": {
+"text": "ﱞ ",
+"codepoints": "U+FC5E U+0020"
+},
+"surah-19": {
+"text": "ﱡ ",
+"codepoints": "U+FC61 U+0020"
+},
+"surah-20": {
+"text": "ﱢ ",
+"codepoints": "U+FC62 U+0020"
+},
+"surah-21": {
+"text": "ﱤ ",
+"codepoints": "U+FC64 U+0020"
+},
+"surah-22": {
+"text": "ﭑ ",
+"codepoints": "U+FB51 U+0020"
+},
+"surah-23": {
+"text": "ﭒ ",
+"codepoints": "U+FB52 U+0020"
+},
+"surah-24": {
+"text": "ﭔ ",
+"codepoints": "U+FB54 U+0020"
+},
+"surah-25": {
+"text": "ﭕ ",
+"codepoints": "U+FB55 U+0020"
+},
+"surah-26": {
+"text": "ﭗ ",
+"codepoints": "U+FB57 U+0020"
+},
+"surah-27": {
+"text": "ﭘ ",
+"codepoints": "U+FB58 U+0020"
+},
+"surah-28": {
+"text": "ﭚ ",
+"codepoints": "U+FB5A U+0020"
+},
+"surah-29": {
+"text": "ﭛ ",
+"codepoints": "U+FB5B U+0020"
+},
+"surah-30": {
+"text": "ﭝ ",
+"codepoints": "U+FB5D U+0020"
+},
+"surah-31": {
+"text": "ﭞ ",
+"codepoints": "U+FB5E U+0020"
+},
+"surah-32": {
+"text": "ﭠ ",
+"codepoints": "U+FB60 U+0020"
+},
+"surah-33": {
+"text": "ﭡ ",
+"codepoints": "U+FB61 U+0020"
+},
+"surah-34": {
+"text": "ﭣ ",
+"codepoints": "U+FB63 U+0020"
+},
+"surah-35": {
+"text": "ﭤ ",
+"codepoints": "U+FB64 U+0020"
+},
+"surah-36": {
+"text": "ﭦ ",
+"codepoints": "U+FB66 U+0020"
+},
+"surah-37": {
+"text": "ﭧ ",
+"codepoints": "U+FB67 U+0020"
+},
+"surah-38": {
+"text": "ﭩ ",
+"codepoints": "U+FB69 U+0020"
+},
+"surah-39": {
+"text": "ﭪ ",
+"codepoints": "U+FB6A U+0020"
+},
+"surah-40": {
+"text": "ﭬ ",
+"codepoints": "U+FB6C U+0020"
+},
+"surah-41": {
+"text": "ﭭ ",
+"codepoints": "U+FB6D U+0020"
+},
+"surah-42": {
+"text": "ﭯ ",
+"codepoints": "U+FB6F U+0020"
+},
+"surah-43": {
+"text": "ﭰ ",
+"codepoints": "U+FB70 U+0020"
+},
+"surah-44": {
+"text": "ﭲ ",
+"codepoints": "U+FB72 U+0020"
+},
+"surah-45": {
+"text": "ﭳ ",
+"codepoints": "U+FB73 U+0020"
+},
+"surah-46": {
+"text": "ﭵ ",
+"codepoints": "U+FB75 U+0020"
+},
+"surah-47": {
+"text": "ﭶ ",
+"codepoints": "U+FB76 U+0020"
+},
+"surah-48": {
+"text": "ﭸ ",
+"codepoints": "U+FB78 U+0020"
+},
+"surah-49": {
+"text": "ﭹ ",
+"codepoints": "U+FB79 U+0020"
+},
+"surah-50": {
+"text": "ﭻ ",
+"codepoints": "U+FB7B U+0020"
+},
+"surah-51": {
+"text": "ﭼ ",
+"codepoints": "U+FB7C U+0020"
+},
+"surah-52": {
+"text": "ﭾ ",
+"codepoints": "U+FB7E U+0020"
+},
+"surah-53": {
+"text": "ﭿ ",
+"codepoints": "U+FB7F U+0020"
+},
+"surah-54": {
+"text": "ﮁ ",
+"codepoints": "U+FB81 U+0020"
+},
+"surah-55": {
+"text": "ﮂ ",
+"codepoints": "U+FB82 U+0020"
+},
+"surah-56": {
+"text": "ﮄ ",
+"codepoints": "U+FB84 U+0020"
+},
+"surah-57": {
+"text": "ﮅ ",
+"codepoints": "U+FB85 U+0020"
+},
+"surah-58": {
+"text": "ﮇ ",
+"codepoints": "U+FB87 U+0020"
+},
+"surah-59": {
+"text": "ﮈ ",
+"codepoints": "U+FB88 U+0020"
+},
+"surah-60": {
+"text": "ﮊ ",
+"codepoints": "U+FB8A U+0020"
+},
+"surah-61": {
+"text": "ﮋ ",
+"codepoints": "U+FB8B U+0020"
+},
+"surah-62": {
+"text": "ﮍ ",
+"codepoints": "U+FB8D U+0020"
+},
+"surah-63": {
+"text": "ﮎ ",
+"codepoints": "U+FB8E U+0020"
+},
+"surah-64": {
+"text": "ﮐ ",
+"codepoints": "U+FB90 U+0020"
+},
+"surah-65": {
+"text": "ﮑ ",
+"codepoints": "U+FB91 U+0020"
+},
+"surah-66": {
+"text": "ﮓ ",
+"codepoints": "U+FB93 U+0020"
+},
+"surah-67": {
+"text": "ﮔ ",
+"codepoints": "U+FB94 U+0020"
+},
+"surah-68": {
+"text": "ﮖ ",
+"codepoints": "U+FB96 U+0020"
+},
+"surah-69": {
+"text": "ﮗ ",
+"codepoints": "U+FB97 U+0020"
+},
+"surah-70": {
+"text": "ﮙ ",
+"codepoints": "U+FB99 U+0020"
+},
+"surah-71": {
+"text": "ﮚ ",
+"codepoints": "U+FB9A U+0020"
+},
+"surah-72": {
+"text": "ﮜ ",
+"codepoints": "U+FB9C U+0020"
+},
+"surah-73": {
+"text": "ﮝ ",
+"codepoints": "U+FB9D U+0020"
+},
+"surah-74": {
+"text": "ﮟ ",
+"codepoints": "U+FB9F U+0020"
+},
+"surah-75": {
+"text": "ﮠ ",
+"codepoints": "U+FBA0 U+0020"
+},
+"surah-76": {
+"text": "ﮢ ",
+"codepoints": "U+FBA2 U+0020"
+},
+"surah-77": {
+"text": "ﮣ ",
+"codepoints": "U+FBA3 U+0020"
+},
+"surah-78": {
+"text": "ﮥ ",
+"codepoints": "U+FBA5 U+0020"
+},
+"surah-79": {
+"text": "ﮦ ",
+"codepoints": "U+FBA6 U+0020"
+},
+"surah-80": {
+"text": "ﮨ ",
+"codepoints": "U+FBA8 U+0020"
+},
+"surah-81": {
+"text": "ﮩ ",
+"codepoints": "U+FBA9 U+0020"
+},
+"surah-82": {
+"text": "ﮫ ",
+"codepoints": "U+FBAB U+0020"
+},
+"surah-83": {
+"text": "ﮬ ",
+"codepoints": "U+FBAC U+0020"
+},
+"surah-84": {
+"text": "ﮮ ",
+"codepoints": "U+FBAE U+0020"
+},
+"surah-85": {
+"text": "ﮯ ",
+"codepoints": "U+FBAF U+0020"
+},
+"surah-86": {
+"text": "ﮱ ",
+"codepoints": "U+FBB1 U+0020"
+},
+"surah-87": {
+"text": "﮲ ",
+"codepoints": "U+FBB2 U+0020"
+},
+"surah-88": {
+"text": "﮴ ",
+"codepoints": "U+FBB4 U+0020"
+},
+"surah-89": {
+"text": "﮵ ",
+"codepoints": "U+FBB5 U+0020"
+},
+"surah-90": {
+"text": "﮷ ",
+"codepoints": "U+FBB7 U+0020"
+},
+"surah-91": {
+"text": "﮸ ",
+"codepoints": "U+FBB8 U+0020"
+},
+"surah-92": {
+"text": "﮺ ",
+"codepoints": "U+FBBA U+0020"
+},
+"surah-93": {
+"text": "﮻ ",
+"codepoints": "U+FBBB U+0020"
+},
+"surah-94": {
+"text": "﮽ ",
+"codepoints": "U+FBBD U+0020"
+},
+"surah-95": {
+"text": "﮾ ",
+"codepoints": "U+FBBE U+0020"
+},
+"surah-96": {
+"text": "﯀ ",
+"codepoints": "U+FBC0 U+0020"
+},
+"surah-97": {
+"text": "﯁ ",
+"codepoints": "U+FBC1 U+0020"
+},
+"surah-98": {
+"text": "ﯓ ",
+"codepoints": "U+FBD3 U+0020"
+},
+"surah-99": {
+"text": "ﯔ ",
+"codepoints": "U+FBD4 U+0020"
+},
+"surah-100": {
+"text": "ﯖ ",
+"codepoints": "U+FBD6 U+0020"
+},
+"surah-101": {
+"text": "ﯗ ",
+"codepoints": "U+FBD7 U+0020"
+},
+"surah-102": {
+"text": "ﯙ ",
+"codepoints": "U+FBD9 U+0020"
+},
+"surah-103": {
+"text": "ﯚ ",
+"codepoints": "U+FBDA U+0020"
+},
+"surah-104": {
+"text": "ﯜ ",
+"codepoints": "U+FBDC U+0020"
+},
+"surah-105": {
+"text": "ﯝ ",
+"codepoints": "U+FBDD U+0020"
+},
+"surah-106": {
+"text": "ﯟ ",
+"codepoints": "U+FBDF U+0020"
+},
+"surah-107": {
+"text": "ﯠ ",
+"codepoints": "U+FBE0 U+0020"
+},
+"surah-108": {
+"text": "ﯢ ",
+"codepoints": "U+FBE2 U+0020"
+},
+"surah-109": {
+"text": "ﯣ ",
+"codepoints": "U+FBE3 U+0020"
+},
+"surah-110": {
+"text": "ﯥ ",
+"codepoints": "U+FBE5 U+0020"
+},
+"surah-111": {
+"text": "ﯦ ",
+"codepoints": "U+FBE6 U+0020"
+},
+"surah-112": {
+"text": "ﯨ ",
+"codepoints": "U+FBE8 U+0020"
+},
+"surah-113": {
+"text": "ﯩ ",
+"codepoints": "U+FBE9 U+0020"
+},
+"surah-114": {
+"text": "ﯫ",
+"codepoints": "U+FBEB"
+}
+}

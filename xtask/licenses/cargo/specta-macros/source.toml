@@ -1,0 +1,7 @@
+# specta-macros ships no licence text of its own; these reviewed files stand in for it (xtask/licenses/README.md).
+versions = ["2.0.0-rc.25"]
+
+[[file]]
+name = "LICENSE"
+kind = "licence"
+source = "https://github.com/specta-rs/specta/blob/e7fd23f586b9bd58de39002dabe49b1f978bf971/LICENSE"

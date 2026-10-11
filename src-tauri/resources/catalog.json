@@ -1,0 +1,1286 @@
+{
+  "$schema": "./catalog.schema.json",
+  "catalogVersion": 1,
+  "generatedAt": "2026-10-10",
+  "packs": [
+    {
+      "id": "mushaf.v2",
+      "kind": "mushaf_fonts",
+      "title": { "en": "Madani Mushaf (1421 AH print)", "ar": "مصحف المدينة (طبعة ١٤٢١ هـ)" },
+      "description": {
+        "en": "The King Fahd Complex page fonts (QCF V2) of the 1421 AH print. Pages download as you read; you can also download all 604.",
+        "ar": "خطوط صفحات مجمع الملك فهد (QCF V2) لطبعة ١٤٢١ هـ. تُنزَّل الصفحات أثناء القراءة، ويمكن تنزيل الصفحات الـ٦٠٤ كلها."
+      },
+      "version": "2026.10",
+      "installMode": "on_demand",
+      "requires": ["decor"],
+      "sizeBytes": 97748500,
+      "itemCount": 604,
+      "recommended": true,
+      "attribution": {
+        "text": {
+          "en": "Quran fonts provided by Quran Foundation · © King Fahd Glorious Qur'an Printing Complex",
+          "ar": "خطوط المصحف مقدمة من Quran Foundation · © مجمع الملك فهد لطباعة المصحف الشريف"
+        },
+        "url": "https://quran.foundation",
+        "licence": "© KFGQPC; used under the Quran Foundation terms (cached in the app, never redistributed)"
+      },
+      "source": {
+        "adapter": "qcf_font_pages",
+        "variant": "v2",
+        "urlTemplates": [
+          "https://verses.quran.foundation/fonts/quran/hafs/v2/woff2/p{page}.woff2",
+          "https://static-cdn.tarteel.ai/qul/fonts/quran_fonts/v2/woff2/p{page}.woff2"
+        ]
+      }
+    },
+    {
+      "id": "mushaf.v1",
+      "kind": "mushaf_fonts",
+      "title": { "en": "Madani Mushaf (1405 AH print)", "ar": "مصحف المدينة (طبعة ١٤٠٥ هـ)" },
+      "description": {
+        "en": "The page fonts (QCF V1) of the first King Fahd Complex print, with its own page breaks. Pages download as you read.",
+        "ar": "خطوط صفحات (QCF V1) الطبعة الأولى لمجمع الملك فهد، بتقسيم صفحاتها الخاص. تُنزَّل الصفحات أثناء القراءة."
+      },
+      "version": "2026.10",
+      "installMode": "on_demand",
+      "requires": ["decor"],
+      "sizeBytes": 47952076,
+      "itemCount": 604,
+      "attribution": {
+        "text": {
+          "en": "Quran fonts provided by Quran Foundation · © King Fahd Glorious Qur'an Printing Complex",
+          "ar": "خطوط المصحف مقدمة من Quran Foundation · © مجمع الملك فهد لطباعة المصحف الشريف"
+        },
+        "url": "https://quran.foundation",
+        "licence": "© KFGQPC; used under the Quran Foundation terms (cached in the app, never redistributed)"
+      },
+      "source": {
+        "adapter": "qcf_font_pages",
+        "variant": "v1",
+        "urlTemplates": [
+          "https://verses.quran.foundation/fonts/quran/hafs/v1/woff2/p{page}.woff2",
+          "https://static-cdn.tarteel.ai/qul/fonts/quran_fonts/v1/woff2/p{page}.woff2"
+        ]
+      }
+    },
+    {
+      "id": "mushaf.v4",
+      "kind": "mushaf_fonts",
+      "title": { "en": "Tajweed Mushaf", "ar": "مصحف التجويد" },
+      "description": {
+        "en": "Colour-coded tajweed page fonts (QCF V4) on the pages of the 1421 AH print. Pages download as you read.",
+        "ar": "خطوط صفحات ملوّنة بأحكام التجويد (QCF V4) على صفحات طبعة ١٤٢١ هـ. تُنزَّل الصفحات أثناء القراءة."
+      },
+      "version": "2026.10",
+      "installMode": "on_demand",
+      "requires": ["decor"],
+      "sizeBytes": 50877636,
+      "itemCount": 604,
+      "attribution": {
+        "text": {
+          "en": "Quran fonts provided by Quran Foundation · © King Fahd Glorious Qur'an Printing Complex",
+          "ar": "خطوط المصحف مقدمة من Quran Foundation · © مجمع الملك فهد لطباعة المصحف الشريف"
+        },
+        "url": "https://quran.foundation",
+        "licence": "© KFGQPC; used under the Quran Foundation terms (cached in the app, never redistributed)"
+      },
+      "source": {
+        "adapter": "qcf_font_pages",
+        "variant": "v4",
+        "urlTemplates": [
+          "https://verses.quran.foundation/fonts/quran/hafs/v4/colrv1/woff2/p{page}.woff2",
+          "https://static-cdn.tarteel.ai/qul/fonts/quran_fonts/v4-tajweed/woff2/p{page}.woff2"
+        ]
+      }
+    },
+    {
+      "id": "decor",
+      "kind": "decor",
+      "title": { "en": "Ornate surah headers", "ar": "زخارف عناوين السور" },
+      "description": {
+        "en": "Surah header, ornament and surah-name fonts for every Mushaf style, Hafs included.",
+        "ar": "خطوط عناوين السور والزخارف وأسماء السور لكل أنماط المصحف، ومنها خط حفص."
+      },
+      "version": "2026.10",
+      "installMode": "whole",
+      "sizeBytes": 332556,
+      "itemCount": 3,
+      "recommended": true,
+      "attribution": {
+        "text": {
+          "en": "Surah header and ornament fonts from QUL (Tarteel) and Quran Foundation · © King Fahd Glorious Qur'an Printing Complex",
+          "ar": "خطوط عناوين السور والزخارف من QUL (ترتيل) و Quran Foundation · © مجمع الملك فهد لطباعة المصحف الشريف"
+        },
+        "url": "https://qul.tarteel.ai",
+        "licence": "© KFGQPC; QUL and Quran Foundation terms (cached in the app, never redistributed)"
+      },
+      "source": {
+        "adapter": "static_files",
+        "files": [
+          {
+            "path": "qcf-surah-header.woff2",
+            "urls": [
+              "https://static-cdn.tarteel.ai/qul/fonts/surah-names/surah-header/QCF_SurahHeader_COLOR-Regular.woff2"
+            ],
+            "bytes": 118552,
+            "sha256": "2c487e8a5432c8e4d3e8c7895af5b40ab28e01038ff91aac6e792a80816e0791"
+          },
+          {
+            "path": "quran-common.ttf",
+            "urls": ["https://static-cdn.tarteel.ai/qul/fonts/common/quran-common.ttf"],
+            "bytes": 125444,
+            "sha256": "63675d54764c3e0acd3875e191dc6f0af1339ddbd53a1df7fcebbaabebc918fa"
+          },
+          {
+            "path": "sura-names.woff2",
+            "urls": [
+              "https://verses.quran.foundation/fonts/quran/surah-names/v1/sura_names.woff2",
+              "https://static.qurancdn.com/fonts/quran/surah-names/v1/sura_names.woff2",
+              "https://quran.com/fonts/quran/surah-names/v1/sura_names.woff2"
+            ],
+            "bytes": 88560,
+            "sha256": "0d8576e3f343a2a01f56cf12af27acad16e01ab023251d6fd368f5165843878b"
+          }
+        ]
+      }
+    },
+    {
+      "id": "decor.nastaliq",
+      "kind": "decor",
+      "title": { "en": "Urdu Nastaliq font", "ar": "خط النستعليق للأردية" },
+      "description": {
+        "en": "Noto Nastaliq Urdu, used for Urdu translations once installed.",
+        "ar": "خط نوتو نستعليق الأردي، يُستخدم للترجمات الأردية بعد تثبيته."
+      },
+      "language": "ur",
+      "version": "5.3.0",
+      "installMode": "whole",
+      "sizeBytes": 159368,
+      "itemCount": 1,
+      "attribution": {
+        "text": {
+          "en": "Noto Nastaliq Urdu by the Noto Project Authors (via Fontsource)",
+          "ar": "خط نوتو نستعليق الأردي من مشروع نوتو (عبر Fontsource)"
+        },
+        "url": "https://github.com/notofonts/nastaliq",
+        "licence": "SIL Open Font License 1.1"
+      },
+      "source": {
+        "adapter": "static_files",
+        "files": [
+          {
+            "path": "noto-nastaliq-urdu.woff2",
+            "urls": [
+              "https://cdn.jsdelivr.net/npm/@fontsource/noto-nastaliq-urdu@5.3.0/files/noto-nastaliq-urdu-arabic-400-normal.woff2",
+              "https://unpkg.com/@fontsource/noto-nastaliq-urdu@5.3.0/files/noto-nastaliq-urdu-arabic-400-normal.woff2"
+            ],
+            "bytes": 159368,
+            "sha256": "fecd45d69436d911d79ff10fc39ca7f7022cbe05214bc07f931820b7c7a7d15c"
+          }
+        ]
+      }
+    },
+    {
+      "id": "tr.en.saheeh",
+      "kind": "translation",
+      "title": { "en": "Saheeh International", "ar": "صحيح إنترناشونال" },
+      "description": { "en": "Issued by Noor International Center.", "ar": "صادرة عن مركز نور إنترناشونال." },
+      "language": "en",
+      "direction": "ltr",
+      "version": "1.1.2",
+      "installMode": "whole",
+      "sizeBytes": 518866,
+      "itemCount": 1,
+      "recommended": true,
+      "attribution": {
+        "text": { "en": "QuranEnc.com — The Noble Qur'an Encyclopedia", "ar": "موسوعة القرآن الكريم — QuranEnc.com" },
+        "url": "https://quranenc.com/en/browse/english_saheeh",
+        "licence": "QuranEnc terms: republished unmodified, credited with its version, kept up to date"
+      },
+      "source": {
+        "adapter": "quranenc_sqlite",
+        "key": "english_saheeh",
+        "version": "1.1.2",
+        "versionSource": "list",
+        "tokenizer": "porter_unicode61",
+        "contentKind": "translation"
+      }
+    },
+    {
+      "id": "tr.en.rwwad",
+      "kind": "translation",
+      "title": { "en": "Rowwad Translation Center", "ar": "مركز رواد الترجمة" },
+      "description": {
+        "en": "Translated by the team of the Rowwad Translation Center, in cooperation with the Rabwah Dawah Association, the Islamic Content Service Association in Languages, and the IslamHouse.com website.",
+        "ar": "ترجمها فريق مركز رواد الترجمة بالتعاون مع جمعية الدعوة بالربوة وجمعية خدمة المحتوى الإسلامي باللغات وموقع IslamHouse.com."
+      },
+      "language": "en",
+      "direction": "ltr",
+      "version": "1.0.19",
+      "installMode": "whole",
+      "sizeBytes": 532287,
+      "itemCount": 1,
+      "attribution": {
+        "text": { "en": "QuranEnc.com — The Noble Qur'an Encyclopedia", "ar": "موسوعة القرآن الكريم — QuranEnc.com" },
+        "url": "https://quranenc.com/en/browse/english_rwwad",
+        "licence": "QuranEnc terms: republished unmodified, credited with its version, kept up to date"
+      },
+      "source": {
+        "adapter": "quranenc_sqlite",
+        "key": "english_rwwad",
+        "version": "1.0.19",
+        "versionSource": "list",
+        "tokenizer": "porter_unicode61",
+        "contentKind": "translation"
+      }
+    },
+    {
+      "id": "tr.en.hilali_khan",
+      "kind": "translation",
+      "title": { "en": "Hilali and Khan", "ar": "الهلالي ومحسن خان" },
+      "description": {
+        "en": "Translated by Taqi-ud-Din al-Hilali and Muhammad Muhsin Khan.",
+        "ar": "ترجمها تقي الدين الهلالي ومحمد محسن خان."
+      },
+      "language": "en",
+      "direction": "ltr",
+      "version": "1.1.2",
+      "installMode": "whole",
+      "sizeBytes": 686078,
+      "itemCount": 1,
+      "attribution": {
+        "text": { "en": "QuranEnc.com — The Noble Qur'an Encyclopedia", "ar": "موسوعة القرآن الكريم — QuranEnc.com" },
+        "url": "https://quranenc.com/en/browse/english_hilali_khan",
+        "licence": "QuranEnc terms: republished unmodified, credited with its version, kept up to date"
+      },
+      "source": {
+        "adapter": "quranenc_sqlite",
+        "key": "english_hilali_khan",
+        "version": "1.1.2",
+        "versionSource": "list",
+        "tokenizer": "porter_unicode61",
+        "contentKind": "translation"
+      }
+    },
+    {
+      "id": "tr.ur.junagarhi",
+      "kind": "translation",
+      "title": { "en": "Muhammad Junagarhi", "ar": "محمد جوناكري" },
+      "description": {
+        "en": "Translated by Muhammad Ibrahim Junagarhi. Developed under the supervision of the Rowwad Translation Center; the original translation is available for comment, evaluation and continuous development.",
+        "ar": "ترجمها محمد إبراهيم جوناكري. تم تطويرها بإشراف مركز رواد الترجمة، ويتاح الاطلاع على الترجمة الأصلية لغرض إبداء الرأي والتقييم والتطوير المستمر."
+      },
+      "language": "ur",
+      "direction": "rtl",
+      "version": "1.1.3",
+      "installMode": "whole",
+      "sizeBytes": 2109171,
+      "itemCount": 1,
+      "attribution": {
+        "text": { "en": "QuranEnc.com — The Noble Qur'an Encyclopedia", "ar": "موسوعة القرآن الكريم — QuranEnc.com" },
+        "url": "https://quranenc.com/en/browse/urdu_junagarhi",
+        "licence": "QuranEnc terms: republished unmodified, credited with its version, kept up to date"
+      },
+      "source": {
+        "adapter": "quranenc_sqlite",
+        "key": "urdu_junagarhi",
+        "version": "1.1.3",
+        "versionSource": "list",
+        "tokenizer": "arabic_normalized",
+        "contentKind": "translation"
+      }
+    },
+    {
+      "id": "tr.id.affairs",
+      "kind": "translation",
+      "title": { "en": "Ministry of Religious Affairs", "ar": "وزارة الشؤون الدينية" },
+      "description": {
+        "en": "Issued by the Indonesian Ministry of Religious Affairs. Developed under the supervision of the Rowwad Translation Center; the original translation is available for comment, evaluation and continuous development.",
+        "ar": "صادرة عن وزارة الشؤون الدينية الإندونيسية. تم تطويرها بإشراف مركز رواد الترجمة، ويتاح الاطلاع على الترجمة الأصلية لغرض إبداء الرأي والتقييم والتطوير المستمر."
+      },
+      "language": "id",
+      "direction": "ltr",
+      "version": "1.0.1",
+      "installMode": "whole",
+      "sizeBytes": 531266,
+      "itemCount": 1,
+      "attribution": {
+        "text": { "en": "QuranEnc.com — The Noble Qur'an Encyclopedia", "ar": "موسوعة القرآن الكريم — QuranEnc.com" },
+        "url": "https://quranenc.com/en/browse/indonesian_affairs",
+        "licence": "QuranEnc terms: republished unmodified, credited with its version, kept up to date"
+      },
+      "source": {
+        "adapter": "quranenc_sqlite",
+        "key": "indonesian_affairs",
+        "version": "1.0.1",
+        "versionSource": "list",
+        "tokenizer": "unicode61_remove_diacritics",
+        "contentKind": "translation"
+      }
+    },
+    {
+      "id": "tr.tr.rwwad",
+      "kind": "translation",
+      "title": { "en": "Rowwad Translation Center", "ar": "مركز رواد الترجمة" },
+      "description": {
+        "en": "Translated by the team of the Rowwad Translation Center, in cooperation with the Rabwah Dawah Association, the Islamic Content Service Association in Languages, and the IslamHouse.com website.",
+        "ar": "ترجمها فريق مركز رواد الترجمة بالتعاون مع جمعية الدعوة بالربوة وجمعية خدمة المحتوى الإسلامي باللغات وموقع IslamHouse.com."
+      },
+      "language": "tr",
+      "direction": "ltr",
+      "version": "1.0.4",
+      "installMode": "whole",
+      "sizeBytes": 447724,
+      "itemCount": 1,
+      "attribution": {
+        "text": { "en": "QuranEnc.com — The Noble Qur'an Encyclopedia", "ar": "موسوعة القرآن الكريم — QuranEnc.com" },
+        "url": "https://quranenc.com/en/browse/turkish_rwwad",
+        "licence": "QuranEnc terms: republished unmodified, credited with its version, kept up to date"
+      },
+      "source": {
+        "adapter": "quranenc_sqlite",
+        "key": "turkish_rwwad",
+        "version": "1.0.4",
+        "versionSource": "list",
+        "tokenizer": "unicode61_remove_diacritics",
+        "contentKind": "translation"
+      }
+    },
+    {
+      "id": "tr.fr.rashid",
+      "kind": "translation",
+      "title": { "en": "Rachid Maach", "ar": "رشيد معاش" },
+      "description": { "en": "Translated by Rachid Maach.", "ar": "ترجمها رشيد معاش." },
+      "language": "fr",
+      "direction": "ltr",
+      "version": "1.0.3",
+      "installMode": "whole",
+      "sizeBytes": 570816,
+      "itemCount": 1,
+      "attribution": {
+        "text": { "en": "QuranEnc.com — The Noble Qur'an Encyclopedia", "ar": "موسوعة القرآن الكريم — QuranEnc.com" },
+        "url": "https://quranenc.com/en/browse/french_rashid",
+        "licence": "QuranEnc terms: republished unmodified, credited with its version, kept up to date"
+      },
+      "source": {
+        "adapter": "quranenc_sqlite",
+        "key": "french_rashid",
+        "version": "1.0.3",
+        "versionSource": "list",
+        "tokenizer": "unicode61_remove_diacritics",
+        "contentKind": "translation"
+      }
+    },
+    {
+      "id": "tr.es.garcia",
+      "kind": "translation",
+      "title": { "en": "Isa Garcia", "ar": "عيسى غارسيا" },
+      "description": {
+        "en": "Latin American edition, translated by Muhammad Isa Garcia.",
+        "ar": "نسخة أمريكا اللاتينية، ترجمها محمد عيسى غارسيا."
+      },
+      "language": "es",
+      "direction": "ltr",
+      "version": "1.0.2",
+      "installMode": "whole",
+      "sizeBytes": 574149,
+      "itemCount": 1,
+      "attribution": {
+        "text": { "en": "QuranEnc.com — The Noble Qur'an Encyclopedia", "ar": "موسوعة القرآن الكريم — QuranEnc.com" },
+        "url": "https://quranenc.com/en/browse/spanish_garcia",
+        "licence": "QuranEnc terms: republished unmodified, credited with its version, kept up to date"
+      },
+      "source": {
+        "adapter": "quranenc_sqlite",
+        "key": "spanish_garcia",
+        "version": "1.0.2",
+        "versionSource": "list",
+        "tokenizer": "unicode61_remove_diacritics",
+        "contentKind": "translation"
+      }
+    },
+    {
+      "id": "tr.de.bubenheim",
+      "kind": "translation",
+      "title": { "en": "Bubenheim and Elyas", "ar": "بوبنهايم وإلياس" },
+      "description": {
+        "en": "Translated by 'Abdullah as-Samit (Frank Bubenheim) and Dr. Nadeem Elyas.",
+        "ar": "ترجمها عبد الله الصامت (فرانك بوبنهايم) والدكتور نديم إلياس."
+      },
+      "language": "de",
+      "direction": "ltr",
+      "version": "1.1.4",
+      "installMode": "whole",
+      "sizeBytes": 455982,
+      "itemCount": 1,
+      "attribution": {
+        "text": { "en": "QuranEnc.com — The Noble Qur'an Encyclopedia", "ar": "موسوعة القرآن الكريم — QuranEnc.com" },
+        "url": "https://quranenc.com/en/browse/german_bubenheim",
+        "licence": "QuranEnc terms: republished unmodified, credited with its version, kept up to date"
+      },
+      "source": {
+        "adapter": "quranenc_sqlite",
+        "key": "german_bubenheim",
+        "version": "1.1.4",
+        "versionSource": "list",
+        "tokenizer": "unicode61_remove_diacritics",
+        "contentKind": "translation"
+      }
+    },
+    {
+      "id": "tr.bn.zakaria",
+      "kind": "translation",
+      "title": { "en": "Abu Bakr Zakaria", "ar": "أبو بكر زكريا" },
+      "description": {
+        "en": "Translated by Dr. Abu Bakr Muhammad Zakaria.",
+        "ar": "ترجمها الدكتور أبو بكر محمد زكريا."
+      },
+      "language": "bn",
+      "direction": "ltr",
+      "version": "2025.03",
+      "installMode": "whole",
+      "sizeBytes": 4178560,
+      "itemCount": 1,
+      "attribution": {
+        "text": { "en": "QuranEnc.com — The Noble Qur'an Encyclopedia", "ar": "موسوعة القرآن الكريم — QuranEnc.com" },
+        "url": "https://quranenc.com/en/browse/bengali_zakaria",
+        "licence": "QuranEnc terms: republished unmodified, credited with its version, kept up to date"
+      },
+      "source": {
+        "adapter": "quranenc_sqlite",
+        "key": "bengali_zakaria",
+        "version": "2025.03",
+        "versionSource": "http_validators",
+        "tokenizer": "unicode61_remove_diacritics",
+        "contentKind": "translation"
+      }
+    },
+    {
+      "id": "tr.ru.rwwad",
+      "kind": "translation",
+      "title": { "en": "Rowwad Translation Center", "ar": "مركز رواد الترجمة" },
+      "description": {
+        "en": "Translated by the team of the Rowwad Translation Center, in cooperation with the Rabwah Dawah Association, the Islamic Content Service Association in Languages, and the IslamHouse.com website.",
+        "ar": "ترجمها فريق مركز رواد الترجمة بالتعاون مع جمعية الدعوة بالربوة وجمعية خدمة المحتوى الإسلامي باللغات وموقع IslamHouse.com."
+      },
+      "language": "ru",
+      "direction": "ltr",
+      "version": "2026.03",
+      "installMode": "whole",
+      "sizeBytes": 576373,
+      "itemCount": 1,
+      "attribution": {
+        "text": { "en": "QuranEnc.com — The Noble Qur'an Encyclopedia", "ar": "موسوعة القرآن الكريم — QuranEnc.com" },
+        "url": "https://quranenc.com/en/browse/russian_rwwad",
+        "licence": "QuranEnc terms: republished unmodified, credited with its version, kept up to date"
+      },
+      "source": {
+        "adapter": "quranenc_sqlite",
+        "key": "russian_rwwad",
+        "version": "2026.03",
+        "versionSource": "http_validators",
+        "tokenizer": "unicode61_remove_diacritics",
+        "contentKind": "translation"
+      }
+    },
+    {
+      "id": "tr.fa.ih",
+      "kind": "translation",
+      "title": { "en": "Rowwad Translation Center", "ar": "مركز رواد الترجمة" },
+      "description": {
+        "en": "Translated by the team of the Rowwad Translation Center, in cooperation with the Rabwah Dawah Association, the Islamic Content Service Association in Languages, and the IslamHouse.com website.",
+        "ar": "ترجمها فريق مركز رواد الترجمة بالتعاون مع جمعية الدعوة بالربوة وجمعية خدمة المحتوى الإسلامي باللغات وموقع IslamHouse.com."
+      },
+      "language": "fa",
+      "direction": "rtl",
+      "version": "1.1.3",
+      "installMode": "whole",
+      "sizeBytes": 634320,
+      "itemCount": 1,
+      "attribution": {
+        "text": { "en": "QuranEnc.com — The Noble Qur'an Encyclopedia", "ar": "موسوعة القرآن الكريم — QuranEnc.com" },
+        "url": "https://quranenc.com/en/browse/persian_ih",
+        "licence": "QuranEnc terms: republished unmodified, credited with its version, kept up to date"
+      },
+      "source": {
+        "adapter": "quranenc_sqlite",
+        "key": "persian_ih",
+        "version": "1.1.3",
+        "versionSource": "list",
+        "tokenizer": "arabic_normalized",
+        "contentKind": "translation"
+      }
+    },
+    {
+      "id": "tr.hi.omari",
+      "kind": "translation",
+      "title": { "en": "Azizul Haq Al-Omari", "ar": "عزيز الحق العمري" },
+      "description": { "en": "Translated by Azizul Haq Al-Omari.", "ar": "ترجمها عزيز الحق العمري." },
+      "language": "hi",
+      "direction": "ltr",
+      "version": "1.1.5",
+      "installMode": "whole",
+      "sizeBytes": 1079899,
+      "itemCount": 1,
+      "attribution": {
+        "text": { "en": "QuranEnc.com — The Noble Qur'an Encyclopedia", "ar": "موسوعة القرآن الكريم — QuranEnc.com" },
+        "url": "https://quranenc.com/en/browse/hindi_omari",
+        "licence": "QuranEnc terms: republished unmodified, credited with its version, kept up to date"
+      },
+      "source": {
+        "adapter": "quranenc_sqlite",
+        "key": "hindi_omari",
+        "version": "1.1.5",
+        "versionSource": "list",
+        "tokenizer": "unicode61_remove_diacritics",
+        "contentKind": "translation"
+      }
+    },
+    {
+      "id": "tafsir.ar.muyassar",
+      "kind": "tafsir",
+      "title": { "en": "At-Tafsir Al-Muyassar", "ar": "التفسير الميسر" },
+      "description": {
+        "en": "A concise tafsir issued by the King Fahd Glorious Qur'an Printing Complex.",
+        "ar": "تفسير موجز صادر عن مجمع الملك فهد لطباعة المصحف الشريف."
+      },
+      "language": "ar",
+      "direction": "rtl",
+      "version": "2025.03",
+      "installMode": "whole",
+      "sizeBytes": 812274,
+      "itemCount": 1,
+      "recommended": true,
+      "attribution": {
+        "text": { "en": "QuranEnc.com — The Noble Qur'an Encyclopedia", "ar": "موسوعة القرآن الكريم — QuranEnc.com" },
+        "url": "https://quranenc.com/en/browse/arabic_moyassar",
+        "licence": "QuranEnc terms: republished unmodified, credited with its version, kept up to date"
+      },
+      "source": {
+        "adapter": "quranenc_sqlite",
+        "key": "arabic_moyassar",
+        "version": "2025.03",
+        "versionSource": "http_validators",
+        "tokenizer": "arabic_normalized",
+        "contentKind": "tafsir"
+      }
+    },
+    {
+      "id": "tafsir.en.ibn_kathir",
+      "kind": "tafsir",
+      "title": { "en": "Ibn Kathir (abridged)", "ar": "تفسير ابن كثير (مختصر)" },
+      "description": {
+        "en": "Tafsir Ibn Kathir, abridged English edition. Chapters download as you read.",
+        "ar": "تفسير ابن كثير، طبعة إنجليزية مختصرة. تُنزَّل السور أثناء القراءة."
+      },
+      "language": "en",
+      "direction": "ltr",
+      "version": "2026.10",
+      "installMode": "on_demand",
+      "sizeBytes": 11094290,
+      "itemCount": 114,
+      "revalidateDays": 7,
+      "attribution": {
+        "text": { "en": "Tafsir via Quran.com (Quran Foundation)", "ar": "التفسير عبر Quran.com (Quran Foundation)" },
+        "url": "https://quran.com",
+        "licence": "Quran Foundation terms (cached in the app for at most 7 days, then refreshed)"
+      },
+      "source": { "adapter": "qurancom_v4_tafsir_by_chapter", "resourceId": 169 }
+    },
+    {
+      "id": "tafsir.en.maarif",
+      "kind": "tafsir",
+      "title": { "en": "Ma'arif al-Qur'an", "ar": "معارف القرآن" },
+      "description": {
+        "en": "Ma'arif al-Qur'an by Mufti Muhammad Shafi, in English. Chapters download as you read.",
+        "ar": "معارف القرآن للمفتي محمد شفيع، بالإنجليزية. تُنزَّل السور أثناء القراءة."
+      },
+      "language": "en",
+      "direction": "ltr",
+      "version": "2026.10",
+      "installMode": "on_demand",
+      "sizeBytes": 11661020,
+      "itemCount": 114,
+      "revalidateDays": 7,
+      "attribution": {
+        "text": { "en": "Tafsir via Quran.com (Quran Foundation)", "ar": "التفسير عبر Quran.com (Quran Foundation)" },
+        "url": "https://quran.com",
+        "licence": "Quran Foundation terms (cached in the app for at most 7 days, then refreshed)"
+      },
+      "source": { "adapter": "qurancom_v4_tafsir_by_chapter", "resourceId": 168 }
+    },
+    {
+      "id": "tafsir.ar.saadi",
+      "kind": "tafsir",
+      "title": { "en": "Tafsir As-Sa'di", "ar": "تفسير السعدي" },
+      "description": {
+        "en": "Taysir al-Karim ar-Rahman by 'Abd ar-Rahman as-Sa'di. Chapters download as you read.",
+        "ar": "تيسير الكريم الرحمن في تفسير كلام المنان لعبد الرحمن بن ناصر السعدي. تُنزَّل السور أثناء القراءة."
+      },
+      "language": "ar",
+      "direction": "rtl",
+      "version": "2026.10",
+      "installMode": "on_demand",
+      "sizeBytes": 7050507,
+      "itemCount": 114,
+      "revalidateDays": 7,
+      "attribution": {
+        "text": { "en": "Tafsir via Quran.com (Quran Foundation)", "ar": "التفسير عبر Quran.com (Quran Foundation)" },
+        "url": "https://quran.com",
+        "licence": "Quran Foundation terms (cached in the app for at most 7 days, then refreshed)"
+      },
+      "source": { "adapter": "qurancom_v4_tafsir_by_chapter", "resourceId": 91 }
+    },
+    {
+      "id": "audio.qdc.7",
+      "kind": "recitation",
+      "title": { "en": "Mishary Rashid Alafasy", "ar": "مشاري راشد العفاسي" },
+      "description": {
+        "en": "Gapless surah recitation with word-by-word highlighting. Streams as you listen; download surahs to listen offline.",
+        "ar": "تلاوة متصلة للسور مع تتبّع الكلمات أثناء التلاوة. تُبثّ أثناء الاستماع، ويمكن تنزيل السور للاستماع دون اتصال."
+      },
+      "language": "ar",
+      "version": "2026.10",
+      "installMode": "on_demand",
+      "sizeBytes": 1680759654,
+      "itemCount": 114,
+      "recommended": true,
+      "revalidateDays": 7,
+      "attribution": {
+        "text": {
+          "en": "Recitations from QuranicAudio.com; timings by Quran Foundation",
+          "ar": "التلاوات من QuranicAudio.com، والتوقيتات من Quran Foundation"
+        },
+        "url": "https://quranicaudio.com",
+        "licence": "QuranicAudio: free for personal, non-commercial use; timings under the Quran Foundation terms"
+      },
+      "source": {
+        "adapter": "qdc_audio",
+        "reciterId": 7,
+        "name": { "en": "Mishary Rashid Alafasy", "ar": "مشاري راشد العفاسي" },
+        "style": { "en": "Murattal", "ar": "مرتل" },
+        "basmalaInFile": false,
+        "hosts": ["download.quranicaudio.com", "download.quranicaudio.org"],
+        "wordLevel": true
+      }
+    },
+    {
+      "id": "audio.qdc.2",
+      "kind": "recitation",
+      "title": { "en": "Abdul Basit Abdul Samad (Murattal)", "ar": "عبد الباسط عبد الصمد (مرتل)" },
+      "description": {
+        "en": "Gapless surah recitation with word-by-word highlighting. Streams as you listen; download surahs to listen offline.",
+        "ar": "تلاوة متصلة للسور مع تتبّع الكلمات أثناء التلاوة. تُبثّ أثناء الاستماع، ويمكن تنزيل السور للاستماع دون اتصال."
+      },
+      "language": "ar",
+      "version": "2026.10",
+      "installMode": "on_demand",
+      "sizeBytes": 2583570130,
+      "itemCount": 114,
+      "revalidateDays": 7,
+      "attribution": {
+        "text": {
+          "en": "Recitations from QuranicAudio.com; timings by Quran Foundation",
+          "ar": "التلاوات من QuranicAudio.com، والتوقيتات من Quran Foundation"
+        },
+        "url": "https://quranicaudio.com",
+        "licence": "QuranicAudio: free for personal, non-commercial use; timings under the Quran Foundation terms"
+      },
+      "source": {
+        "adapter": "qdc_audio",
+        "reciterId": 2,
+        "name": { "en": "Abdul Basit Abdul Samad", "ar": "عبد الباسط عبد الصمد" },
+        "style": { "en": "Murattal", "ar": "مرتل" },
+        "basmalaInFile": false,
+        "hosts": ["download.quranicaudio.com", "download.quranicaudio.org"],
+        "wordLevel": true
+      }
+    },
+    {
+      "id": "audio.qdc.1",
+      "kind": "recitation",
+      "title": { "en": "Abdul Basit Abdul Samad (Mujawwad)", "ar": "عبد الباسط عبد الصمد (مجود)" },
+      "description": {
+        "en": "Gapless surah recitation with word-by-word highlighting. Streams as you listen; download surahs to listen offline.",
+        "ar": "تلاوة متصلة للسور مع تتبّع الكلمات أثناء التلاوة. تُبثّ أثناء الاستماع، ويمكن تنزيل السور للاستماع دون اتصال."
+      },
+      "language": "ar",
+      "version": "2026.10",
+      "installMode": "on_demand",
+      "sizeBytes": 3374164989,
+      "itemCount": 114,
+      "revalidateDays": 7,
+      "attribution": {
+        "text": {
+          "en": "Recitations from QuranicAudio.com; timings by Quran Foundation",
+          "ar": "التلاوات من QuranicAudio.com، والتوقيتات من Quran Foundation"
+        },
+        "url": "https://quranicaudio.com",
+        "licence": "QuranicAudio: free for personal, non-commercial use; timings under the Quran Foundation terms"
+      },
+      "source": {
+        "adapter": "qdc_audio",
+        "reciterId": 1,
+        "name": { "en": "Abdul Basit Abdul Samad", "ar": "عبد الباسط عبد الصمد" },
+        "style": { "en": "Mujawwad", "ar": "مجود" },
+        "basmalaInFile": false,
+        "hosts": ["download.quranicaudio.com", "download.quranicaudio.org"],
+        "wordLevel": true
+      }
+    },
+    {
+      "id": "audio.qdc.3",
+      "kind": "recitation",
+      "title": { "en": "Abdul Rahman Al-Sudais", "ar": "عبد الرحمن السديس" },
+      "description": {
+        "en": "Gapless surah recitation with word-by-word highlighting. Streams as you listen; download surahs to listen offline.",
+        "ar": "تلاوة متصلة للسور مع تتبّع الكلمات أثناء التلاوة. تُبثّ أثناء الاستماع، ويمكن تنزيل السور للاستماع دون اتصال."
+      },
+      "language": "ar",
+      "version": "2026.10",
+      "installMode": "on_demand",
+      "sizeBytes": 1698216114,
+      "itemCount": 114,
+      "revalidateDays": 7,
+      "attribution": {
+        "text": {
+          "en": "Recitations from QuranicAudio.com; timings by Quran Foundation",
+          "ar": "التلاوات من QuranicAudio.com، والتوقيتات من Quran Foundation"
+        },
+        "url": "https://quranicaudio.com",
+        "licence": "QuranicAudio: free for personal, non-commercial use; timings under the Quran Foundation terms"
+      },
+      "source": {
+        "adapter": "qdc_audio",
+        "reciterId": 3,
+        "name": { "en": "Abdul Rahman Al-Sudais", "ar": "عبد الرحمن السديس" },
+        "style": { "en": "Murattal", "ar": "مرتل" },
+        "basmalaInFile": false,
+        "hosts": ["download.quranicaudio.com", "download.quranicaudio.org"],
+        "wordLevel": true
+      }
+    },
+    {
+      "id": "audio.qdc.4",
+      "kind": "recitation",
+      "title": { "en": "Abu Bakr Al-Shatri", "ar": "أبو بكر الشاطري" },
+      "description": {
+        "en": "Gapless surah recitation with word-by-word highlighting. Streams as you listen; download surahs to listen offline.",
+        "ar": "تلاوة متصلة للسور مع تتبّع الكلمات أثناء التلاوة. تُبثّ أثناء الاستماع، ويمكن تنزيل السور للاستماع دون اتصال."
+      },
+      "language": "ar",
+      "version": "2026.10",
+      "installMode": "on_demand",
+      "sizeBytes": 1421265196,
+      "itemCount": 114,
+      "revalidateDays": 7,
+      "attribution": {
+        "text": {
+          "en": "Recitations from QuranicAudio.com; timings by Quran Foundation",
+          "ar": "التلاوات من QuranicAudio.com، والتوقيتات من Quran Foundation"
+        },
+        "url": "https://quranicaudio.com",
+        "licence": "QuranicAudio: free for personal, non-commercial use; timings under the Quran Foundation terms"
+      },
+      "source": {
+        "adapter": "qdc_audio",
+        "reciterId": 4,
+        "name": { "en": "Abu Bakr Al-Shatri", "ar": "أبو بكر الشاطري" },
+        "style": { "en": "Murattal", "ar": "مرتل" },
+        "basmalaInFile": false,
+        "hosts": ["download.quranicaudio.com", "download.quranicaudio.org"],
+        "wordLevel": true
+      }
+    },
+    {
+      "id": "audio.qdc.97",
+      "kind": "recitation",
+      "title": { "en": "Yasser Al-Dosari", "ar": "ياسر الدوسري" },
+      "description": {
+        "en": "Gapless surah recitation with word-by-word highlighting. Streams as you listen; download surahs to listen offline.",
+        "ar": "تلاوة متصلة للسور مع تتبّع الكلمات أثناء التلاوة. تُبثّ أثناء الاستماع، ويمكن تنزيل السور للاستماع دون اتصال."
+      },
+      "language": "ar",
+      "version": "2026.10",
+      "installMode": "on_demand",
+      "sizeBytes": 1494030368,
+      "itemCount": 114,
+      "revalidateDays": 7,
+      "attribution": {
+        "text": {
+          "en": "Recitations from QuranicAudio.com; timings by Quran Foundation",
+          "ar": "التلاوات من QuranicAudio.com، والتوقيتات من Quran Foundation"
+        },
+        "url": "https://quranicaudio.com",
+        "licence": "QuranicAudio: free for personal, non-commercial use; timings under the Quran Foundation terms"
+      },
+      "source": {
+        "adapter": "qdc_audio",
+        "reciterId": 97,
+        "name": { "en": "Yasser Al-Dosari", "ar": "ياسر الدوسري" },
+        "style": { "en": "Murattal", "ar": "مرتل" },
+        "basmalaInFile": false,
+        "hosts": ["download.quranicaudio.com", "download.quranicaudio.org"],
+        "wordLevel": true
+      }
+    },
+    {
+      "id": "audio.qdc.5",
+      "kind": "recitation",
+      "title": { "en": "Hani Ar-Rifai", "ar": "هاني الرفاعي" },
+      "description": {
+        "en": "Gapless surah recitation with word-by-word highlighting. Streams as you listen; download surahs to listen offline.",
+        "ar": "تلاوة متصلة للسور مع تتبّع الكلمات أثناء التلاوة. تُبثّ أثناء الاستماع، ويمكن تنزيل السور للاستماع دون اتصال."
+      },
+      "language": "ar",
+      "version": "2026.10",
+      "installMode": "on_demand",
+      "sizeBytes": 1459066203,
+      "itemCount": 114,
+      "revalidateDays": 7,
+      "attribution": {
+        "text": {
+          "en": "Recitations from QuranicAudio.com; timings by Quran Foundation",
+          "ar": "التلاوات من QuranicAudio.com، والتوقيتات من Quran Foundation"
+        },
+        "url": "https://quranicaudio.com",
+        "licence": "QuranicAudio: free for personal, non-commercial use; timings under the Quran Foundation terms"
+      },
+      "source": {
+        "adapter": "qdc_audio",
+        "reciterId": 5,
+        "name": { "en": "Hani Ar-Rifai", "ar": "هاني الرفاعي" },
+        "style": { "en": "Murattal", "ar": "مرتل" },
+        "basmalaInFile": false,
+        "hosts": ["download.quranicaudio.com", "download.quranicaudio.org"],
+        "wordLevel": true
+      }
+    },
+    {
+      "id": "audio.qdc.161",
+      "kind": "recitation",
+      "title": { "en": "Khalifa Al-Tunaiji", "ar": "خليفة الطنيجي" },
+      "description": {
+        "en": "Gapless surah recitation with word-by-word highlighting. Streams as you listen; download surahs to listen offline.",
+        "ar": "تلاوة متصلة للسور مع تتبّع الكلمات أثناء التلاوة. تُبثّ أثناء الاستماع، ويمكن تنزيل السور للاستماع دون اتصال."
+      },
+      "language": "ar",
+      "version": "2026.10",
+      "installMode": "on_demand",
+      "sizeBytes": 814439434,
+      "itemCount": 114,
+      "revalidateDays": 7,
+      "attribution": {
+        "text": {
+          "en": "Recitations from QuranicAudio.com; timings by Quran Foundation",
+          "ar": "التلاوات من QuranicAudio.com، والتوقيتات من Quran Foundation"
+        },
+        "url": "https://quranicaudio.com",
+        "licence": "QuranicAudio: free for personal, non-commercial use; timings under the Quran Foundation terms"
+      },
+      "source": {
+        "adapter": "qdc_audio",
+        "reciterId": 161,
+        "name": { "en": "Khalifa Al-Tunaiji", "ar": "خليفة الطنيجي" },
+        "style": { "en": "Murattal", "ar": "مرتل" },
+        "basmalaInFile": false,
+        "hosts": ["download.quranicaudio.com", "download.quranicaudio.org"],
+        "wordLevel": true
+      }
+    },
+    {
+      "id": "audio.qdc.6",
+      "kind": "recitation",
+      "title": { "en": "Mahmoud Khalil Al-Husary (Murattal)", "ar": "محمود خليل الحصري (مرتل)" },
+      "description": {
+        "en": "Gapless surah recitation with word-by-word highlighting. Streams as you listen; download surahs to listen offline.",
+        "ar": "تلاوة متصلة للسور مع تتبّع الكلمات أثناء التلاوة. تُبثّ أثناء الاستماع، ويمكن تنزيل السور للاستماع دون اتصال."
+      },
+      "language": "ar",
+      "version": "2026.10",
+      "installMode": "on_demand",
+      "sizeBytes": 1225959245,
+      "itemCount": 114,
+      "revalidateDays": 7,
+      "attribution": {
+        "text": {
+          "en": "Recitations from QuranicAudio.com; timings by Quran Foundation",
+          "ar": "التلاوات من QuranicAudio.com، والتوقيتات من Quran Foundation"
+        },
+        "url": "https://quranicaudio.com",
+        "licence": "QuranicAudio: free for personal, non-commercial use; timings under the Quran Foundation terms"
+      },
+      "source": {
+        "adapter": "qdc_audio",
+        "reciterId": 6,
+        "name": { "en": "Mahmoud Khalil Al-Husary", "ar": "محمود خليل الحصري" },
+        "style": { "en": "Murattal", "ar": "مرتل" },
+        "basmalaInFile": false,
+        "hosts": ["download.quranicaudio.com", "download.quranicaudio.org"],
+        "wordLevel": true
+      }
+    },
+    {
+      "id": "audio.qdc.12",
+      "kind": "recitation",
+      "title": { "en": "Mahmoud Khalil Al-Husary (Muallim)", "ar": "محمود خليل الحصري (المعلم)" },
+      "description": {
+        "en": "Teaching recitation, slow and clear so learners can follow and repeat, with word-by-word highlighting. Streams as you listen; download surahs to listen offline.",
+        "ar": "تلاوة تعليمية متأنية وواضحة ليتابعها المتعلم ويرددها، مع تتبّع الكلمات. تُبثّ أثناء الاستماع، ويمكن تنزيل السور للاستماع دون اتصال."
+      },
+      "language": "ar",
+      "version": "2026.10",
+      "installMode": "on_demand",
+      "sizeBytes": 2741064365,
+      "itemCount": 114,
+      "revalidateDays": 7,
+      "attribution": {
+        "text": {
+          "en": "Recitations from QuranicAudio.com; timings by Quran Foundation",
+          "ar": "التلاوات من QuranicAudio.com، والتوقيتات من Quran Foundation"
+        },
+        "url": "https://quranicaudio.com",
+        "licence": "QuranicAudio: free for personal, non-commercial use; timings under the Quran Foundation terms"
+      },
+      "source": {
+        "adapter": "qdc_audio",
+        "reciterId": 12,
+        "name": { "en": "Mahmoud Khalil Al-Husary", "ar": "محمود خليل الحصري" },
+        "style": { "en": "Muallim", "ar": "المعلم" },
+        "basmalaInFile": false,
+        "hosts": ["download.quranicaudio.com", "download.quranicaudio.org"],
+        "wordLevel": true
+      }
+    },
+    {
+      "id": "audio.qdc.9",
+      "kind": "recitation",
+      "title": { "en": "Mohamed Siddiq Al-Minshawi (Murattal)", "ar": "محمد صديق المنشاوي (مرتل)" },
+      "description": {
+        "en": "Gapless surah recitation with word-by-word highlighting. Streams as you listen; download surahs to listen offline.",
+        "ar": "تلاوة متصلة للسور مع تتبّع الكلمات أثناء التلاوة. تُبثّ أثناء الاستماع، ويمكن تنزيل السور للاستماع دون اتصال."
+      },
+      "language": "ar",
+      "version": "2026.10",
+      "installMode": "on_demand",
+      "sizeBytes": 1665764338,
+      "itemCount": 114,
+      "revalidateDays": 7,
+      "attribution": {
+        "text": {
+          "en": "Recitations from QuranicAudio.com; timings by Quran Foundation",
+          "ar": "التلاوات من QuranicAudio.com، والتوقيتات من Quran Foundation"
+        },
+        "url": "https://quranicaudio.com",
+        "licence": "QuranicAudio: free for personal, non-commercial use; timings under the Quran Foundation terms"
+      },
+      "source": {
+        "adapter": "qdc_audio",
+        "reciterId": 9,
+        "name": { "en": "Mohamed Siddiq Al-Minshawi", "ar": "محمد صديق المنشاوي" },
+        "style": { "en": "Murattal", "ar": "مرتل" },
+        "basmalaInFile": false,
+        "hosts": ["download.quranicaudio.com", "download.quranicaudio.org"],
+        "wordLevel": true
+      }
+    },
+    {
+      "id": "audio.qdc.168",
+      "kind": "recitation",
+      "title": { "en": "Mohamed Siddiq Al-Minshawi (with children)", "ar": "محمد صديق المنشاوي (مع ترديد الأطفال)" },
+      "description": {
+        "en": "Teaching recitation with children repeating after the reciter, with word-by-word highlighting. Streams as you listen; download surahs to listen offline.",
+        "ar": "تلاوة تعليمية يردد فيها الأطفال بعد القارئ، مع تتبّع الكلمات. تُبثّ أثناء الاستماع، ويمكن تنزيل السور للاستماع دون اتصال."
+      },
+      "language": "ar",
+      "version": "2026.10",
+      "installMode": "on_demand",
+      "sizeBytes": 797280111,
+      "itemCount": 114,
+      "revalidateDays": 7,
+      "attribution": {
+        "text": {
+          "en": "Recitations from QuranicAudio.com; timings by Quran Foundation",
+          "ar": "التلاوات من QuranicAudio.com، والتوقيتات من Quran Foundation"
+        },
+        "url": "https://quranicaudio.com",
+        "licence": "QuranicAudio: free for personal, non-commercial use; timings under the Quran Foundation terms"
+      },
+      "source": {
+        "adapter": "qdc_audio",
+        "reciterId": 168,
+        "name": { "en": "Mohamed Siddiq Al-Minshawi", "ar": "محمد صديق المنشاوي" },
+        "style": { "en": "With children repeating", "ar": "مع ترديد الأطفال" },
+        "basmalaInFile": false,
+        "hosts": ["download.quranicaudio.com", "download.quranicaudio.org"],
+        "wordLevel": true
+      }
+    },
+    {
+      "id": "audio.qdc.10",
+      "kind": "recitation",
+      "title": { "en": "Saud Al-Shuraim", "ar": "سعود الشريم" },
+      "description": {
+        "en": "Gapless surah recitation with word-by-word highlighting. Streams as you listen; download surahs to listen offline.",
+        "ar": "تلاوة متصلة للسور مع تتبّع الكلمات أثناء التلاوة. تُبثّ أثناء الاستماع، ويمكن تنزيل السور للاستماع دون اتصال."
+      },
+      "language": "ar",
+      "version": "2026.10",
+      "installMode": "on_demand",
+      "sizeBytes": 1045312524,
+      "itemCount": 114,
+      "revalidateDays": 7,
+      "attribution": {
+        "text": {
+          "en": "Recitations from QuranicAudio.com; timings by Quran Foundation",
+          "ar": "التلاوات من QuranicAudio.com، والتوقيتات من Quran Foundation"
+        },
+        "url": "https://quranicaudio.com",
+        "licence": "QuranicAudio: free for personal, non-commercial use; timings under the Quran Foundation terms"
+      },
+      "source": {
+        "adapter": "qdc_audio",
+        "reciterId": 10,
+        "name": { "en": "Saud Al-Shuraim", "ar": "سعود الشريم" },
+        "style": { "en": "Murattal", "ar": "مرتل" },
+        "basmalaInFile": false,
+        "hosts": ["download.quranicaudio.com", "download.quranicaudio.org"],
+        "wordLevel": true
+      }
+    },
+    {
+      "id": "audio.qdc.173",
+      "kind": "recitation",
+      "title": { "en": "Mishary Rashid Alafasy (streaming edition)", "ar": "مشاري راشد العفاسي (نسخة البث)" },
+      "description": {
+        "en": "An alternative edition of Mishary Alafasy's murattal recitation, with word-by-word highlighting. Streams as you listen; download surahs to listen offline.",
+        "ar": "نسخة أخرى من تلاوة مشاري العفاسي المرتلة، مع تتبّع الكلمات. تُبثّ أثناء الاستماع، ويمكن تنزيل السور للاستماع دون اتصال."
+      },
+      "language": "ar",
+      "version": "2026.10",
+      "installMode": "on_demand",
+      "sizeBytes": 1270001742,
+      "itemCount": 114,
+      "revalidateDays": 7,
+      "attribution": {
+        "text": {
+          "en": "Recitations from QuranicAudio.com; timings by Quran Foundation",
+          "ar": "التلاوات من QuranicAudio.com، والتوقيتات من Quran Foundation"
+        },
+        "url": "https://quranicaudio.com",
+        "licence": "QuranicAudio: free for personal, non-commercial use; timings under the Quran Foundation terms"
+      },
+      "source": {
+        "adapter": "qdc_audio",
+        "reciterId": 173,
+        "name": { "en": "Mishary Rashid Alafasy", "ar": "مشاري راشد العفاسي" },
+        "style": { "en": "Murattal, streaming edition", "ar": "مرتل، نسخة البث" },
+        "basmalaInFile": false,
+        "hosts": ["download.quranicaudio.com", "download.quranicaudio.org"],
+        "wordLevel": true
+      }
+    },
+    {
+      "id": "wbw.en",
+      "kind": "wbw",
+      "title": { "en": "Word by word: English", "ar": "معاني الكلمات: الإنجليزية" },
+      "description": {
+        "en": "Word-by-word English meanings and transliteration, shown in the word tooltip. Chapters download as you read.",
+        "ar": "معاني الكلمات بالإنجليزية مع نطقها بالحروف اللاتينية، تظهر في تلميح الكلمة. تُنزَّل السور أثناء القراءة."
+      },
+      "language": "en",
+      "direction": "ltr",
+      "version": "2026.10",
+      "installMode": "on_demand",
+      "sizeBytes": 3227795,
+      "itemCount": 114,
+      "recommended": true,
+      "revalidateDays": 7,
+      "attribution": {
+        "text": {
+          "en": "Word-by-word data by Quran.com (Quran Foundation)",
+          "ar": "بيانات معاني الكلمات من Quran.com (Quran Foundation)"
+        },
+        "url": "https://quran.com",
+        "licence": "Quran Foundation terms (cached in the app for at most 7 days, then refreshed)"
+      },
+      "source": { "adapter": "qurancom_v4_wbw", "language": "en" }
+    },
+    {
+      "id": "wbw.ur",
+      "kind": "wbw",
+      "title": { "en": "Word by word: Urdu", "ar": "معاني الكلمات: الأردية" },
+      "description": {
+        "en": "Word-by-word Urdu meanings with Latin transliteration, shown in the word tooltip. Chapters download as you read.",
+        "ar": "معاني الكلمات بالأردية مع نطقها بالحروف اللاتينية، تظهر في تلميح الكلمة. تُنزَّل السور أثناء القراءة."
+      },
+      "language": "ur",
+      "direction": "rtl",
+      "version": "2026.10",
+      "installMode": "on_demand",
+      "sizeBytes": 3814935,
+      "itemCount": 114,
+      "revalidateDays": 7,
+      "attribution": {
+        "text": {
+          "en": "Word-by-word data by Quran.com (Quran Foundation)",
+          "ar": "بيانات معاني الكلمات من Quran.com (Quran Foundation)"
+        },
+        "url": "https://quran.com",
+        "licence": "Quran Foundation terms (cached in the app for at most 7 days, then refreshed)"
+      },
+      "source": { "adapter": "qurancom_v4_wbw", "language": "ur" }
+    },
+    {
+      "id": "wbw.id",
+      "kind": "wbw",
+      "title": { "en": "Word by word: Indonesian", "ar": "معاني الكلمات: الإندونيسية" },
+      "description": {
+        "en": "Word-by-word Indonesian meanings with Latin transliteration, shown in the word tooltip. Chapters download as you read.",
+        "ar": "معاني الكلمات بالإندونيسية مع نطقها بالحروف اللاتينية، تظهر في تلميح الكلمة. تُنزَّل السور أثناء القراءة."
+      },
+      "language": "id",
+      "direction": "ltr",
+      "version": "2026.10",
+      "installMode": "on_demand",
+      "sizeBytes": 3385425,
+      "itemCount": 114,
+      "revalidateDays": 7,
+      "attribution": {
+        "text": {
+          "en": "Word-by-word data by Quran.com (Quran Foundation)",
+          "ar": "بيانات معاني الكلمات من Quran.com (Quran Foundation)"
+        },
+        "url": "https://quran.com",
+        "licence": "Quran Foundation terms (cached in the app for at most 7 days, then refreshed)"
+      },
+      "source": { "adapter": "qurancom_v4_wbw", "language": "id" }
+    },
+    {
+      "id": "wbw.bn",
+      "kind": "wbw",
+      "title": { "en": "Word by word: Bengali", "ar": "معاني الكلمات: البنغالية" },
+      "description": {
+        "en": "Word-by-word Bengali meanings with Latin transliteration, shown in the word tooltip. Chapters download as you read.",
+        "ar": "معاني الكلمات بالبنغالية مع نطقها بالحروف اللاتينية، تظهر في تلميح الكلمة. تُنزَّل السور أثناء القراءة."
+      },
+      "language": "bn",
+      "direction": "ltr",
+      "version": "2026.10",
+      "installMode": "on_demand",
+      "sizeBytes": 4722052,
+      "itemCount": 114,
+      "revalidateDays": 7,
+      "attribution": {
+        "text": {
+          "en": "Word-by-word data by Quran.com (Quran Foundation)",
+          "ar": "بيانات معاني الكلمات من Quran.com (Quran Foundation)"
+        },
+        "url": "https://quran.com",
+        "licence": "Quran Foundation terms (cached in the app for at most 7 days, then refreshed)"
+      },
+      "source": { "adapter": "qurancom_v4_wbw", "language": "bn" }
+    },
+    {
+      "id": "wbw.tr",
+      "kind": "wbw",
+      "title": { "en": "Word by word: Turkish", "ar": "معاني الكلمات: التركية" },
+      "description": {
+        "en": "Word-by-word Turkish meanings with Latin transliteration, shown in the word tooltip. Chapters download as you read.",
+        "ar": "معاني الكلمات بالتركية مع نطقها بالحروف اللاتينية، تظهر في تلميح الكلمة. تُنزَّل السور أثناء القراءة."
+      },
+      "language": "tr",
+      "direction": "ltr",
+      "version": "2026.10",
+      "installMode": "on_demand",
+      "sizeBytes": 3273260,
+      "itemCount": 114,
+      "revalidateDays": 7,
+      "attribution": {
+        "text": {
+          "en": "Word-by-word data by Quran.com (Quran Foundation)",
+          "ar": "بيانات معاني الكلمات من Quran.com (Quran Foundation)"
+        },
+        "url": "https://quran.com",
+        "licence": "Quran Foundation terms (cached in the app for at most 7 days, then refreshed)"
+      },
+      "source": { "adapter": "qurancom_v4_wbw", "language": "tr" }
+    },
+    {
+      "id": "wbw.fa",
+      "kind": "wbw",
+      "title": { "en": "Word by word: Persian", "ar": "معاني الكلمات: الفارسية" },
+      "description": {
+        "en": "Word-by-word Persian meanings with Latin transliteration, shown in the word tooltip. Chapters download as you read.",
+        "ar": "معاني الكلمات بالفارسية مع نطقها بالحروف اللاتينية، تظهر في تلميح الكلمة. تُنزَّل السور أثناء القراءة."
+      },
+      "language": "fa",
+      "direction": "rtl",
+      "version": "2026.10",
+      "installMode": "on_demand",
+      "sizeBytes": 3650472,
+      "itemCount": 114,
+      "revalidateDays": 7,
+      "attribution": {
+        "text": {
+          "en": "Word-by-word data by Quran.com (Quran Foundation)",
+          "ar": "بيانات معاني الكلمات من Quran.com (Quran Foundation)"
+        },
+        "url": "https://quran.com",
+        "licence": "Quran Foundation terms (cached in the app for at most 7 days, then refreshed)"
+      },
+      "source": { "adapter": "qurancom_v4_wbw", "language": "fa" }
+    },
+    {
+      "id": "wbw.hi",
+      "kind": "wbw",
+      "title": { "en": "Word by word: Hindi", "ar": "معاني الكلمات: الهندية" },
+      "description": {
+        "en": "Word-by-word Hindi meanings with Latin transliteration, shown in the word tooltip. Chapters download as you read.",
+        "ar": "معاني الكلمات بالهندية مع نطقها بالحروف اللاتينية، تظهر في تلميح الكلمة. تُنزَّل السور أثناء القراءة."
+      },
+      "language": "hi",
+      "direction": "ltr",
+      "version": "2026.10",
+      "installMode": "on_demand",
+      "sizeBytes": 4487260,
+      "itemCount": 114,
+      "revalidateDays": 7,
+      "attribution": {
+        "text": {
+          "en": "Word-by-word data by Quran.com (Quran Foundation)",
+          "ar": "بيانات معاني الكلمات من Quran.com (Quran Foundation)"
+        },
+        "url": "https://quran.com",
+        "licence": "Quran Foundation terms (cached in the app for at most 7 days, then refreshed)"
+      },
+      "source": { "adapter": "qurancom_v4_wbw", "language": "hi" }
+    },
+    {
+      "id": "wbw.ta",
+      "kind": "wbw",
+      "title": { "en": "Word by word: Tamil", "ar": "معاني الكلمات: التاميلية" },
+      "description": {
+        "en": "Word-by-word Tamil meanings with Latin transliteration, shown in the word tooltip. Chapters download as you read.",
+        "ar": "معاني الكلمات بالتاميلية مع نطقها بالحروف اللاتينية، تظهر في تلميح الكلمة. تُنزَّل السور أثناء القراءة."
+      },
+      "language": "ta",
+      "direction": "ltr",
+      "version": "2026.10",
+      "installMode": "on_demand",
+      "sizeBytes": 5163165,
+      "itemCount": 114,
+      "revalidateDays": 7,
+      "attribution": {
+        "text": {
+          "en": "Word-by-word data by Quran.com (Quran Foundation)",
+          "ar": "بيانات معاني الكلمات من Quran.com (Quran Foundation)"
+        },
+        "url": "https://quran.com",
+        "licence": "Quran Foundation terms (cached in the app for at most 7 days, then refreshed)"
+      },
+      "source": { "adapter": "qurancom_v4_wbw", "language": "ta" }
+    }
+  ]
+}

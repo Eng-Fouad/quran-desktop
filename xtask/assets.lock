@@ -1,0 +1,10 @@
+# sha256 pins of the third-party assets fetched by `cargo xtask fetch-assets` (docs/ARCHITECTURE.md §4.7).
+# Recorded on first use and checked on every later run; after reviewing an upstream change, re-pin with
+# `cargo xtask fetch-assets --force`. CI caches public/fonts/ keyed by the hash of this file.
+# Generated: do not edit by hand.
+
+[[asset]]
+file = "public/fonts/KFGQPC-Hafs-V30.ttf"
+source = "https://fonts.qurancomplex.gov.sa/fonts/KFGQPC-Hafs-V30.zip"
+bytes = 301356
+sha256 = "c9dd7e71a454565b13d89e5e6f2663a918acb0a20a23eea31eccb32a3aeec47a"

@@ -1,0 +1,77 @@
+# Release bundles around the placeholder core.db (ARCHITECTURE §13.3 `build` job, §13.5, §13.6). Owner: WP-CI; the
+# budgets and bundle checks are WP13b's (scripts/size-budget.mjs, scripts/check-bundles.mjs).
+#
+# A qdc core.db is QF-derived and never enters a bundle: the in-job core.db is moved aside, build.rs recreates the
+# 0-byte placeholder, and `pnpm tauri build` makes this OS's installers (NSIS; app + dmg; deb + AppImage). Then
+#   - scripts/check-bundles.mjs --core placeholder unpacks them and checks what they contain (identity, resources,
+#     deb Depends and desktop entry, macOS signature with the hardened runtime, …);
+#   - scripts/size-budget.mjs --placeholder-core adds the real core.db as each format compresses it and enforces §13.6.
+# Nothing is uploaded; the scrub step at the end of the job deletes the bundles before the caches are saved.
+name: Bundle and size check
+description: Build this OS's installers around the placeholder core.db, check their contents and the §13.6 budgets
+
+inputs:
+  build-args:
+    description: Extra `pnpm tauri build` arguments (e.g. `--target universal-apple-darwin`)
+    required: false
+    default: ''
+  require:
+    description: The installer kinds this OS must produce (check-bundles --require), comma-separated
+    required: true
+  budgets:
+    description: The §13.6 rows that must be measured here (size-budget --require), comma-separated
+    required: true
+  universal:
+    description: The macOS binary must be universal (`true` with `--target universal-apple-darwin`)
+    required: false
+    default: 'false'
+  enforce:
+    description: Fail the job when a budget is exceeded (`false` only reports)
+    required: false
+    default: 'true'
+
+runs:
+  using: composite
+  steps:
+    - name: Move the in-job core.db aside (build.rs writes the 0-byte placeholder)
+      id: aside
+      shell: bash
+      run: node "$GITHUB_ACTION_PATH/size-check.mjs" aside --core src-tauri/resources/core.db
+
+    - name: pnpm tauri build (release installers, placeholder core.db)
+      shell: bash
+      env:
+        QD_REQUIRE_CORE: ''
+        QD_BUILD_ARGS: ${{ inputs.build-args }}
+        # macOS: ad-hoc signature with the hardened runtime, as release.yml signs without a Developer ID (WP13b.md).
+        APPLE_SIGNING_IDENTITY: ${{ runner.os == 'macOS' && '-' || '' }}
+      run: |
+        if [ -z "$APPLE_SIGNING_IDENTITY" ]; then unset APPLE_SIGNING_IDENTITY; fi
+        # shellcheck disable=SC2086 # QD_BUILD_ARGS is a list of arguments
+        pnpm tauri build $QD_BUILD_ARGS
+
+    - name: Installer contents (scripts/check-bundles.mjs --core placeholder)
+      shell: bash
+      env:
+        QD_REQUIRE: ${{ inputs.require }}
+        QD_UNIVERSAL: ${{ inputs.universal }}
+      run: |
+        set -- --core placeholder --require "$QD_REQUIRE"
+        if [ "$QD_UNIVERSAL" = "true" ]; then set -- "$@" --universal; fi
+        node scripts/check-bundles.mjs "$@"
+
+    - name: §13.6 budgets (scripts/size-budget.mjs, the real core.db added per format)
+      shell: bash
+      env:
+        QD_ASIDE: ${{ steps.aside.outputs.aside }}
+        QD_BUDGETS: ${{ inputs.budgets }}
+        QD_ENFORCE: ${{ inputs.enforce }}
+      run: |
+        set -- --placeholder-core "$QD_ASIDE" --require "$QD_BUDGETS"
+        if [ "$QD_ENFORCE" != "true" ]; then set -- "$@" --report-only; fi
+        node scripts/size-budget.mjs "$@"
+
+    - name: Move core.db back
+      if: always()
+      shell: bash
+      run: node "$GITHUB_ACTION_PATH/size-check.mjs" restore

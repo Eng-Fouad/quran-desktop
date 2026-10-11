@@ -1,0 +1,14 @@
+# CI policy (ARCHITECTURE §13.3, §9.9). Owner: WP-CI.
+#
+# Structural checks on .github/** that keep the licensing guards in place: SHA-pinned actions, uploads only through
+# ./.github/actions/upload (after scripts/check-artifacts.mjs), no QF-derived cache paths, the fork guard on jobs that
+# build core.db, no pull_request_target, least-privilege permissions, and no default Tauri icon.
+name: CI policy
+description: Enforce pinned actions, guarded uploads, safe caches, the fork guard, permissions and the app icon
+
+runs:
+  using: composite
+  steps:
+    - name: Check .github/** against the CI policy
+      shell: bash
+      run: node "$GITHUB_ACTION_PATH/policy.mjs" --root "$GITHUB_WORKSPACE"

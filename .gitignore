@@ -1,0 +1,48 @@
+# Dependencies and build output
+/node_modules/
+/dist/
+/dist-ssr/
+*.local
+*.log
+*.tsbuildinfo
+.eslintcache
+vite.config.*.timestamp-*
+vitest.config.*.timestamp-*
+
+# Rust
+/target/
+src-tauri/target/
+src-tauri/gen/schemas/
+
+# Generated data and third-party binaries: never committed (BRIEF §4, D10, D23).
+# src-tauri/resources/catalog.json IS committed (WP5a).
+src-tauri/resources/core.db*
+src/lib/ipc/mock/fixtures/
+data/cache/
+data/dev-packs/
+data/sources/qul/*
+!data/sources/qul/.gitkeep
+!data/sources/qul/manifest.toml
+data/sources/tanzil/*
+!data/sources/tanzil/.gitkeep
+public/fonts/*.ttf
+fixtures-out/
+
+# Test and QA output (Mushaf images are never committed, §12.6)
+artifacts/
+tests/e2e/baselines/
+# vitest's default attachment directory (failure screenshots of older runs; vitest.config.ts now writes to artifacts/)
+.vitest/
+__screenshots__/
+coverage/
+test-results/
+screenshots/
+
+# Editors / OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+*.suo
+*.sw?

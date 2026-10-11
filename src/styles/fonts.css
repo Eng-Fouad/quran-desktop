@@ -1,0 +1,27 @@
+/*
+ * Font faces (ARCHITECTURE §8.5, §9.3). Owner: WP7a.
+ *
+ * UI faces come from Fontsource (bundled into dist/, so CSP `font-src 'self'` covers them):
+ *   Inter Variable (wght axis)         Latin UI                       --font-latin
+ *   Noto Naskh Arabic Variable (wght)  tafsir, Arabic prose, heads    --font-naskh
+ *   IBM Plex Sans Arabic 400/500/600   Arabic UI                      --font-arabic
+ * Each Fontsource face is split by `unicode-range`, so the browser only fetches the subsets a page actually uses.
+ *
+ * Quran faces:
+ *   qd-hafs          bundled below; `main.ts` awaits it before the first paint, so it never flashes a system font
+ *   qcf-{v1,v2,v4}-p{N}, qd-surah-header, qd-quran-common, qd-sura-names, qd-nastaliq
+ *                    page and decor fonts, registered at runtime through the FontFace API by the font registry (WP8b)
+ */
+@import '@fontsource-variable/inter/wght.css';
+@import '@fontsource-variable/noto-naskh-arabic/wght.css';
+@import '@fontsource/ibm-plex-sans-arabic/400.css';
+@import '@fontsource/ibm-plex-sans-arabic/500.css';
+@import '@fontsource/ibm-plex-sans-arabic/600.css';
+
+/* KFGQPC Hafs V30, unmodified (EULA), fetched by `cargo xtask fetch-assets` into public/fonts/ (D23). One regular weight:
+   every element that uses it carries `.quran-text` (§9.3). */
+@font-face {
+  font-family: 'qd-hafs';
+  src: url('/fonts/KFGQPC-Hafs-V30.ttf') format('truetype');
+  font-display: block;
+}

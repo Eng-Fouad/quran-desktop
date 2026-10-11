@@ -1,0 +1,160 @@
+{
+  "$comment": "Golden vectors of the reference parser (ARCHITECTURE §10.4, §12.3; WP10a). `out` is the exact result list (targets, source and issue; the localised disabledReason is checked by the unit test, not here). `first` checks only the best result, for surah-name matches whose tail depends on the name set. Digits may be ASCII, Arabic-Indic or Persian.",
+  "cases": [
+    { "in": "2:255", "out": [{ "target": { "type": "ayah", "surah": 2, "ayah": 255 }, "source": "ref" }] },
+    {
+      "in": " 2 : 255 ",
+      "out": [{ "target": { "type": "ayah", "surah": 2, "ayah": 255 }, "source": "ref" }]
+    },
+    { "in": "2.255", "out": [{ "target": { "type": "ayah", "surah": 2, "ayah": 255 }, "source": "ref" }] },
+    { "in": "2/255", "out": [{ "target": { "type": "ayah", "surah": 2, "ayah": 255 }, "source": "ref" }] },
+    { "in": "2 255", "out": [{ "target": { "type": "ayah", "surah": 2, "ayah": 255 }, "source": "ref" }] },
+    { "in": "٢:٢٥٥", "out": [{ "target": { "type": "ayah", "surah": 2, "ayah": 255 }, "source": "ref" }] },
+    { "in": "۲:۲۵۵", "out": [{ "target": { "type": "ayah", "surah": 2, "ayah": 255 }, "source": "ref" }] },
+    { "in": "(2:255)", "out": [{ "target": { "type": "ayah", "surah": 2, "ayah": 255 }, "source": "ref" }] },
+    {
+      "in": "— Al-Baqarah 2:255",
+      "out": [{ "target": { "type": "ayah", "surah": 2, "ayah": 255 }, "source": "ref" }]
+    },
+    { "in": "1:1", "out": [{ "target": { "type": "ayah", "surah": 1, "ayah": 1 }, "source": "ref" }] },
+    { "in": "114:6", "out": [{ "target": { "type": "ayah", "surah": 114, "ayah": 6 }, "source": "ref" }] },
+    {
+      "in": "2:255-257",
+      "out": [{ "target": { "type": "ayah", "surah": 2, "ayah": 255, "toAyah": 257 }, "source": "ref" }]
+    },
+    {
+      "in": "2:255–257",
+      "out": [{ "target": { "type": "ayah", "surah": 2, "ayah": 255, "toAyah": 257 }, "source": "ref" }]
+    },
+    {
+      "in": "٢:٢٥٥ — ٢٥٧",
+      "out": [{ "target": { "type": "ayah", "surah": 2, "ayah": 255, "toAyah": 257 }, "source": "ref" }]
+    },
+    {
+      "in": "2:255-255",
+      "out": [{ "target": { "type": "ayah", "surah": 2, "ayah": 255 }, "source": "ref" }]
+    },
+    {
+      "in": "2:257-255",
+      "out": [
+        {
+          "target": { "type": "ayah", "surah": 2, "ayah": 257, "toAyah": 255 },
+          "source": "ref",
+          "issue": "range"
+        }
+      ]
+    },
+    {
+      "in": "2:300",
+      "out": [{ "target": { "type": "ayah", "surah": 2, "ayah": 300 }, "source": "ref", "issue": "ayah" }]
+    },
+    {
+      "in": "2:0",
+      "out": [{ "target": { "type": "ayah", "surah": 2, "ayah": 0 }, "source": "ref", "issue": "ayah" }]
+    },
+    {
+      "in": "2:255-300",
+      "out": [
+        {
+          "target": { "type": "ayah", "surah": 2, "ayah": 255, "toAyah": 300 },
+          "source": "ref",
+          "issue": "ayah"
+        }
+      ]
+    },
+    {
+      "in": "115:1",
+      "out": [{ "target": { "type": "ayah", "surah": 115, "ayah": 1 }, "source": "ref", "issue": "surah" }]
+    },
+    {
+      "in": "0:1",
+      "out": [{ "target": { "type": "ayah", "surah": 0, "ayah": 1 }, "source": "ref", "issue": "surah" }]
+    },
+    { "in": "2:", "out": [{ "target": { "type": "surah", "surah": 2 }, "source": "ref" }] },
+    {
+      "in": "120:",
+      "out": [{ "target": { "type": "surah", "surah": 120 }, "source": "ref", "issue": "surah" }]
+    },
+    { "in": "p 262", "out": [{ "target": { "type": "page", "page": 262 }, "source": "ref" }] },
+    { "in": "P262", "out": [{ "target": { "type": "page", "page": 262 }, "source": "ref" }] },
+    { "in": "page 262", "out": [{ "target": { "type": "page", "page": 262 }, "source": "ref" }] },
+    { "in": "p. 262", "out": [{ "target": { "type": "page", "page": 262 }, "source": "ref" }] },
+    { "in": "ص ٢٦٢", "out": [{ "target": { "type": "page", "page": 262 }, "source": "ref" }] },
+    { "in": "صفحة 262", "out": [{ "target": { "type": "page", "page": 262 }, "source": "ref" }] },
+    { "in": "صَفْحَة ٢٦٢", "out": [{ "target": { "type": "page", "page": 262 }, "source": "ref" }] },
+    { "in": "الصفحة ٢٦٢", "out": [{ "target": { "type": "page", "page": 262 }, "source": "ref" }] },
+    { "in": "p 604", "out": [{ "target": { "type": "page", "page": 604 }, "source": "ref" }] },
+    {
+      "in": "p 605",
+      "out": [{ "target": { "type": "page", "page": 605 }, "source": "ref", "issue": "page" }]
+    },
+    { "in": "p 0", "out": [{ "target": { "type": "page", "page": 0 }, "source": "ref", "issue": "page" }] },
+    {
+      "in": "p 1000",
+      "out": [{ "target": { "type": "page", "page": 1000 }, "source": "ref", "issue": "page" }]
+    },
+    { "in": "j 15", "out": [{ "target": { "type": "juz", "juz": 15 }, "source": "ref" }] },
+    { "in": "Juz 30", "out": [{ "target": { "type": "juz", "juz": 30 }, "source": "ref" }] },
+    { "in": "j15", "out": [{ "target": { "type": "juz", "juz": 15 }, "source": "ref" }] },
+    { "in": "ج ١٥", "out": [{ "target": { "type": "juz", "juz": 15 }, "source": "ref" }] },
+    { "in": "جزء 15", "out": [{ "target": { "type": "juz", "juz": 15 }, "source": "ref" }] },
+    { "in": "الجزء ١٥", "out": [{ "target": { "type": "juz", "juz": 15 }, "source": "ref" }] },
+    { "in": "j 31", "out": [{ "target": { "type": "juz", "juz": 31 }, "source": "ref", "issue": "juz" }] },
+    { "in": "h 30", "out": [{ "target": { "type": "hizb", "hizb": 30 }, "source": "ref" }] },
+    { "in": "Hizb 60", "out": [{ "target": { "type": "hizb", "hizb": 60 }, "source": "ref" }] },
+    { "in": "حزب ٣٠", "out": [{ "target": { "type": "hizb", "hizb": 30 }, "source": "ref" }] },
+    { "in": "h 61", "out": [{ "target": { "type": "hizb", "hizb": 61 }, "source": "ref", "issue": "hizb" }] },
+    { "in": "s 18", "out": [{ "target": { "type": "surah", "surah": 18 }, "source": "ref" }] },
+    { "in": "Surah 18", "out": [{ "target": { "type": "surah", "surah": 18 }, "source": "ref" }] },
+    { "in": "سورة ١٨", "out": [{ "target": { "type": "surah", "surah": 18 }, "source": "ref" }] },
+    {
+      "in": "s 115",
+      "out": [{ "target": { "type": "surah", "surah": 115 }, "source": "ref", "issue": "surah" }]
+    },
+    {
+      "in": "18",
+      "out": [
+        { "target": { "type": "surah", "surah": 18 }, "source": "number" },
+        { "target": { "type": "page", "page": 18 }, "source": "number" }
+      ]
+    },
+    {
+      "in": "١١٤",
+      "out": [
+        { "target": { "type": "surah", "surah": 114 }, "source": "number" },
+        { "target": { "type": "page", "page": 114 }, "source": "number" }
+      ]
+    },
+    { "in": "115", "out": [{ "target": { "type": "page", "page": 115 }, "source": "number" }] },
+    { "in": "604", "out": [{ "target": { "type": "page", "page": 604 }, "source": "number" }] },
+    {
+      "in": "605",
+      "out": [{ "target": { "type": "page", "page": 605 }, "source": "number", "issue": "page" }]
+    },
+    { "in": "0", "out": [{ "target": { "type": "page", "page": 0 }, "source": "number", "issue": "page" }] },
+    { "in": "kahf 10", "first": { "target": { "type": "ayah", "surah": 18, "ayah": 10 }, "source": "name" } },
+    {
+      "in": "Al-Kahf:10",
+      "first": { "target": { "type": "ayah", "surah": 18, "ayah": 10 }, "source": "name" }
+    },
+    {
+      "in": "kahf 200",
+      "first": { "target": { "type": "ayah", "surah": 18, "ayah": 200 }, "source": "name", "issue": "ayah" }
+    },
+    {
+      "in": "[البقرة: ٢٥٥]",
+      "first": { "target": { "type": "ayah", "surah": 2, "ayah": 255 }, "source": "name" }
+    },
+    {
+      "in": "يس ١-١٢",
+      "first": { "target": { "type": "ayah", "surah": 36, "ayah": 1, "toAyah": 12 }, "source": "name" }
+    },
+    { "in": "kahf", "first": { "target": { "type": "surah", "surah": 18 }, "source": "name" } },
+    { "in": "Surah Yasin", "first": { "target": { "type": "surah", "surah": 36 }, "source": "name" } },
+    { "in": "الكهف", "first": { "target": { "type": "surah", "surah": 18 }, "source": "name" } },
+    { "in": "ص", "first": { "target": { "type": "surah", "surah": 38 }, "source": "name" } },
+    { "in": "", "out": [] },
+    { "in": "   ", "out": [] },
+    { "in": "xyzzy", "out": [] }
+  ]
+}

@@ -1,0 +1,19 @@
+/*
+ * The app stylesheet (ARCHITECTURE §7.1, §9.1). Owner: WP7a. Imported once by main.ts.
+ *
+ * Cascade layers, lowest to highest priority:
+ *   reset       box model and element resets                                   styles/base.css
+ *   tokens      design tokens (sub-layers scale, theme, preference)            styles/tokens.css
+ *   base        document and element defaults, focus ring, reduced motion      styles/base.css
+ *   components  reserved for shared component CSS (Svelte's scoped styles are unlayered and beat every layer)
+ *   mushaf      the Mushaf renderer (§8), one file per owner                   styles/mushaf/*.css
+ *   utilities   .sr-only, .quran-text, .icon-dir, …                            styles/base.css
+ *
+ * No <style> element may appear in index.html (§6.4): everything global comes through here.
+ */
+@layer reset, tokens, base, components, mushaf, utilities;
+
+@import './styles/tokens.css';
+@import './styles/fonts.css';
+@import './styles/base.css';
+@import './styles/mushaf/index.css';

@@ -1,0 +1,42 @@
+[package]
+name = "quran-audio"
+description = "Quran for Desktop recitation engine: symphonia decode, WSOLA time-stretch, rubato resampling, cpal output, sample-exact markers and streaming sources"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[features]
+# Exposes `fake_out` (a test output that drains the ring and records every applied marker) outside `cfg(test)`, so the
+# integration tests in tests/ can drive the decode thread without audio hardware (§2.3.1). Never enabled by the app.
+testing = []
+
+# Final after wave 0 (docs/ARCHITECTURE.md §2.3, §14.2): wave-1+ packages request additions from the lead.
+[dependencies]
+quran-types = { workspace = true }
+cpal = { workspace = true }
+symphonia = { workspace = true }              # mp3 only (+ opt-simd); wav/pcm only in dev-dependencies
+rtrb = { workspace = true }                   # sample ring and marker ring (lock-free, real-time safe)
+rubato = { workspace = true }                 # Fft resampler when the file rate differs from the device rate
+crossbeam-channel = { workspace = true }      # control/decode/output command channels
+stream-download = { workspace = true }        # progressive HTTP source that fills the on-disk cache (§2.3.7)
+reqwest = { workspace = true }
+tokio = { workspace = true }                  # Handle::block_on on qd-audio-ctl only (§0.2)
+thiserror = { workspace = true }
+log = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }             # QD_AUDIO_SINK=wav marker/tick log as JSON lines (D24, debug builds)
+
+[target.'cfg(target_os = "linux")'.dependencies]
+cpal = { workspace = true, features = ["pulseaudio"] }
+
+[dev-dependencies]
+# Self dev-dependency: integration tests (tests/*.rs) link the library with `testing` on, which exposes `fake_out`.
+quran-audio = { workspace = true, features = ["testing"] }
+symphonia = { workspace = true, features = ["wav", "pcm"] } # WAV fixtures for seek/decode tests (§12.1)
+tempfile = { workspace = true }
+
+[lints]
+workspace = true

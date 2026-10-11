@@ -1,0 +1,12 @@
+# objc2-core-graphics ships no licence text of its own; these reviewed files stand in for it (xtask/licenses/README.md).
+versions = ["0.3.2"]
+
+[[file]]
+name = "LICENSE.md"
+kind = "licence"
+source = "https://github.com/madsmtm/objc2/blob/7b1abfd750a2cacaea71d6a56ecfb83cb7de560b/LICENSE.md"
+
+[[file]]
+name = "LICENSE-MIT"
+kind = "licence"
+source = "SPDX MIT text (https://github.com/spdx/license-list-data/blob/v3.29.0/text/MIT.txt) with the copyright line \"Copyright (c) the objc2 project contributors\": the repository's LICENSE.md names the MIT licence but does not contain its text; the crate declares no authors, so the holders are the contributors of the objc2 project, which generates it"

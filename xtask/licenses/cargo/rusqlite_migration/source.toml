@@ -1,0 +1,7 @@
+# rusqlite_migration ships no licence text of its own; these reviewed files stand in for it (xtask/licenses/README.md).
+versions = ["2.6.0"]
+
+[[file]]
+name = "LICENSE.txt"
+kind = "licence"
+source = "https://github.com/cljoly/rusqlite_migration/blob/37c7a555018ecd80c58b2954779d83c281e4557a/LICENSE.txt"

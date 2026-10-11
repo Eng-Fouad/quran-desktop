@@ -1,0 +1,6 @@
+# Cargo aliases (docs/ARCHITECTURE.md §13.2). Package acceptance lints only what a package owns
+# (`cargo clippy -p <crate> --all-targets -- -D warnings`, §14.4); `cargo lint` is for CI and integration checkpoints.
+[alias]
+xtask = "run --package xtask --"
+lint = "clippy --workspace --all-targets -- -D warnings"
+bindings = "test -p quran-desktop --lib export_bindings"

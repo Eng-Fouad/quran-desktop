@@ -1,0 +1,28 @@
+# Drift check for committed generated files (ARCHITECTURE §14.3 WP-CI). Owner: WP-CI.
+#
+# Runs the generator, fails when any listed file differs from the committed one, and always restores the originals
+# (git-free, like `pnpm bindings:check`; LEAD decision 1).
+name: Drift check
+description: Regenerate committed files with a command and fail when they differ (originals restored)
+
+inputs:
+  name:
+    description: Label for the log and the annotation
+    required: true
+  command:
+    description: The generator, run by bash in the workspace
+    required: true
+  paths:
+    description: The generated files it must leave unchanged, one per line
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Regenerate and compare
+      shell: bash
+      env:
+        QD_DRIFT_COMMAND: ${{ inputs.command }}
+        QD_DRIFT_PATHS: ${{ inputs.paths }}
+        QD_DRIFT_NAME: ${{ inputs.name }}
+      run: node "$GITHUB_ACTION_PATH/drift-check.mjs" --name "$QD_DRIFT_NAME"

@@ -1,0 +1,7 @@
+# is-reference ships no licence text of its own; these reviewed files stand in for it (xtask/licenses/README.md).
+versions = ["3.0.3"]
+
+[[file]]
+name = "LICENSE-MIT"
+kind = "licence"
+source = "SPDX MIT text (https://github.com/spdx/license-list-data/blob/v3.29.0/text/MIT.txt) with the copyright line \"Copyright (c) Rich Harris\": the repository (github.com/Rich-Harris) has no licence file at any tag; the holder is the package's author"

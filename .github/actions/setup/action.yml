@@ -1,0 +1,110 @@
+# Shared CI setup (ARCHITECTURE §13.3). Owner: WP-CI. Used by every job that compiles src-tauri.
+#
+# Node 22 + pnpm (version from package.json `packageManager`) with the pnpm store cached, a frozen install, the Rust
+# toolchain from rust-toolchain.toml with Swatinem/rust-cache, the Tauri/ALSA system packages on Linux, the KFGQPC Hafs
+# font (cached by the hash of xtask/assets.lock and verified against it), then `pnpm build` so dist/ exists for
+# tauri's generate_context! (§5.15). Third-party actions are pinned to commit SHAs (the policy check enforces it).
+#
+# Nothing QF-derived passes through these caches: the pnpm store, ~/.cargo and dependency build outputs (rust-cache
+# never caches workspace crates or anything outside target/*/{build,deps,.fingerprint}), and the font, which is not
+# QF content (D23).
+name: Setup
+description: Node 22 + pnpm, frozen install, Rust from rust-toolchain.toml with cache, Linux packages, KFGQPC font, pnpm build
+
+inputs:
+  rust:
+    description: Install the Rust toolchain, the Linux system packages and the cargo cache
+    required: false
+    default: 'true'
+  fonts:
+    description: >-
+      KFGQPC Hafs V30 font for dist/ and the installer: `required` (fail when it cannot be fetched), `optional`
+      (warn and continue; vite then leaves the URL unresolved) or `none`
+    required: false
+    default: optional
+  build-frontend:
+    description: Run `pnpm build` so dist/ exists for tauri's generate_context! (§5.15)
+    required: false
+    default: 'true'
+
+runs:
+  using: composite
+  steps:
+    - name: pnpm (version from package.json packageManager)
+      uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+    - name: Node 22
+      uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      with:
+        node-version: 22
+        cache: pnpm
+
+    - name: Install node modules (frozen lockfile)
+      shell: bash
+      run: pnpm install --frozen-lockfile
+
+    - name: Linux packages (Tauri v2 prerequisites + ALSA for cpal)
+      if: runner.os == 'Linux' && inputs.rust == 'true'
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential pkg-config curl wget file patchelf libwebkit2gtk-4.1-dev \
+          libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev libasound2-dev
+
+    - name: Rust toolchain (rust-toolchain.toml)
+      if: inputs.rust == 'true'
+      shell: bash
+      run: |
+        rustup toolchain install
+        rustup show active-toolchain
+        cargo --version
+        rustc --version
+
+    - name: Cargo cache (saved only by pushes to the default branch)
+      if: inputs.rust == 'true'
+      uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      with:
+        save-if: ${{ github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+
+    - name: Restore the KFGQPC font (keyed by xtask/assets.lock)
+      id: fonts
+      if: inputs.fonts != 'none'
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: public/fonts/*.ttf
+        key: fonts-${{ hashFiles('xtask/assets.lock') }}
+
+    - name: Fetch the KFGQPC font unless the cached copy matches the lock (cargo xtask fetch-assets)
+      id: fetch-fonts
+      if: inputs.fonts != 'none'
+      shell: bash
+      env:
+        QD_FONTS: ${{ inputs.fonts }}
+        QD_RUST: ${{ inputs.rust }}
+      run: |
+        verify="$GITHUB_ACTION_PATH/verify-assets.mjs"
+        if node "$verify" --quiet; then
+          echo "fonts: the cached files match xtask/assets.lock"
+          exit 0
+        fi
+        if [ "$QD_RUST" = "true" ] && cargo xtask fetch-assets && node "$verify"; then
+          echo "fetched=true" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+        if [ "$QD_FONTS" = "required" ]; then
+          echo "::error title=KFGQPC font::cargo xtask fetch-assets failed and no verified copy is cached"
+          exit 1
+        fi
+        echo "::warning title=KFGQPC font::not available; dist/ is built without the bundled Mushaf font"
+
+    - name: Save the KFGQPC font
+      if: inputs.fonts != 'none' && steps.fetch-fonts.outputs.fetched == 'true'
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: public/fonts/*.ttf
+        key: ${{ steps.fonts.outputs.cache-primary-key }}
+
+    - name: Frontend build (dist/ for generate_context!)
+      if: inputs.build-frontend == 'true'
+      shell: bash
+      run: pnpm build

@@ -1,0 +1,7 @@
+# realfft ships no licence text of its own; these reviewed files stand in for it (xtask/licenses/README.md).
+versions = ["3.5.0"]
+
+[[file]]
+name = "LICENSE-MIT"
+kind = "licence"
+source = "SPDX MIT text (https://github.com/spdx/license-list-data/blob/v3.29.0/text/MIT.txt) with the copyright line \"Copyright (c) HEnquist\": HEnquist/realfft has no licence file (neither at d0d4eee0525fd27c96c8a046d6d107acd5ed84a6, the crate's commit, nor later); the holder is the crate's Cargo author"

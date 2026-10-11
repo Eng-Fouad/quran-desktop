@@ -1,0 +1,75 @@
+# Guarded upload to the draft GitHub release (ARCHITECTURE §13.4, risk R19). Owner: WP13b.
+#
+# The ONLY place in this repository that may run `gh release upload` (the policy check enforces it), the release
+# counterpart of ./.github/actions/upload. Before anything leaves the runner:
+#   1. every installer gets a `<name>.sha256` next to it (in $RUNNER_TEMP);
+#   2. scripts/check-artifacts.mjs --release --verified <manifest> runs on exactly the files to upload: installers and
+#      executables are allowed, an SQLite database only as a qul core.db, and an installer the guard cannot open
+#      (NSIS, dmg, AppImage) only when scripts/check-bundles.mjs --core qul unpacked and verified it (same size and
+#      SHA-256);
+#   3. the release must exist and still be a draft: a published release is never modified.
+name: Release upload (guarded)
+description: Run check-artifacts --release on the installers and their SHA-256 files, then upload them to the draft release
+
+inputs:
+  tag:
+    description: The release tag (v*)
+    required: true
+  manifest:
+    description: The qd-bundle-check/1 manifest written by `scripts/check-bundles.mjs --core qul --manifest`
+    required: true
+  files:
+    description: The installers to upload, one per line
+    required: true
+  token:
+    description: A token with contents:write (github.token)
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: SHA-256 of every installer
+      id: sums
+      shell: bash
+      env:
+        QD_UPLOAD_FILES: ${{ inputs.files }}
+      run: |
+        dir="$RUNNER_TEMP/qd-release-sums"
+        mkdir -p "$dir"
+        {
+          echo 'files<<QD_EOF'
+          while IFS= read -r file; do
+            [ -n "$file" ] || continue
+            name="$(basename "$file")"
+            (cd "$(dirname "$file")" && if command -v sha256sum >/dev/null; then sha256sum "$name"; else shasum -a 256 "$name"; fi) > "$dir/$name.sha256"
+            echo "$file"
+            echo "$dir/$name.sha256"
+          done <<< "$QD_UPLOAD_FILES"
+          echo 'QD_EOF'
+        } >> "$GITHUB_OUTPUT"
+
+    - name: Licensing guard (scripts/check-artifacts.mjs --release)
+      shell: bash
+      env:
+        QD_UPLOAD_PATHS: ${{ steps.sums.outputs.files }}
+        QD_MANIFEST: ${{ inputs.manifest }}
+      run: node "$GITHUB_WORKSPACE/scripts/check-artifacts.mjs" --release --verified "$QD_MANIFEST" --from-env QD_UPLOAD_PATHS
+
+    - name: Upload to the draft release
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        GH_REPO: ${{ github.repository }}
+        QD_TAG: ${{ inputs.tag }}
+        QD_UPLOAD_PATHS: ${{ steps.sums.outputs.files }}
+      run: |
+        draft="$(gh release view "$QD_TAG" --json isDraft --jq .isDraft)"
+        if [ "$draft" != "true" ]; then
+          echo "::error title=release upload::$QD_TAG is not a draft release (isDraft=$draft); a published release is never modified"
+          exit 1
+        fi
+        files=()
+        while IFS= read -r file; do
+          if [ -n "$file" ]; then files+=("$file"); fi
+        done <<< "$QD_UPLOAD_PATHS"
+        gh release upload "$QD_TAG" "${files[@]}" --clobber

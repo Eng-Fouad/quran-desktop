@@ -1,0 +1,31 @@
+{
+  // Type-checks the QA harness and every scenario (scripts/qa/**, tests/e2e/lib/**, tests/e2e/{scenarios,metrics}/*.mjs,
+  // scripts/measure-glyph-scale.mjs; all `// @ts-check` JavaScript) against playwright-core, Node and the app's own
+  // `window.__QD_TEST__` types:  pnpm exec tsc -p tests/e2e/lib/tsconfig.json
+  "compilerOptions": {
+    "target": "es2023",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "types": ["node"],
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "noUncheckedIndexedAccess": true,
+    "verbatimModuleSyntax": true,
+    "paths": {
+      "$lib": ["../../../src/lib"],
+      "$lib/*": ["../../../src/lib/*"]
+    }
+  },
+  "include": [
+    "./*.mjs",
+    "./*.d.ts",
+    "../scenarios/*.mjs",
+    "../metrics/*.mjs",
+    "../../../scripts/qa/**/*.mjs",
+    "../../../scripts/measure-glyph-scale.mjs"
+  ]
+}

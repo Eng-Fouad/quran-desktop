@@ -1,0 +1,7 @@
+# webview2-com ships no licence text of its own; these reviewed files stand in for it (xtask/licenses/README.md).
+versions = ["0.39.1"]
+
+[[file]]
+name = "LICENSE"
+kind = "licence"
+source = "https://github.com/wravery/webview2-rs/blob/edc2caf886175ccaebe86078c9cfe1ae2a187328/LICENSE"

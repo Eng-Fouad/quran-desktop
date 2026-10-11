@@ -1,0 +1,47 @@
+[package]
+name = "media-session"
+description = "OS media controls for Quran for Desktop: Windows SMTC, macOS Now Playing, Linux MPRIS, with a no-op fallback"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+license.workspace = true
+authors.workspace = true
+
+# Final after wave 0 (docs/ARCHITECTURE.md §2.4, §14.2). No tauri dependency.
+[dependencies]
+thiserror = { workspace = true }
+log = { workspace = true }
+
+[target.'cfg(windows)'.dependencies]
+windows = { workspace = true } # SMTC via ISystemMediaTransportControlsInterop, COM (MTA thread), AUMID
+
+[target.'cfg(windows)'.dev-dependencies]
+# `examples/smtc_check.rs` and `tests/windows_smtc.rs` create a hidden top-level window on an STA thread (the shape of
+# the app's main window) and observe the session through the system's session manager (`Windows.Media.Control`).
+# Same crate and version as above: extra features only, no Cargo.lock change.
+windows = { workspace = true, features = ["Win32_UI_WindowsAndMessaging", "Media_Control"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = { workspace = true }
+# The feature list WP6d verified (`cargo clippy --target aarch64-apple-darwin`); NSNumber is in `NSValue`.
+objc2-foundation = { workspace = true, default-features = false, features = [
+    "std",
+    "NSArray",
+    "NSDictionary",
+    "NSGeometry",
+    "NSObject",
+    "NSString",
+    "NSValue",
+    "objc2-core-foundation",
+] }
+objc2-media-player = { workspace = true }
+block2 = { workspace = true }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+mpris-server = { workspace = true }
+async-channel = { workspace = true }
+futures-lite = { workspace = true }
+
+[lints]
+workspace = true

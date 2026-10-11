@@ -1,0 +1,13 @@
+# webview2-com-sys ships no licence text of its own; these reviewed files stand in for it (xtask/licenses/README.md).
+versions = ["0.39.1"]
+
+[[file]]
+name = "LICENSE"
+kind = "licence"
+source = "https://github.com/wravery/webview2-rs/blob/edc2caf886175ccaebe86078c9cfe1ae2a187328/LICENSE"
+
+[[file]]
+name = "WebView2-SDK-LICENSE.txt"
+kind = "notice"
+heading = "Microsoft WebView2 SDK 1.0.3800.47: webview2-com-sys links WebView2LoaderStatic.lib from this SDK into the Windows app."
+source = "LICENSE.txt of the NuGet package Microsoft.Web.WebView2 1.0.3800.47 (https://www.nuget.org/packages/Microsoft.Web.WebView2/1.0.3800.47), the SDK version that webview2-rs pins at edc2caf886175ccaebe86078c9cfe1ae2a187328 (crates/update-bindings, WEBVIEW2_VERSION). The crate's x64/WebView2LoaderStatic.lib is byte-identical to the package's build/native/x64/WebView2LoaderStatic.lib (sha256 89c6b872783b8f6c3cedbff618adb42082d455c615453ae10cfc753f1e8f25d8). The package's NOTICE.txt covers only its wv2winrt code generator, which is not shipped."
