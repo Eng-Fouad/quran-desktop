@@ -102,6 +102,17 @@ describe('app store', () => {
     expect(ready).toHaveBeenCalledTimes(1)
   })
 
+  it('asks to be shown without waiting for frames while the window is hidden (WKWebView runs none)', async () => {
+    await initIpc()
+    const ready = vi.spyOn(mockCommands, 'windowReady')
+    const raf = vi.spyOn(window, 'requestAnimationFrame')
+    vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden')
+    app.markReady()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(ready).toHaveBeenCalledTimes(1)
+    expect(raf).not.toHaveBeenCalled()
+  })
+
   it('dismisses a startup notice', async () => {
     const b = await bootstrap()
     app.init({

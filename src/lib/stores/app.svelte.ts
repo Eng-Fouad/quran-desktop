@@ -138,12 +138,18 @@ class AppStore implements Store {
     this.ready = true
     // Without IPC (a browser preview of a production build) there is no window to show and nothing to quit.
     if (hasIpc()) this.#unlistenQuit = listenEvent(events.quitRequested, () => void this.quit())
-    requestAnimationFrame(() =>
-      requestAnimationFrame(() => {
-        if (!hasIpc()) return
-        call(api.windowReady()).catch((e: unknown) => console.error('[qd] window_ready failed', e))
-      }),
-    )
+    const ready = (): void => {
+      if (!hasIpc()) return
+      call(api.windowReady()).catch((e: unknown) => console.error('[qd] window_ready failed', e))
+    }
+    // A hidden document gets no animation frames: WKWebView (macOS) reports its hidden window as hidden, so the double
+    // rAF would wait for Rust's show fallback (3 s). Lay out now and ask to be shown; WebKit paints as the window appears.
+    if (document.visibilityState === 'hidden') {
+      void document.documentElement.offsetHeight
+      setTimeout(ready, 0)
+      return
+    }
+    requestAnimationFrame(() => requestAnimationFrame(ready))
   }
 
   /**
