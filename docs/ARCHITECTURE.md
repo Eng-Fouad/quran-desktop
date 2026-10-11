@@ -3021,6 +3021,7 @@ pub struct SettingsChanged(pub Settings);          // "settings-changed"
 pub struct UserDataChanged { pub kinds: Vec<UserDataKind> }  // "user-data-changed"
 pub struct NavigateRequested(pub NavTarget);       // "navigate-requested": tray, single-instance argv, deep link (stretch)
 pub struct NetworkChanged { pub online: bool }     // "network-changed"
+pub struct SettingsRequested;                      // "settings-requested": the macOS app menu's "Settings…" (⌘,), §7.4
 ```
 Event names follow tauri-specta's default: the kebab-case type name (verified in the probe: `PlaybackTick` → `"playback-tick"`).
 TS usage: `events.audioStateChanged.listen(e => …)`.
@@ -3410,6 +3411,11 @@ needed. `Mod+Z` / `Mod+Shift+Z` (§10.1) and every toast's Undo action call `und
 - **Settings dialog** (`SettingsDialog`, hosted once by `App`; WP7c). `ui.view` stays the source of truth (the Rust
   `AppView`, deep links, the tray, the palette, `Mod+,`, the offline badge are unchanged), and it is **not** a
   `ui.overlays` kind: `OverlayHost` renders only the top overlay, so every confirmation would unmount Settings.
+  - macOS: the app menu has "Settings…" (⌘,) after About (`window::install_app_menu`). It shows the window and emits
+    `settings-requested`; the page runs `settingsFromMenu`, which opens Settings where `Mod+,` would act (never over
+    another layer, the palette alone closing first) and, a menu command rather than a toggle, never closes the dialog
+    (About turns to Settings). WKWebView offers ⌘, to the page first and passes it to the menu only when the page left
+    it unhandled, which `Mod+,` does only where it declines, so a key press never acts twice.
   - Frame: centred in the room under the 40 px title bar, `min(1040px, 100% − 48px)` × `min(760px, 100% − 48px)`,
     radius-lg, shadow-3, on the onboarding's faint scrim (`rgb(0 0 0 / .18)`). Under 880 × 560 CSS px of room (after
     the UI zoom) it fills the room edge to edge (no margin, radius or shadow). The scrim starts below the title bar,
@@ -4807,7 +4813,7 @@ keys by name. "reader" scope means the reader view is active; "mushaf" means Mus
 | app | `Mod+k` **C** | Command palette (toggle) | global, in inputs | app.ts (WP7c) |
 | app | `Mod+f` **C** | Search (sidebar Search tab, focus input; "Search settings" while the Settings dialog is open) | global, in inputs | app.ts |
 | app | `?` | Shortcut sheet | global | app.ts |
-| app | `Mod+,` **C** | Settings dialog (toggle; not over another layer, but closes the palette first when it is the only one, outside the dialog) | global, in inputs | app.ts |
+| app | `Mod+,` **C** | Settings dialog (toggle; not over another layer, but closes the palette first when it is the only one, outside the dialog). macOS: also the app menu's "Settings…", which opens but never closes it (§7.4) | global, in inputs | app.ts |
 | app | `Mod+Shift+d` **C** | Downloads manager (also from inside the rail's Downloads flyout) | global | app.ts |
 | app | `Escape` **C** | Close the top overlay/floating layer → else clear selection/search hit → else exit zen. In the note editor: closes; asks "Discard note?" only if the unsaved body is non-empty (drafts autosave to the ui store) | global, in inputs | app.ts |
 | app | `F6`, `Mod+Shift+u` | Move focus to the toast region (actions such as Undo) | global | app.ts |

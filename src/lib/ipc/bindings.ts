@@ -174,6 +174,7 @@ export const events = {
 	packsChanged: makeEvent<PacksChanged>("packs-changed"),
 	quitRequested: makeEvent<QuitRequested>("quit-requested"),
 	settingsChanged: makeEvent<SettingsChanged>("settings-changed"),
+	settingsRequested: makeEvent<SettingsRequested>("settings-requested"),
 	userDataChanged: makeEvent<UserDataChanged>("user-data-changed"),
 };
 
@@ -1197,6 +1198,14 @@ export type Settings = {
 
 /**  `"settings-changed"`: the validated settings after `settings_set`/`settings_reset`. */
 export type SettingsChanged = Settings;
+
+/**
+ *  `"settings-requested"`: the macOS app menu's "Settings…" (⌘,). The page opens the Settings dialog under the rule of
+ *  `Mod+,` (never over another layer) and leaves it open when it already shows. WKWebView offers ⌘, to the page first
+ *  and hands it to the menu only when the page left it unhandled, which `Mod+,` does only where it declines: a key press
+ *  never acts twice.
+ */
+export type SettingsRequested = null;
 
 export type SidePaneFollow = "selection" | "selection_or_audio" | "pinned";
 

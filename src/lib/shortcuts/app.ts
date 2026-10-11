@@ -9,7 +9,8 @@
  * wins by scope precedence while it applies.
  *
  * While the Settings dialog is open (§7.4) only `SETTINGS_ALLOWED` and the audio group run (the `shortcuts` store
- * consumes the other global ones), `Mod+F` focuses "Search settings", and `Mod+,` closes the dialog.
+ * consumes the other global ones), `Mod+F` focuses "Search settings", and `Mod+,` closes the dialog. The macOS app
+ * menu's "Settings…" (`settings-requested`, which the `shortcuts` store hears) runs `settingsFromMenu`.
  */
 import { SETTING_LIMITS } from '$lib/contracts/settings'
 import type { ShortcutDef } from '$lib/contracts/shortcuts'
@@ -82,6 +83,27 @@ function overlaySidebarShown(): boolean {
 /** `Mod+,` and the rail button: open Settings, or close the dialog (Settings or About) when it shows. */
 export function toggleSettings(): void {
   ui.setView(inDialog(ui.view) ? 'reader' : 'settings')
+}
+
+/**
+ * Where `Mod+,` acts: over no other layer (a confirmation, the note editor, the onboarding, an open listbox or popover,
+ * a sheet), since the dialog sits under every overlay; the palette alone is the exception (it closes first), and only
+ * while the dialog does not show.
+ */
+function settingsKeyHolds(): boolean {
+  return !ui.layerOpen || (paletteAlone() && !inDialog(ui.view))
+}
+
+/**
+ * The macOS app menu's "Settings…" (⌘,, `settings-requested`): opens Settings where `Mod+,` would, and, a menu command
+ * rather than a toggle, leaves the dialog open when it shows Settings (About turns to Settings). WKWebView offers ⌘, to
+ * the page first and hands it to the menu only when the page left it unhandled, that is where `Mod+,` declined; the
+ * request declines there too, so a key press never acts twice.
+ */
+export function settingsFromMenu(): void {
+  if (ui.view === 'settings' || !settingsKeyHolds()) return
+  if (ui.isTop('palette')) ui.close('palette')
+  ui.setView('settings')
 }
 
 /**
@@ -161,12 +183,11 @@ export const appShortcuts: readonly ShortcutDef[] = [
     labelKey: 'shortcuts.app.settings',
     scope: 'global',
     capture: true,
-    // It closes the dialog from "Search settings" too, yet never acts over another layer (a confirmation, the note
-    // editor, the onboarding, an open listbox or popover, a sheet): the dialog sits under every overlay. The palette
-    // alone is the exception, as for Mod+F: the key (or its "Settings" row) closes it first. The palette offers that
-    // row only where it would run: not over another layer, nor while the dialog shows.
+    // It closes the dialog from "Search settings" too, yet never acts over another layer (`settingsKeyHolds`). The
+    // palette alone is the exception, as for Mod+F: the key (or its "Settings" row) closes it first. The palette offers
+    // that row only where it would run: not over another layer, nor while the dialog shows.
     allowInInput: true,
-    when: () => !ui.layerOpen || (paletteAlone() && !inDialog(ui.view)),
+    when: settingsKeyHolds,
     run: () => {
       if (ui.isTop('palette')) ui.close('palette')
       toggleSettings()

@@ -87,6 +87,8 @@ copy, recitation, settings, themes, zen, the close-to-tray question, the Dock's 
 - Dragging the title bar: the pass's synthetic clicks in the drag region resized the window from its top-left corner
   (`performWindowDragWithEvent:` with a synthetic event); a real mouse should move it.
 - The rest of the macOS checklist rows: the universal dmg on Intel, macOS 13.3, VoiceOver, the drop guard.
+- The app menu's "Settings…" (⌘,, added later, WP7c 28): it opens the Settings dialog; ⌘, toggles it; with a
+  confirmation up neither does anything.
 
 ## The owner's Mushaf requests (2026-10-11), checked on the Mac
 

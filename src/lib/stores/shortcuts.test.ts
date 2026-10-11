@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ShortcutDef } from '$lib/contracts/shortcuts'
 import { defaultSettings } from '$lib/contracts/settings'
-import { api, call, initIpc } from '$lib/ipc'
+import { api, call, events, initIpc } from '$lib/ipc'
 import type { Bootstrap, Platform, Settings } from '$lib/ipc/bindings'
 import { state } from '$lib/ipc/mock/state'
 import { appShortcuts } from '$lib/shortcuts/app'
@@ -574,6 +574,44 @@ describe('the Settings dialog (§7.4)', () => {
     ui.open('palette', {})
     expect(press(comma).defaultPrevented).toBe(false)
     expect(ui.topOverlay?.kind).toBe('palette')
+    expect(ui.view).toBe('settings')
+  })
+
+  it('the macOS app menu’s "Settings…" opens it where Mod+, would act, and never closes it', async () => {
+    const fromMenu = async () => {
+      await events.settingsRequested.emit()
+      await Promise.resolve()
+    }
+    await Promise.resolve() // the store's listener is attached
+    await fromMenu()
+    expect(ui.view).toBe('settings')
+    // A menu command, not a toggle: the dialog stays, and About turns to Settings.
+    openSettings()
+    await fromMenu()
+    expect(ui.view).toBe('settings')
+    openSettings('about')
+    await fromMenu()
+    expect(ui.view).toBe('settings')
+    // Over another layer it declines, as Mod+, does (WKWebView hands ⌘, to the menu exactly then).
+    ui.setSettingsOpen(false)
+    ui.setView('reader')
+    for (const open of [
+      () => void ui.confirm({ title: 'Delete note?', body: '', confirmLabel: 'Delete' }),
+      () => ui.open('onboarding', {}),
+      () => ui.pushFloating(),
+    ]) {
+      open()
+      await fromMenu()
+      expect(ui.view).toBe('reader')
+      ui.reset()
+      ui.init(bootstrap)
+    }
+    // The palette alone closes first.
+    ui.open('palette', {})
+    ui.pushFloating()
+    ui.pushModal()
+    await fromMenu()
+    expect(ui.overlays).toEqual([])
     expect(ui.view).toBe('settings')
   })
 })

@@ -24,8 +24,9 @@
  * then `reader`, then `global`), then the most recently registered. So a reader-scoped `Escape` (clear the selection,
  * WP8e) takes over from the global one (close layers, leave a view, leave zen) whenever its `when()` holds.
  *
- * The store registers `appShortcuts` (`$lib/shortcuts/app`, same owner) in `init`; every other shortcut file is
- * registered by its owner (`shortcuts.register(defs)` returns the unregister function).
+ * The store registers `appShortcuts` (`$lib/shortcuts/app`, same owner) in `init`, and hears the macOS app menu's
+ * "Settings…" (`settings-requested` → `settingsFromMenu`); every other shortcut file is registered by its owner
+ * (`shortcuts.register(defs)` returns the unregister function).
  */
 import {
   SHORTCUT_GROUPS,
@@ -34,6 +35,7 @@ import {
   type ShortcutScope,
 } from '$lib/contracts/shortcuts'
 import type { Store } from '$lib/contracts/stores'
+import { events } from '$lib/ipc'
 import type { Bootstrap } from '$lib/ipc/bindings'
 import {
   type Chord,
@@ -49,8 +51,8 @@ import {
   parseChord,
   widgetGuardBlocks,
 } from '$lib/shortcuts'
-import { allowedInSettings, appShortcuts } from '$lib/shortcuts/app'
-import { app } from './app.svelte'
+import { allowedInSettings, appShortcuts, settingsFromMenu } from '$lib/shortcuts/app'
+import { app, listenEvent } from './app.svelte'
 import { i18n } from './i18n.svelte'
 import { settings } from './settings.svelte'
 import { ui } from './ui.svelte'
@@ -140,6 +142,8 @@ class ShortcutsStore implements Store {
         bubble: (e) => this.handleBubble(e),
       }),
       this.register(appShortcuts),
+      // The macOS app menu's "Settings…" (⌘,): `Mod+,` from the menu bar.
+      listenEvent(events.settingsRequested, settingsFromMenu),
     )
     // The layout can change while the app is in the background (a layout switch in the OS): re-read on focus.
     const onFocus = () => void this.refreshLayoutMap()

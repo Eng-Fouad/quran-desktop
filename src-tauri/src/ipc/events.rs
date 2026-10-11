@@ -49,3 +49,10 @@ pub struct NetworkChanged {
 /// `app_quit`. If it does not within 1.5 s, the app exits anyway.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type, Event)]
 pub struct QuitRequested;
+
+/// `"settings-requested"`: the macOS app menu's "Settings…" (⌘,). The page opens the Settings dialog under the rule of
+/// `Mod+,` (never over another layer) and leaves it open when it already shows. WKWebView offers ⌘, to the page first
+/// and hands it to the menu only when the page left it unhandled, which `Mod+,` does only where it declines: a key press
+/// never acts twice.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type, Event)]
+pub struct SettingsRequested;

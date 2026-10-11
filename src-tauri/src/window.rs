@@ -115,18 +115,29 @@ pub fn create_main<R: Runtime>(app: &AppHandle<R>) {
 
 /// The macOS app menu's Quit ([`install_app_menu`]).
 pub const QUIT_MENU_ID: &str = "qd-menu.quit";
+/// The macOS app menu's "Settings…" ([`install_app_menu`]).
+pub const SETTINGS_MENU_ID: &str = "qd-menu.settings";
 
-/// macOS: tauri's default menu bar (the app menu, Edit for Cmd+C/V/A in text fields, View, Window) with its Quit
-/// replaced by one that goes through [`quit`], so Cmd+Q lets the page save first like the tray's Quit. The default item
-/// calls `terminate:`, which ends the app without `quit-requested` and lost a turn of the last second (LEAD 23). The
-/// Dock's Quit and logout still terminate directly. A menu that cannot be built leaves the default one.
-#[cfg(target_os = "macos")]
+/// macOS: tauri's default menu bar (the app menu, Edit for Cmd+C/V/A in text fields, View, Window) with two changes to
+/// its app menu:
+/// - "Settings…" (⌘,) after About, where macOS apps keep it: it shows the window and asks the page for the Settings
+///   dialog ([`request_settings`]), which applies `Mod+,`'s rule, never over another layer. WKWebView offers ⌘, to the
+///   page first and hands it to this item only when the page left it unhandled, which `Mod+,` does only where it
+///   declines: a key press never acts twice.
+/// - Its Quit replaced by one that goes through [`quit`], so Cmd+Q lets the page save first like the tray's Quit. The
+///   default item calls `terminate:`, which ends the app without `quit-requested` and lost a turn of the last second
+///   (LEAD 23). The Dock's Quit and logout still terminate directly.
+///
+/// A menu that cannot be built leaves the default one. Compiled on every OS, so the Windows and Linux builds check it
+/// too; installed on macOS only, the one OS whose default menu starts with the app menu.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 fn install_app_menu<R: Runtime>(app: &AppHandle<R>) {
-    use tauri::menu::{Menu, MenuItem, MenuItemKind};
+    use tauri::menu::{Menu, MenuItem, MenuItemKind, PredefinedMenuItem};
 
     let build = || -> tauri::Result<Menu<R>> {
         let menu = Menu::default(app)?;
-        // The default menu's first submenu is the app menu; its last item is the predefined Quit.
+        // The default menu's first submenu is the app menu: About, a separator, Services, a separator, Hide, Hide
+        // Others, a separator, and the predefined Quit last.
         if let Some(MenuItemKind::Submenu(app_menu)) = menu.items()?.into_iter().next() {
             let last = app_menu.items()?.len().saturating_sub(1);
             app_menu.remove_at(last)?;
@@ -138,6 +149,15 @@ fn install_app_menu<R: Runtime>(app: &AppHandle<R>) {
                 true,
                 Some("CmdOrCtrl+Q"),
             )?)?;
+            // After About and its separator, with a separator of its own before Services.
+            let settings = MenuItem::with_id(
+                app,
+                SETTINGS_MENU_ID,
+                "Settings…",
+                true,
+                Some("CmdOrCtrl+,"),
+            )?;
+            app_menu.insert_items(&[&settings, &PredefinedMenuItem::separator(app)?], 2)?;
         }
         Ok(menu)
     };
@@ -145,12 +165,25 @@ fn install_app_menu<R: Runtime>(app: &AppHandle<R>) {
         log::warn!("app menu: {e}; keeping the default menu");
         return;
     }
-    // A global listener: it also hears the tray's items (and the tray's listener hears this one).
-    app.on_menu_event(|app, event| {
-        if event.id().as_ref() == QUIT_MENU_ID {
-            quit(app);
-        }
+    // A global listener: it also hears the tray's items (and the tray's listener hears these).
+    app.on_menu_event(|app, event| match event.id().as_ref() {
+        QUIT_MENU_ID => quit(app),
+        SETTINGS_MENU_ID => request_settings(app),
+        _ => {}
     });
+}
+
+/// The app menu's "Settings…": shows the main window (it may be hidden in the tray, still reciting) and emits
+/// `settings-requested`; the page decides, as for `Mod+,`.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+fn request_settings<R: Runtime>(app: &AppHandle<R>) {
+    show_main(app);
+    if let Err(e) = app.emit(
+        <crate::ipc::events::SettingsRequested as tauri_specta::Event>::NAME,
+        crate::ipc::events::SettingsRequested,
+    ) {
+        log::warn!("settings-requested: {e}");
+    }
 }
 
 /// WebView2 crash recovery for the real (Wry) window; nothing on other platforms or runtimes (tests).

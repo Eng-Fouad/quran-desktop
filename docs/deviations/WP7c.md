@@ -239,9 +239,7 @@ your recommendations"). The shell's part of Settings:
     `settingsDialog.test.ts`, a `layer="view"` test in `Dialog.browser.test.ts`, the allow-list, `Mod+F` and `Mod+,`
     (over a popover and over a sheet too) in `shortcuts.test.ts`, the palette's return and its "Settings" row in
     `palette-providers.test.ts`, `dismissFloating` in `ui.test.ts`. `shortcuts.browser.test.ts` finds the Settings
-    search field in the dialog. Not done:
-    a macOS App-menu "Settings… ⌘," (Rust; not in this change). If it is added, it must go through the same guarded
-    toggle, and the native accelerator and the JS `Mod+,` must not both fire.
+    search field in the dialog. The macOS app-menu "Settings… ⌘," came later (28).
 
 ### Owner request 2026-10-11: the rail's Downloads flyout and the manager
 
@@ -283,6 +281,23 @@ The shell's part of the Downloads change (WP12a 12–15):
       the manager has none), the heading focus in `SettingsDialog.browser.test.ts`, and in `flyout.browser.test.ts`
       the rail button's attributes where it navigates and the rail's 40 px buttons with scrolling tabs at 507 × 400 and
       380 × 300.
+
+### Owner request 2026-10-11: "Settings…" in the macOS app menu
+
+28. **The app menu's "Settings…" (⌘,).** `window::install_app_menu` inserts it after About and its separator, with a
+    separator of its own before Services (Apple's order: About, Settings…, Services, Hide, Quit). Choosing it shows the
+    window (it may be hidden in the tray, still reciting) and emits the new `settings-requested` event
+    (`contract-changes.md`); the `shortcuts` store hears it and runs `settingsFromMenu` (`app.ts`).
+    - Same rule as `Mod+,` (`settingsKeyHolds`): never over another layer, the palette alone closing first. Unlike the
+      key it never toggles: with Settings open it does nothing, from About it turns to Settings.
+    - No double action: WKWebView offers ⌘, to the page first and resends it to the menu only if the page left it
+      unhandled (not `preventDefault`ed). `Mod+,` consumes the key wherever it acts and declines exactly where
+      `settingsFromMenu` declines too.
+    - The menu code is compiled on every OS (`#[cfg_attr(not(target_os = "macos"), allow(dead_code))]`, as
+      `tray::macos`), so the Windows and Linux builds type-check it; it is installed on macOS only.
+    - Tests: `shortcuts.test.ts` (the request opens Settings, never closes it, turns About to Settings, declines over a
+      confirmation, the onboarding and a popover, closes the palette alone first); the contract test in `ipc/mod.rs`
+      lists the event. The menu itself needs a Mac (RELEASE_CHECKLIST).
 
 ## Requests
 

@@ -116,6 +116,8 @@ Install each file from the draft release, not a local build. Use a fresh user pr
       source and licence.
 - [ ] Dropping a file or a link from another app onto the window does nothing (no navigation, a "not allowed"
       cursor), and the reader stays where it was. A link inside About opens in the default browser, never in the app.
+- [ ] macOS: the app menu shows "Settings… ⌘," after About. Choosing it opens the Settings dialog (and leaves it open
+      when it shows); ⌘, toggles the dialog once per press; with a confirmation open neither does anything.
 - [ ] Uninstall removes the app. User data stays where §2.8.3 says it is.
 - [ ] Upgrade: install the previous release, use it (a bookmark, a downloaded translation), then install this one over
       it. One "Quran" entry remains in the system's app list, and the bookmark and the download are still there.

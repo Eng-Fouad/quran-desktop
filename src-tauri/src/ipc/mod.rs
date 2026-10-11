@@ -133,6 +133,7 @@ pub fn specta_builder() -> tauri_specta::Builder<tauri::Wry> {
             events::NavigateRequested,
             events::NetworkChanged,
             events::QuitRequested,
+            events::SettingsRequested,
         ])
 }
 
@@ -172,8 +173,8 @@ mod tests {
 
     /// The generated contract has the §5.13 surface (92 typed commands: the 90 of §5.13 plus the integration's
     /// `window_set_caption` and `user_backup_restore`, every one returning the `AppError` result type), the 7 §5.14
-    /// events plus the integration's `quit-requested`, and no raw `font_bytes`. Rendered into a temp dir so it never
-    /// races the export.
+    /// events plus the integration's `quit-requested` and the macOS menu's `settings-requested`, and no raw
+    /// `font_bytes`. Rendered into a temp dir so it never races the export.
     #[test]
     fn bindings_cover_the_contract() {
         let ts = render();
@@ -196,6 +197,7 @@ mod tests {
             "navigate-requested",
             "network-changed",
             "quit-requested",
+            "settings-requested",
         ] {
             assert!(
                 ts.contains(&format!("(\"{event}\")")),

@@ -505,7 +505,8 @@ is the lead's fold-in of every accepted deviation (`docs/deviations/WP*.md`), ev
   the filled frame its views keep the dock's band free (`settingsFrame`). The frame stays
   below the title bar's band in zen too (the bar's reveal zone), so the bar slides in uncovered. Focus starts on
   "Search settings" and returns to the opener, or stays with the destination when the view moved on (Downloads)
-  (WP7c 22–24, WP12b 10–12, WP12c 29).
+  (WP7c 22–24, WP12b 10–12, WP12c 29). On macOS the app menu's "Settings…" (⌘,) asks the page through
+  `settings-requested`, which opens Settings where `Mod+,` would and never closes it (WP7c 28).
 - **Downloads in two tiers** (§7.4, §9.7; the same owner request): the rail's Downloads button opens an arrowless
   activity flyout (`DownloadsFlyout`, a floating layer: jobs with one action and Stop, failures with their reason, what
   waits for a connection, "Recently finished", "Update all", "Get content" links that open the manager on a kind, and
