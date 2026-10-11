@@ -787,12 +787,13 @@ of freshly loaded page fonts); a flip has 4–5 frames over 32 ms. §13.6 rows: 
 memory ≈ 430 MiB against 350 (mostly the WebView2 renderer and GPU processes), cold start 0.95–1.2 s against 0.8 s. All
 need the release build on a quiet machine; memory also a renderer-heap profile.
 
-**Not verifiable on the Windows dev machine:** macOS and Linux runtime behaviour (font transport `url` on macOS, WebKitGTK
-memo budget, window placement, drop and navigation guards, MPRIS and Now Playing live tests), the installers on CI, a real
-GitHub run, NVDA and VoiceOver passes over 1:1–7, 2:255 and 38:24, and the R4 listening test (`dsp_listen`, 3 reciters × 5
-speeds). Each is a `RELEASE_CHECKLIST.md` row. On macOS, Cmd+Q (the default app menu's Quit) is expected to end the app
-without `quit-requested`, so a turn in its last second would not be kept; an app menu whose Quit calls `window::quit`
-would close that gap once it can be tried on a Mac (LEAD 23).
+**Not verifiable on the Windows dev machine:** Linux runtime behaviour (WebKitGTK memo budget, window placement, drop and
+navigation guards, MPRIS live tests), the macOS drop and navigation guards and Control Center's Now Playing, the
+installers on CI, a real GitHub run, NVDA and VoiceOver passes over 1:1–7, 2:255 and 38:24, and the R4 listening test
+(`dsp_listen`, 3 reciters × 5 speeds). Each is a `RELEASE_CHECKLIST.md` row. The rest of the macOS rows were checked on a
+Mac ([`deviations/WP-macOS.md`](deviations/WP-macOS.md)); there the app menu's Quit (Cmd+Q) now goes through
+`window::quit` and saves like the tray's Quit (LEAD 23), while the Dock's Quit and logout still end the app without
+`quit-requested`.
 
 **Optional, not done (reasoned in INTEGRATION.md):** lazy audio planning; a `position_list` command; a `search_history`
 `UserDataKind`; `ContentDb` stamp-only updates; the CSP's unused `blob:` and `media-src quran:` sources.
