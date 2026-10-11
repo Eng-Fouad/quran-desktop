@@ -242,16 +242,17 @@
     overflow: visible;
   }
 
-  .mp-foot .ring {
-    fill: var(--surface-page);
-    stroke: var(--frame-gold);
-    stroke-linejoin: round;
-  }
-
-  .mp-foot .disc {
+  /*
+   * The medallion is one rosette path, filled and stroked: the tint covers exactly the area inside the lobes, up to the
+   * stroke's centre line, at any qfs (no offsets). Translucent gold over the paper (.mp-paper), so it follows every
+   * theme, the onboarding previews' re-themed subtrees and forced colours (CanvasText at 10 % over Canvas), like the
+   * frame's corner stars.
+   */
+  .mp-foot .rosette {
     fill: var(--frame-gold);
     fill-opacity: 0.1;
-    stroke: none;
+    stroke: var(--frame-gold);
+    stroke-linejoin: round;
   }
 
   .mp-foot-num {
@@ -261,7 +262,7 @@
     font-size: max(calc(var(--qfs) * 0.55), 12px);
     font-variant-numeric: tabular-nums;
     line-height: 1;
-    /* Naskh digits sit high in their em box: centre their ink in the disc. */
+    /* Naskh digits sit high in their em box: centre their ink in the medallion. */
     translate: 0 calc(var(--qfs) * 0.04);
   }
 

@@ -113,6 +113,16 @@ are re-created. A browser test switches decor on a painted page and asserts zero
 - The page-stack hairlines (`div.mp-edges`, owned by `PageFrame`) stay when `showPageFrame` is off (they are paper,
   not frame) and show only under a `.spread` ancestor. Count: `1 + round(4 · fraction)` (1–5). Pitch 2.5 px (1 px
   lines, 1.5 px apart), each receding 1.5 px at both ends.
+- **The footer medallion's tint is the rosette's own fill** (owner request, after v1.2). The medallion was a 12-lobed
+  rosette filled with opaque paper around a separate tinted disc of 0.8·r, so about 30 % of its interior stayed
+  untinted: a paper band under the valleys (≈ 1 px at qfs 24) widening into every lobe (≈ 2.6 px at the crests), which
+  read as a circle shaded inside a scalloped shape. It is now one path, filled with `--frame-gold` at 10 % and stroked
+  in it: fill and outline share the path at every qfs, in every theme and in forced colours (CanvasText at 10 % over
+  Canvas). The tint and every box are unchanged (CLS 0); the tinted area grows by about 43 %, so the S03 first-run look
+  (LEAD 13) and the local baselines of scenarios that show a footer change. Nothing is drawn behind the medallion, so
+  dropping its paper fill uncovers nothing. `furniture.browser.test.ts` screenshots the medallion in each theme (and in
+  forced colours emulated in Chromium) and checks every pixel: the tint inside the outline, the paper outside it, the
+  gold on it; the old drawing fails with about 2,250 of the 10,436 interior pixels it checks untinted (qfs 120).
 
 ### 5. Margin marks
 

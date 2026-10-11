@@ -19,6 +19,8 @@ import {
   DECOR_QUARTER,
   firstRubStart,
   fitTiles,
+  FOOTER_DEPTH,
+  FOOTER_LOBES,
   footerMedallion,
   frameBoxQ,
   frameGeometry,
@@ -414,12 +416,52 @@ describe('cartouche (§8.8 fallback)', () => {
 })
 
 describe('footerMedallion (§8.9)', () => {
-  it('is 1.1·qfs with the ring and the disc inside the box', () => {
-    const m = footerMedallion(20)
-    expect(m.size).toBeCloseTo(22)
-    expect(m.disc.cx).toBeCloseTo(11)
-    expect(m.disc.r).toBeLessThan(11)
-    for (const [x, y] of curvePoints(m.ring)) expect(Math.hypot(x - 11, y - 11)).toBeLessThanOrEqual(11)
+  /** The rosette's crest radius: the box's half-size less half the stroke. */
+  const crest = (m: ReturnType<typeof footerMedallion>) => m.size / 2 - m.stroke / 2
+
+  it.each([8, 20, 40])('is 1.1·qfs with one stroke and no separate disc (qfs %i)', (qfs) => {
+    const m = footerMedallion(qfs)
+    expect(m.size).toBeCloseTo(1.1 * qfs)
+    expect(m.stroke).toBe(Math.max(0.75, 0.03 * qfs))
+    // The tint is the rosette's own fill: nothing else is drawn.
+    expect(Object.keys(m).sort()).toEqual(['rosette', 'size', 'stroke'])
+  })
+
+  it.each([8, 20, 40])('draws one closed rosette of FOOTER_LOBES lobes (qfs %i)', (qfs) => {
+    const d = footerMedallion(qfs).rosette
+    expect(d.match(/M/g)).toHaveLength(1)
+    expect(d.match(/Q/g)).toHaveLength(FOOTER_LOBES)
+    expect(d.endsWith('Z')).toBe(true)
+  })
+
+  it.each([8, 20, 40])(
+    'puts the valleys on FOOTER_DEPTH·r and the crests on r, inside the box (qfs %i)',
+    (qfs) => {
+      const m = footerMedallion(qfs)
+      const c = m.size / 2
+      const r = crest(m)
+      const ends = curvePoints(m.rosette)
+      expect(ends).toHaveLength(FOOTER_LOBES + 1)
+      for (const [x, y] of ends) expect(Math.hypot(x - c, y - c)).toBeCloseTo(FOOTER_DEPTH * r, 1)
+      // A quadratic's midpoint (P0 + 2C + P1) / 4 is the crest; with half the stroke it stays inside the box.
+      const segs = [...m.rosette.matchAll(/Q(-?[\d.]+) (-?[\d.]+) (-?[\d.]+) (-?[\d.]+)/g)]
+      expect(segs).toHaveLength(FOOTER_LOBES)
+      segs.forEach((s, i) => {
+        const [x0, y0] = ends[i] ?? [0, 0]
+        const x = (x0 + 2 * Number(s[1]) + Number(s[3])) / 4
+        const y = (y0 + 2 * Number(s[2]) + Number(s[4])) / 4
+        expect(Math.hypot(x - c, y - c)).toBeCloseTo(r, 1)
+        expect(Math.hypot(x - c, y - c) + m.stroke / 2).toBeLessThanOrEqual(c + 0.02)
+      })
+    },
+  )
+
+  it('scales with qfs above the stroke floor', () => {
+    // 0.03·qfs passes the 0.75 px floor at qfs 25: at 30 and 60 the whole medallion is one shape at two sizes.
+    const small = numbers(footerMedallion(30).rosette)
+    const large = numbers(footerMedallion(60).rosette)
+    expect(large).toHaveLength(small.length)
+    large.forEach((v, i) => expect(Math.abs(v - 2 * (small[i] ?? 0))).toBeLessThanOrEqual(0.02))
   })
 })
 

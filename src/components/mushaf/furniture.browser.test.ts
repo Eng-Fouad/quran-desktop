@@ -3,15 +3,18 @@
  * ready): the frame and its settings switch, the opening medallion, the running heads (prefixes, quarter, opening
  * pages), the footer, the surah header (cartouche and decor glyph), the surah info popover opened from a header, the
  * basmala (fallback, decor, the audio basmala highlight), the margin markers and every margin mark (loaded through the
- * library store's `user_marks` cache). The user-data IPC is faked; pages come from the exported fixtures.
+ * library store's `user_marks` cache). The user-data IPC is faked; pages come from the exported fixtures. The footer
+ * medallion's tint is checked on screenshots, pixel by pixel, in every theme (and forced colours, Chromium only).
  */
 import { flushSync } from 'svelte'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
+import { cdp, page as browserPage, server } from 'vitest/browser'
 import { render } from 'vitest-browser-svelte'
 import '../../app.css'
 import type { Note, PageData, UserMarks } from '$lib/ipc/bindings'
 import { fixtures } from '$lib/ipc/mock/fixtures'
-import { lineCenterY } from '$lib/mushaf/ornaments'
+import { FOOTER_DEPTH, FOOTER_LOBES, footerMedallion, lineCenterY } from '$lib/mushaf/ornaments'
+import { parseColor, type Rgba } from '../../styles/token-harness'
 import { fonts, library, player, quran, reader, settings } from '$lib/stores'
 import MushafPage from './MushafPage.svelte'
 import { resetPaintedHeaders } from './HeaderLine.svelte'
@@ -271,7 +274,7 @@ function inkCentre(el: HTMLElement): number {
 }
 
 describe('PageFooter (§8.9)', () => {
-  it('centres the Arabic-Indic page number under the block in a 1.1·qfs medallion, inert to the pointer', async () => {
+  it('centres the page number in Eastern Arabic numbers under the block in a 1.1·qfs inert medallion', async () => {
     const { section } = await show(262)
     const foot = section.querySelector<HTMLElement>(':scope > .mp-foot')
     expect(foot?.textContent?.trim()).toBe('٢٦٢')
@@ -283,7 +286,231 @@ describe('PageFooter (§8.9)', () => {
     ).toBe(true)
     expect(medallion && near(medallion.width, 1.1 * QFS)).toBe(true)
   })
+
+  it.each([12, QFS, 60])(
+    'tints the rosette itself: the band under the valleys and every lobe (qfs %i)',
+    async (qfs) => {
+      const { section } = await show(262, { qfs })
+      const svg = section.querySelector('.mp-foot-medallion > svg')
+      // One shape, filled and stroked: no second shape whose outline could differ from the rosette's.
+      expect(svg?.querySelectorAll('path, circle, ellipse, rect, polygon, polyline, line')).toHaveLength(1)
+      const outline = svg?.querySelector<SVGPathElement>(':scope > path.rosette')
+      if (!outline) throw new Error('no rosette')
+      const m = footerMedallion(qfs)
+      const c = m.size / 2
+      const r = c - m.stroke / 2
+      const at = (radius: number, angle: number) =>
+        new DOMPoint(c + radius * Math.cos(angle), c + radius * Math.sin(angle))
+      const misses: string[] = []
+      for (let i = 0; i < FOOTER_LOBES; i++) {
+        const valley = -Math.PI / 2 + (2 * Math.PI * i) / FOOTER_LOBES
+        const crest = valley + Math.PI / FOOTER_LOBES
+        // Just inside a valley (the band the old 0.8·r disc left bare), and near a lobe's crest.
+        if (!outline.isPointInFill(at((FOOTER_DEPTH - 0.03) * r, valley))) misses.push(`valley ${i}`)
+        if (!outline.isPointInFill(at(0.95 * r, crest))) misses.push(`lobe ${i}`)
+        // No further: just past a valley lies between two lobes, outside.
+        if (outline.isPointInFill(at((FOOTER_DEPTH + 0.03) * r, valley))) misses.push(`past valley ${i}`)
+      }
+      expect(misses).toEqual([])
+    },
+  )
+
+  it('fills and strokes it in --frame-gold, the fill at 10 %, in every theme', async () => {
+    onTestFinished(() => setTheme('paper'))
+    const { section } = await show(262)
+    const outline = section.querySelector<SVGPathElement>('.mp-foot path.rosette')
+    if (!outline) throw new Error('no rosette')
+    const probe = document.createElement('span')
+    probe.style.color = 'var(--frame-gold)'
+    section.append(probe)
+    const failures: string[] = []
+    for (const [theme, hc] of THEMES) {
+      setTheme(theme, hc)
+      const css = getComputedStyle(outline)
+      const gold = getComputedStyle(probe).color
+      const name = themeName(theme, hc)
+      if (css.fill !== gold || css.stroke !== gold)
+        failures.push(`${name}: ${css.fill} / ${css.stroke} ≠ ${gold}`)
+      if (!near(Number(css.fillOpacity), 0.1, 1e-6)) failures.push(`${name}: fill-opacity ${css.fillOpacity}`)
+      if (Number(css.strokeOpacity) !== 1) failures.push(`${name}: stroke-opacity ${css.strokeOpacity}`)
+    }
+    expect(failures).toEqual([])
+  })
+
+  it('paints every pixel inside the outline with the tint and none outside it, in every theme', async () => {
+    onTestFinished(() => setTheme('paper'))
+    const shots = await medallionShots(120)
+    const failures: string[] = []
+    for (const [theme, hc] of THEMES) {
+      setTheme(theme, hc)
+      failures.push(...(await shots.check(themeName(theme, hc))))
+    }
+    expect(failures).toEqual([])
+  })
+
+  it('keeps the tint in forced colours: CanvasText at 10 % over Canvas (Chromium)', async (ctx) => {
+    // Forced colours are a Windows mode: Chromium emulates it through the DevTools protocol, WebKit has none.
+    if (server.browser !== 'chromium') ctx.skip()
+    const session = cdp()
+    await session.send('Emulation.setEmulatedMedia', {
+      features: [{ name: 'forced-colors', value: 'active' }],
+    })
+    onTestFinished(async () => {
+      await session.send('Emulation.setEmulatedMedia', { features: [] })
+    })
+    expect(matchMedia('(forced-colors: active)').matches).toBe(true)
+    const shots = await medallionShots(120)
+    expect(await shots.check('forced colours')).toEqual([])
+  })
 })
+
+/** The six themes (high contrast in both variants), as `[data-theme, data-hc]`. */
+const THEMES: [string, string | undefined][] = [
+  ['paper', undefined],
+  ['sepia', undefined],
+  ['night', undefined],
+  ['black', undefined],
+  ['high_contrast', undefined],
+  ['high_contrast', 'dark'],
+]
+
+function setTheme(theme: string, hc?: string) {
+  html.dataset.theme = theme
+  if (hc) html.dataset.hc = hc
+  else delete html.dataset.hc
+}
+
+const themeName = (theme: string, hc?: string) => (hc ? `${theme}-${hc}` : theme)
+
+/**
+ * Page 262 at `qfs` with its footer medallion ready to be checked on screenshots. Its pixels are sorted once, by the
+ * rosette path itself: inside its fill or outside it, each at least half the stroke plus 1.5 px (anti-aliasing and the
+ * screenshot's pixel snapping) from the path; and on the path, within 0.3 px of it, where the opaque stroke covers the
+ * pixel whole. `check` then screenshots the medallion (number hidden) and lists every pixel that is not the paper
+ * outside, the paper with 10 % of `--frame-gold` inside, or the gold on the path; and every lobe not tested beyond the
+ * old 0.8·r disc.
+ */
+async function medallionShots(qfs: number) {
+  const { section } = await show(262, { qfs })
+  const medallion = section.querySelector<HTMLElement>('.mp-foot-medallion')
+  const outline = medallion?.querySelector<SVGPathElement>('path.rosette')
+  const num = medallion?.querySelector<HTMLElement>('.mp-foot-num')
+  if (!medallion || !outline || !num) throw new Error('no medallion')
+  // The number covers the middle of the tint.
+  num.style.visibility = 'hidden'
+  const probe = document.createElement('span')
+  probe.style.color = 'var(--frame-gold)'
+  section.append(probe)
+  const m = footerMedallion(qfs)
+  const c = m.size / 2
+  const r = c - m.stroke / 2
+  const length = outline.getTotalLength()
+  const path = Array.from({ length: 2400 }, (_, k) => outline.getPointAtLength((length * k) / 2400))
+  const radii = path.map((p) => Math.hypot(p.x - c, p.y - c))
+  const nearest = Math.min(...radii)
+  const farthest = Math.max(...radii)
+  const clear = m.stroke / 2 + 1.5
+  const box = medallion.getBoundingClientRect()
+  /** Each class's pixel indices, sorted once at the screenshot's scale, and the inside pixels per lobe beyond 0.8·r. */
+  let classes: { inside: number[]; outside: number[]; onPath: number[]; lobes: number[] } | null = null
+  const classify = (width: number, height: number) => {
+    const scale = width / box.width
+    const out = {
+      inside: [] as number[],
+      outside: [] as number[],
+      onPath: [] as number[],
+      lobes: Array.from({ length: FOOTER_LOBES }, () => 0),
+    }
+    for (let j = 0; j < height; j++) {
+      for (let i = 0; i < width; i++) {
+        const x = (i + 0.5) / scale
+        const y = (j + 0.5) / scale
+        // A pixel is at least |ρ − ρ(p)| from any point p of the path: only the ring the path spans needs the search.
+        const rho = Math.hypot(x - c, y - c)
+        let d2 = Infinity
+        if (rho > nearest - clear && rho < farthest + clear)
+          for (const p of path) d2 = Math.min(d2, (p.x - x) ** 2 + (p.y - y) ** 2)
+        const d = Math.sqrt(d2)
+        const k = j * width + i
+        if (d <= 0.3) out.onPath.push(k)
+        if (d < clear) continue
+        if (!outline.isPointInFill(new DOMPoint(x, y))) {
+          out.outside.push(k)
+          continue
+        }
+        out.inside.push(k)
+        // Beyond the old disc: count it for its lobe (lobe i spans the valleys at i and i + 1).
+        if (rho > 0.8 * r) {
+          const turn = (Math.atan2(y - c, x - c) + Math.PI / 2) / (2 * Math.PI)
+          const lobe = Math.floor((((turn % 1) + 1) % 1) * FOOTER_LOBES)
+          out.lobes[lobe] = (out.lobes[lobe] ?? 0) + 1
+        }
+      }
+    }
+    return out
+  }
+  const check = async (name: string): Promise<string[]> => {
+    await frames()
+    const img = await screenshotPixels(medallion)
+    classes ??= classify(img.width, img.height)
+    const at = (k: number): Rgba => ({
+      r: img.data[k * 4] ?? 0,
+      g: img.data[k * 4 + 1] ?? 0,
+      b: img.data[k * 4 + 2] ?? 0,
+      a: 1,
+    })
+    // The paper: the screenshot's own colour at the box's corner (outside the rosette).
+    const paper = at(0)
+    const gold = parseColor(getComputedStyle(probe).color)
+    const tint = mix(paper, gold, 0.1)
+    const failures: string[] = []
+    const expectAll = (where: string, pixels: number[], want: Rgba) => {
+      const off = pixels.filter((k) => !sameRgb(at(k), want, 3))
+      if (off.length)
+        failures.push(
+          `${name}: ${off.length}/${pixels.length} ${where} pixels off ${rgb(want)}, e.g. ${rgb(at(off[0] ?? 0))}`,
+        )
+    }
+    expectAll('outside', classes.outside, paper)
+    expectAll('inside', classes.inside, tint)
+    expectAll('on-path', classes.onPath, gold)
+    if (sameRgb(tint, paper, 3))
+      failures.push(`${name}: the tint ${rgb(tint)} does not show on ${rgb(paper)}`)
+    classes.lobes.forEach((n, i) => {
+      if (n < 10) failures.push(`${name}: lobe ${i} has ${n} pixels beyond 0.8·r`)
+    })
+    return failures
+  }
+  return { check }
+}
+
+/** The RGBA pixels of a screenshot of `el`, as the browser rendered it. */
+async function screenshotPixels(el: Element): Promise<ImageData> {
+  const base64 = await browserPage.screenshot({ element: el, save: false })
+  const bytes = Uint8Array.from(atob(base64), (ch) => ch.charCodeAt(0))
+  const bitmap = await createImageBitmap(new Blob([bytes], { type: 'image/png' }), {
+    colorSpaceConversion: 'none',
+    premultiplyAlpha: 'none',
+  })
+  const canvas = document.createElement('canvas')
+  canvas.width = bitmap.width
+  canvas.height = bitmap.height
+  const ctx = canvas.getContext('2d', { willReadFrequently: true })
+  if (!ctx) throw new Error('no canvas')
+  ctx.drawImage(bitmap, 0, 0)
+  return ctx.getImageData(0, 0, bitmap.width, bitmap.height)
+}
+
+/** `top` at `alpha` over `base`, in sRGB as browsers composite. */
+const mix = (base: Rgba, top: Rgba, alpha: number): Rgba => ({
+  r: base.r + (top.r - base.r) * alpha,
+  g: base.g + (top.g - base.g) * alpha,
+  b: base.b + (top.b - base.b) * alpha,
+  a: 1,
+})
+const sameRgb = (a: Rgba, b: Rgba, tol: number) =>
+  Math.abs(a.r - b.r) <= tol && Math.abs(a.g - b.g) <= tol && Math.abs(a.b - b.b) <= tol
+const rgb = (c: Rgba) => `rgb(${Math.round(c.r)} ${Math.round(c.g)} ${Math.round(c.b)})`
 
 describe('HeaderLine, SurahCartouche and SurahInfoPopover (§8.8)', () => {
   it('draws the cartouche across the 16.5 qfs line with the surah name', async () => {

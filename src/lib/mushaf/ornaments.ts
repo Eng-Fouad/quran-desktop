@@ -543,19 +543,25 @@ export function ogeeBand(w: number, h: number, inset: number): PathData {
 /** The footer medallion's diameter (qfs). */
 export const FOOTER_MEDALLION = 1.1
 
-/** The footer medallion's ring and disc strokes (qfs). */
+/** The footer medallion's outline stroke (qfs). */
 export const FOOTER_STROKE = 0.03
 
+/** The footer rosette: 12 lobes, valleys at 0.88 of the crest radius. */
+export const FOOTER_LOBES = 12
+export const FOOTER_DEPTH = 0.88
+
 /**
- * The footer medallion in its own `size × size` box (px): a 12-lobed rosette ring around a disc, both inside the box
- * with their strokes. `PageFooter` centres the box on the text block in the FOOT band.
+ * The footer medallion: one 12-lobed rosette in its own `size × size` box (px), crests on the box edge less half the
+ * stroke. `PageFooter` centres the box on the text block in the FOOT band; frame.css fills the same path with the
+ * medallion's tint and strokes it in gold, so the shading follows the lobes exactly at every size. (A separate 0.8·r
+ * disc left the band under the valleys and every lobe unshaded.)
  */
-export function footerMedallion(qfs: number): { size: number; ring: PathData; disc: Circle; stroke: number } {
+export function footerMedallion(qfs: number): { size: number; rosette: PathData; stroke: number } {
   const size = FOOTER_MEDALLION * qfs
   const stroke = Math.max(0.75, FOOTER_STROKE * qfs)
   const c = size / 2
   const r = Math.max(0, c - stroke / 2)
-  return { size, ring: rosette(c, c, r, 12, 0.88), disc: { cx: c, cy: c, r: r * 0.8 }, stroke }
+  return { size, rosette: rosette(c, c, r, FOOTER_LOBES, FOOTER_DEPTH), stroke }
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

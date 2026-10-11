@@ -3840,8 +3840,9 @@ export function wordPill(box: WordBox, qfs: number, lh: number): Rect;
   - At `qfs < 20` the heads drop the `سورة` / `الجزء` prefixes. When margin labels are glyph-only (below), the quarter of a
     rub starting on the page is appended (e.g. `الجزء ١٤ · ¾ الحزب ٢٧`).
   - Hidden when `showRunningHeads = false`.
-- **Footer:** the page number in Arabic-Indic digits (`Intl.NumberFormat('ar-u-nu-arab')`), centred in a 1.1·qfs medallion (SVG
-  circle + rosette outline), `max(0.55·qfs, 12px)` `--font-naskh`.
+- **Footer:** the page number in Eastern Arabic numbers (`Intl.NumberFormat('ar-u-nu-arab')`), centred in a 1.1·qfs
+  medallion (**v1.2:** a 12-lobed SVG rosette whose whole interior carries the 10 % `--frame-gold` tint: the fill of the
+  outline path itself, no separate disc), `max(0.55·qfs, 12px)` `--font-naskh`.
 - **Margin markers** (`MarginMarkers.svelte`, outer margin `M_OUT`), for each `PageAyah`, colour **`--marker-ink`** (§9.2;
   `--frame-green` is decorative only and fails text contrast in dark themes):
   - rub start (`flags & 1`, mushaf-source rub, D6): ۞ U+06DE in `qd-hafs` at `max(0.95·qfs, 14px)`, or `qd-quran-common`

@@ -568,6 +568,9 @@ is the lead's fold-in of every accepted deviation (`docs/deviations/WP*.md`), ev
   qfs 20 the juz reads `ج ١٤`; the head's calligraphy is aligned on the text's ink centre (WP8c 3, INT fix 2 mushaf).
   Furniture text is set in the bundled Hafs face, so a late web font never shifts it (CLS 0) (WP8c 3a). Running head and
   footer are `div`s.
+- Footer medallion: one rosette path, filled with `--frame-gold` at 10 % and stroked in it, so the tint follows the 12
+  lobes at every qfs, in every theme and in forced colours. The earlier 0.8·r tinted disc inside a paper-filled rosette
+  left the band under the valleys and every lobe unshaded (owner request; WP8c 4).
 - Margin marks come from `library.marksFor` (one request per page for both layers); the ribbon uses a drop-shadow; the
   surah header opens `SurahInfoPopover` through its module controller (WP8c 5–6).
 

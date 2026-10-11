@@ -105,7 +105,8 @@ export function inspectFurniture(pageNo) {
     head = { surah: surahText, juz: juzText, size }
   }
 
-  // Footer (§8.9): the page number in Arabic-Indic digits, centred under the block.
+  // Footer (§8.9): the page number in Eastern Arabic numbers, centred under the block in a rosette tinted by its own
+  // fill (no separate disc, whose circle left the lobes bare).
   const footEl = /** @type {HTMLElement | null} */ (section.querySelector(':scope > .mp-foot'))
   const foot = footEl?.textContent?.trim() ?? ''
   const block = section.querySelector('.mp-block')?.getBoundingClientRect()
@@ -118,6 +119,18 @@ export function inspectFurniture(pageNo) {
       problems.push(`footer medallion ${medallionEl.width}, expected ${1.1 * qfs}`)
     if (!near(medallionEl.top + medallionEl.height / 2 - page.top, (31.95 - 0.6 - 0.7) * qfs, 1))
       problems.push('footer medallion not centred in the FOOT band')
+  }
+  const medallionSvg = footEl?.querySelector('.mp-foot-medallion > svg')
+  if (medallionSvg) {
+    const shapes = medallionSvg.querySelectorAll('path, circle, ellipse, rect, polygon, polyline, line')
+    const rosette = medallionSvg.querySelector(':scope > path.rosette')
+    if (shapes.length !== 1 || !rosette)
+      problems.push(`footer medallion draws ${shapes.length} shapes, not one rosette`)
+    else {
+      const paint = getComputedStyle(rosette)
+      if (paint.fill === 'none' || Number(paint.fillOpacity) === 0)
+        problems.push('footer rosette is not tinted')
+    }
   }
 
   // Header and basmala lines of the visible rendition (§8.8).
