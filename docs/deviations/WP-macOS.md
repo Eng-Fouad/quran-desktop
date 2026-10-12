@@ -45,6 +45,9 @@ copy, recitation, settings, themes, zen, the close-to-tray question, the Dock's 
 8. **Shift+F10 and the Menu key opened no item menu on macOS.** The library rows, search hits, surahs, verse rows and the
    downloads grid open their menu from the `contextmenu` event, which the browser fires for those keys on Windows and
    Linux only. On macOS the shortcuts store now fires it at the focused element when no shortcut takes the key.
+   (CI, later) Linux does the same outside text fields: WebKitGTK fires the event only from GTK's key bindings, which the
+   keys of Playwright's WebKit never reach. The keydown's `preventDefault()` keeps WebKitGTK (checked: webkit2gtk 4.1,
+   real X key events) and Chromium from firing a second one.
 9. **The browser tests assumed Windows.** The mock reports the browser's platform, so on a Mac `Mod` is ⌘ and the labels
    are ⌘-style (`⌘B`, `⇧⌘C`), and Home/End do not move a text field's caret there (⌘←/⌘→ do). Eleven chords and the
    label checks now follow `app.isMac`; the Mod+click test runs the store on the browser's platform (Ctrl+click is a

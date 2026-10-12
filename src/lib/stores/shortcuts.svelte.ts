@@ -58,10 +58,22 @@ import { settings } from './settings.svelte'
 import { ui } from './ui.svelte'
 
 /**
- * macOS: `Shift+F10` and the Menu key open the focused widget's context menu (a library row, a search hit, a surah), as
- * the browser does on Windows and Linux; WebKit and Chromium fire no `contextmenu` for them on macOS. The event has no
- * pointer button and sits at the widget's bottom corner on its inline-start side, like a browser's keyboard menu.
+ * `Shift+F10` and the Menu key open the focused widget's context menu (a library row, a search hit, a surah) when no
+ * shortcut takes them. Who fires the `contextmenu`:
+ * - Windows: the browser (WebView2).
+ * - macOS: nobody (WebKit and Chromium fire none there), so the store does.
+ * - Linux: WebKitGTK fires one only from GTK's key bindings, after the page has left the keydown unhandled, so a key
+ *   that does not pass through GTK (Playwright's WebKit injects keys below it) gets none. The store fires it there too,
+ *   except in text fields, which keep WebKitGTK's own editing menu. The keydown's `preventDefault()` stops WebKitGTK
+ *   from firing a second one, and stops Chromium, which fires its own right after the keydown.
+ *
+ * The event has no pointer button and sits at the widget's bottom corner on its inline-start side, like a browser's
+ * keyboard menu.
  */
+function firesMenuByKey(target: EventTarget | null): boolean {
+  return app.isMac || (app.isLinux && !isEditableTarget(target))
+}
+
 function openContextMenuByKey(e: KeyboardEvent): void {
   const menuKey = e.key === 'ContextMenu' || (e.key === 'F10' && e.shiftKey)
   const target = e.target
@@ -207,7 +219,7 @@ class ShortcutsStore implements Store {
     if (e.defaultPrevented || isInertKeyEvent(e)) return
     const hit = this.#resolve(e, false)
     if (hit !== null) this.#run(hit, e)
-    else if (app.isMac) openContextMenuByKey(e)
+    else if (firesMenuByKey(e.target)) openContextMenuByKey(e)
   }
 
   /** The label of a definition's first chord available on this platform (`Ctrl+K`, `⌘K`); empty if none. */

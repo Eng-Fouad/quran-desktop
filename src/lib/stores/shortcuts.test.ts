@@ -306,12 +306,12 @@ describe('rules', () => {
 })
 
 describe('context-menu keys', () => {
-  it('Shift+F10 and the Menu key open the focused element’s context menu on macOS, as browsers do elsewhere', async () => {
+  it('Shift+F10 and the Menu key open the focused element’s context menu on macOS, as browsers do on Windows', async () => {
     const row = el('button')
     const menus: MouseEvent[] = []
     row.addEventListener('contextmenu', (e) => menus.push(e))
-    press({ key: 'F10', code: 'F10', shiftKey: true }, row)
-    expect(menus).toEqual([]) // Windows and Linux: the browser fires it itself
+    expect(press({ key: 'F10', code: 'F10', shiftKey: true }, row).defaultPrevented).toBe(false)
+    expect(menus).toEqual([]) // Windows: the browser fires it itself
     for (const store of [shortcuts, ui, i18n, settings, app]) store.reset()
     await boot(undefined, 'macos')
     const e = press({ key: 'F10', code: 'F10', shiftKey: true }, row)
@@ -322,6 +322,21 @@ describe('context-menu keys', () => {
     expect(e.defaultPrevented).toBe(true)
     // No pointer button: the widgets place a keyboard menu themselves.
     expect(menus.map((m) => m.button)).toEqual([0, 0])
+  })
+
+  it('opens it on Linux too, where WebKitGTK fires one only for keys that pass through GTK; text fields keep theirs', async () => {
+    for (const store of [shortcuts, ui, i18n, settings, app]) store.reset()
+    await boot(undefined, 'linux')
+    const row = el('button')
+    const field = el('input', { type: 'text' })
+    const menus: EventTarget[] = []
+    for (const node of [row, field]) node.addEventListener('contextmenu', () => menus.push(node))
+    // Handled, so neither WebKitGTK's key binding nor Chromium follows with a second one.
+    expect(press({ key: 'F10', code: 'F10', shiftKey: true }, row).defaultPrevented).toBe(true)
+    press({ key: 'ContextMenu', code: 'ContextMenu' }, row)
+    expect(press({ key: 'F10', code: 'F10', shiftKey: true }, field).defaultPrevented).toBe(false)
+    press({ key: 'ContextMenu', code: 'ContextMenu' }, field)
+    expect(menus).toEqual([row, row])
   })
 })
 
