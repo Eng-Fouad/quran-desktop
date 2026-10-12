@@ -32,6 +32,21 @@ async function until(done: () => boolean, timeout = 5_000, message = 'condition'
   throw new Error(`${message} not met within ${timeout} ms`)
 }
 
+/**
+ * Waits up to `frames` rendering frames for `done`: for what an exit transition removes, which advances on frames, not
+ * on the clock. Right after a turn Linux WebKit rasterises the new spread in software, and that first frame takes
+ * 0.2–0.4 s on an idle machine and longer on a loaded CI runner; the strip's 160 ms exit needs a few frames, however
+ * long they are.
+ */
+async function untilFrames(done: () => boolean, frames: number, message: string): Promise<void> {
+  for (let i = 0; i <= frames; i++) {
+    flushSync()
+    if (done()) return
+    await new Promise((resolve) => requestAnimationFrame(resolve))
+  }
+  throw new Error(`${message} not met within ${frames} frames`)
+}
+
 async function boot(settings: Parameters<typeof bootApp>[0] = {}): Promise<void> {
   await bootApp({
     ...settings,
@@ -180,8 +195,10 @@ describe('the rail as a slider (§8.11)', () => {
     expect(go).toHaveBeenCalledTimes(1)
     expect(go).toHaveBeenCalledWith(265, { push: true })
     expect(document.activeElement?.matches(RAIL)).toBe(false)
+    // Nothing holds it (no pointer near): it leaves at once, and the strip goes after its exit transition.
+    expect(railState.open).toBe(false)
     await until(() => reader.visiblePages.includes(265), 2_000, 'the turn')
-    await until(() => $(RAIL) === null, 2_000, 'the rail gone')
+    await untilFrames(() => $(RAIL) === null, 60, 'the rail gone')
     expect(ui.floating).toBe(0)
   })
 
