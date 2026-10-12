@@ -154,6 +154,11 @@ describe('PlayerDock: popovers', () => {
     const popover = () => $('[data-qd-popover="repeat"]') as HTMLElement
     const fewer = () => $$('[data-qd-popover="repeat"] [aria-label="Fewer"]')[0] as HTMLElement
     const more = () => $$('[data-qd-popover="repeat"] [aria-label="More"]')[0] as HTMLElement
+    // The popover has opened once its first control has the focus: bits-ui mounts the popover's focus scope twice as it
+    // opens, and the second mount hands the focus back to the trigger, then on to that control a frame later. Focus
+    // moved or a key sent before that (a slow runner shows the popover sooner) lands on the trigger or that control.
+    await until(() => popover().contains(document.activeElement), 2_000, 'focus in the popover')
+    await settle()
     more().focus()
     await userEvent.keyboard('{Enter}')
     await until(() => player.snapshot?.ayahRepeat === 2, 2_000, '×2')
