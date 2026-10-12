@@ -10,6 +10,13 @@
  *   the reader moved to QCF V2, while the V4 rendition keeps its face for as long as it is on screen.
  * The page-font IPC is faked; the "QCF" face is the real page font when `data/dev-packs` exists, else the bundled Hafs
  * TTF registered under the QCF family name (any different font proves the swap).
+ *
+ * The tests about what happens within the waits (`FONT_WAIT_MS` for the face, `GLYPH_WAIT_MS` for its glyphs) run the
+ * component's timers on a fake clock (`setTimeout` only) and hold the IPC answer: they prove the order of events, not
+ * how fast this engine loads a face or shapes a page, which takes what it takes in real time while the clock stands
+ * still (on a loaded CI runner WebKit needed more than the 120 ms of a real clock). Tests about something else start
+ * with the face loaded and its glyphs warm where a wait would otherwise decide their path. A cross-fade is proven by
+ * the opacity transitions it starts, not by a frame that happens to fall within its 180 ms.
  */
 import { flushSync } from 'svelte'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -23,7 +30,7 @@ import { PALETTE_STYLE_ID } from '$lib/mushaf/palettes'
 import { glyphKey, shapeWarmer } from '$lib/mushaf/warmup'
 import { app, fonts, quran, reader, settings } from '$lib/stores'
 import MushafPage from './MushafPage.svelte'
-import { FONT_WAIT_MS } from './RenditionStack.svelte'
+import { FONT_WAIT_MS, GLYPH_WAIT_MS } from './RenditionStack.svelte'
 
 const ipc = vi.hoisted(() => ({
   calls: 0,
@@ -86,6 +93,18 @@ const frames = (n = 2) =>
     step(n)
   })
 
+/**
+ * Waits for `done()` frame by frame, `ms` at most: never on a timer, which the fake clock holds (and `expect.poll`
+ * would advance the fake clock between its tries).
+ */
+async function untilFrame(done: () => boolean, ms: number, what: string): Promise<void> {
+  const end = performance.now() + ms
+  while (!done()) {
+    if (performance.now() > end) throw new Error(`${what} not within ${ms} ms`)
+    await frames(1)
+  }
+}
+
 const rect = (el: Element | null | undefined) => {
   const r = el?.getBoundingClientRect()
   return r ? [r.x, r.y, r.width, r.height].map((v) => Math.round(v * 100) / 100) : null
@@ -104,16 +123,48 @@ function snapshot(section: HTMLElement) {
 const renditions = (section: HTMLElement) =>
   [...section.querySelectorAll<HTMLElement>('.mp-block > .mp-glyphs')].map((el) => el.dataset.rendition)
 
-/** Records every rendition that ever mounts, and the opacities seen on each frame. */
+/** An opacity transition a rendition started: from and to which opacity, over how long. */
+interface Fade {
+  rendition: string
+  from: number
+  to: number
+  ms: number
+}
+
+/**
+ * Records every rendition that ever mounts, the opacities seen on each frame, and every opacity transition a rendition
+ * starts. A transition is read when the stack writes the rendition's inline opacity (`getAnimations()` brings the style
+ * up to date, which starts it), and on no other style write: the watch must not compute styles at moments the page
+ * itself would not.
+ */
 function watch(section: HTMLElement) {
   const mounted: string[] = []
+  const fades: Fade[] = []
+  const counted = new WeakSet<Animation>()
   const observer = new MutationObserver((records) => {
-    for (const r of records)
+    for (const r of records) {
       for (const n of r.addedNodes)
         if (n instanceof HTMLElement && n.classList.contains('mp-glyphs'))
           mounted.push(n.dataset.rendition ?? '?')
+      const el = r.target
+      if (r.type !== 'attributes' || !(el instanceof HTMLElement) || !el.classList.contains('mp-glyphs'))
+        continue
+      if (el.style.opacity === '') continue
+      for (const a of el.getAnimations()) {
+        if (counted.has(a) || !(a instanceof CSSTransition) || a.transitionProperty !== 'opacity') continue
+        counted.add(a)
+        const effect = a.effect instanceof KeyframeEffect ? a.effect : null
+        const keyframes = effect?.getKeyframes() ?? []
+        fades.push({
+          rendition: el.dataset.rendition ?? '?',
+          from: Number(keyframes[0]?.opacity),
+          to: Number(keyframes.at(-1)?.opacity),
+          ms: Number(effect?.getTiming().duration ?? 0),
+        })
+      }
+    }
   })
-  observer.observe(section, { childList: true, subtree: true })
+  observer.observe(section, { childList: true, subtree: true, attributes: true, attributeFilter: ['style'] })
   const frames: number[][] = []
   let on = true
   const sample = () => {
@@ -128,6 +179,7 @@ function watch(section: HTMLElement) {
   return {
     mounted,
     frames,
+    fades,
     stop() {
       on = false
       observer.disconnect()
@@ -241,26 +293,47 @@ describe('the fallback → QCF swap (D13)', () => {
     expect(after.lines).toEqual(before.lines)
     expect(after.words).not.toEqual(before.words)
     if (shifts.supported) expect(shifts.total()).toBe(0)
-    // It was a cross-fade: both renditions were on screen together, the new one invisible on its first frame and then
-    // part-way faded in.
+    // It was a cross-fade: both renditions were on screen together, the new one invisible on its first frame, then
+    // faded in over `--dur-glyph-swap` while the fallback faded out.
     expect(seen.mounted).toEqual(['qcf'])
     expect(seen.frames.find((f) => f.length === 2)?.[1]).toBe(0)
-    expect(seen.frames.some((f) => f.length === 2 && (f[1] ?? 0) > 0 && (f[1] ?? 0) < 1)).toBe(true)
+    const ms = Number.parseFloat(
+      getComputedStyle(document.documentElement).getPropertyValue('--dur-glyph-swap'),
+    )
+    expect(ms).toBeGreaterThan(0)
+    expect(seen.fades).toEqual([
+      { rendition: 'fallback', from: 1, to: 0, ms },
+      { rendition: 'qcf', from: 0, to: 1, ms },
+    ])
     // The new rendition was measured for the highlight layer.
     expect(measured.calls).toBeGreaterThan(measuredBefore)
     expect(section.querySelector<HTMLElement>('.mp-glyphs')?.style.opacity).toBe('')
   })
 
   it('draws a face that is ready within 120 ms directly: the fallback never mounts', async () => {
-    const screen = await render(MushafPage, { data: page('qcf_v2:262'), qfs: QFS, side: 'left' })
-    const section = screen.container.querySelector<HTMLElement>('section.mp')
-    if (!section) throw new Error('no section.mp')
-    const seen = watch(section)
-    await expect.poll(() => renditions(section), { timeout: 2000 }).toEqual(['qcf'])
-    await frames()
-    seen.stop()
-    expect(seen.mounted.filter((k) => k === 'fallback')).toEqual([])
-    expect(ipc.calls).toBe(1)
+    ipc.hold = true
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    try {
+      const { section } = await mount('qcf_v2:262')
+      const seen = watch(section)
+      await vi.advanceTimersByTimeAsync(FONT_WAIT_MS - 20)
+      // Still waiting for the face: nothing is drawn.
+      expect(renditions(section)).toEqual([])
+      // The face answers 100 ms into the wait and loads; its cold glyphs are warmed, a slice per task.
+      ipc.release()
+      await untilFrame(() => fonts.isReady('qcf_v2', 262), 5000, 'the face')
+      // Past every wait (the face's and its glyphs'), the page shows its face, and only ever did.
+      await vi.advanceTimersByTimeAsync(FONT_WAIT_MS + GLYPH_WAIT_MS)
+      flushSync()
+      expect(renditions(section)).toEqual(['qcf'])
+      await frames()
+      seen.stop()
+      expect(seen.mounted).toEqual(['qcf'])
+      expect(seen.fades).toEqual([])
+      expect(ipc.calls).toBe(1)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('renders a page whose face is already loaded (and its glyphs warm) at once, without asking again', async () => {
@@ -290,6 +363,8 @@ describe('the fallback → QCF swap (D13)', () => {
     await frames()
     seen.stop()
     expect(seen.frames.some((f) => f.some((o) => o > 0 && o < 1))).toBe(false)
+    // Nor does any fade take time (base.css leaves every transition 0.01 ms long under reduced motion).
+    expect(seen.fades.filter((f) => f.ms >= 1)).toEqual([])
   })
 })
 
@@ -333,6 +408,10 @@ describe('unavailable and failed fonts (§8.5, §9.8)', () => {
 
 describe('style and page changes', () => {
   it('cross-fades a style change on the same page with zero layout shift', async () => {
+    // The new style's face is loaded and its glyphs warm (the reader's prefetch and warm-up): the swap is under test,
+    // not the waits (above), which on a slow machine would bring the fallback in between.
+    await fonts.ensure('qcf_v2', [262], 'interactive')
+    shapeWarmer.markWarm(glyphKey('qcf_v2', 262, QFS))
     const { screen, section } = await mount('hafs:262')
     await expect.poll(() => renditions(section)).toEqual(['qcf'])
     expect(
@@ -359,6 +438,7 @@ describe('style and page changes', () => {
     expect(after.block).toEqual(before.block)
     expect(after.lines).toEqual(before.lines)
     if (shifts.supported) expect(shifts.total()).toBe(0)
+    expect(seen.mounted).toEqual(['qcf'])
     expect(seen.frames.some((f) => f.length === 2)).toBe(true)
   })
 
@@ -416,28 +496,38 @@ describe('style and page changes', () => {
 
   it('starts afresh on another page: no cross-fade between pages', async () => {
     await fonts.ensure('qcf_v2', [262, 263], 'interactive')
-    const { screen, section } = await mount('qcf_v2:262')
-    await expect.poll(() => renditions(section)).toEqual(['qcf'])
-    const need = vi.spyOn(shapeWarmer, 'need')
-    const seen = watch(section)
-    await screen.rerender({ data: page('qcf_v2:263') })
-    // A reader page's cold glyphs are measured and shaped first, in slices (warmup.ts, §8.18), then the page is drawn
-    // directly in its font: never the fallback, never a cross-fade.
-    await expect.poll(() => renditions(section)).toEqual(['qcf'])
-    seen.stop()
-    expect(seen.mounted).toEqual(['qcf'])
-    expect(need).toHaveBeenCalledWith(
-      expect.any(HTMLElement),
-      expect.objectContaining({ key: glyphKey('qcf_v2', 263, QFS) }),
-      expect.any(Number),
-    )
-    expect(shapeWarmer.hasGlyphsNow(glyphKey('qcf_v2', 263, QFS))).toBe(true)
-    expect(section.querySelector('.qd-warm')?.childElementCount).toBe(0)
-    const first = page('qcf_v2:263').lines.flatMap((l) => l.words)[0]
-    expect(section.querySelector('.mp-glyphs .w')?.getAttribute('data-w')).toBe(String(first?.id))
-    expect(
-      section.querySelector<HTMLElement>('.mp-glyphs')?.style.getPropertyValue('--glyph-family'),
-    ).toContain('qcf-v2-p263')
+    // The glyphs' warm-up takes real time; the page's wait for it runs on the fake clock (see the top).
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    try {
+      const { screen, section } = await mount('qcf_v2:262')
+      await vi.advanceTimersByTimeAsync(FONT_WAIT_MS + GLYPH_WAIT_MS)
+      expect(renditions(section)).toEqual(['qcf'])
+      const need = vi.spyOn(shapeWarmer, 'need')
+      const seen = watch(section)
+      await screen.rerender({ data: page('qcf_v2:263') })
+      // A reader page's cold glyphs are measured and shaped first, in slices (warmup.ts, §8.18), then the page is drawn
+      // directly in its font: never the fallback, never a cross-fade, however long the waits run.
+      await vi.advanceTimersByTimeAsync(FONT_WAIT_MS + GLYPH_WAIT_MS)
+      flushSync()
+      expect(renditions(section)).toEqual(['qcf'])
+      seen.stop()
+      expect(seen.mounted).toEqual(['qcf'])
+      expect(seen.fades).toEqual([])
+      expect(need).toHaveBeenCalledWith(
+        expect.any(HTMLElement),
+        expect.objectContaining({ key: glyphKey('qcf_v2', 263, QFS) }),
+        expect.any(Number),
+      )
+      expect(shapeWarmer.hasGlyphsNow(glyphKey('qcf_v2', 263, QFS))).toBe(true)
+      expect(section.querySelector('.qd-warm')?.childElementCount).toBe(0)
+      const first = page('qcf_v2:263').lines.flatMap((l) => l.words)[0]
+      expect(section.querySelector('.mp-glyphs .w')?.getAttribute('data-w')).toBe(String(first?.id))
+      expect(
+        section.querySelector<HTMLElement>('.mp-glyphs')?.style.getPropertyValue('--glyph-family'),
+      ).toContain('qcf-v2-p263')
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('refits and re-measures after a qfs change', async () => {
@@ -486,7 +576,8 @@ describe('leaving a style (§8.5)', () => {
     await fonts.ensure('qcf_v4', [260, 261, 262, 263, 264], 'interactive')
     expect(v4Faces()).toHaveLength(5)
     const { screen, section } = await mount('qcf_v4:262')
-    await expect.poll(() => renditions(section)).toEqual(['qcf'])
+    // Cold glyphs: warmed first, or after the waits the fallback, then a cross-fade (either way within seconds).
+    await expect.poll(() => renditions(section), { timeout: 3000 }).toEqual(['qcf'])
     expect(document.getElementById(PALETTE_STYLE_ID)?.textContent).toContain('qcf-v4-p262')
 
     // Leaving V4: the faces nothing draws go at once; page 262 is still drawn in V4 until its V2 rendition is in.
