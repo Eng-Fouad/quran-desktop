@@ -7,36 +7,18 @@ import './app.css'
 import { mount } from 'svelte'
 import App from './App.svelte'
 import { api, call, initIpc } from '$lib/ipc'
-import { app, initStores } from '$lib/stores'
-
-/**
- * Waits for the bundled faces (§8.5): the Hafs font, so the first paint never shows a system-font flash, and the
- * print's furniture labels (LEAD 25), so the running heads and margin labels never change after it (CLS 0). The fonts
- * store reads which of them loaded (`fonts.printLabelsReady`); a face that failed leaves the Hafs text in its place.
- */
-async function loadQuranFont(): Promise<void> {
-  const faces = [
-    ['qd-hafs', 'بسم'],
-    ['qd-print-labels', String.fromCodePoint(0xf800 + 1)],
-  ] as const
-  await Promise.all(
-    faces.map(async ([family, text]) => {
-      try {
-        await document.fonts.load(`32px "${family}"`, text)
-      } catch (e) {
-        console.warn(`${family} did not load before the first paint`, e)
-      }
-    }),
-  )
-}
+import { app, fonts, initStores } from '$lib/stores'
+import { loadBundledFaces } from '$lib/stores/fonts.svelte'
 
 async function start(): Promise<void> {
   const target = document.getElementById('app')
   if (!target) throw new Error('#app is missing from index.html')
   try {
     await initIpc()
-    const [bootstrap] = await Promise.all([call(api.appBootstrap()), loadQuranFont()])
+    const [bootstrap] = await Promise.all([call(api.appBootstrap()), loadBundledFaces()])
     await initStores(bootstrap)
+    // Settings' init may have set the Arabic UI's lang and dir, which makes WebKit drop the faces just loaded.
+    await fonts.settleBundledFaces()
   } catch (e) {
     app.failBootstrap(e)
   }

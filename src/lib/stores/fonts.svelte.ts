@@ -10,6 +10,8 @@
  * - `printLabelsReady`: the bundled print-labels face (`qd-print-labels`, the 1441H print's running heads and margin
  *   labels, LEAD 25) is loaded. `main.ts` loads it before the app mounts, and `init` reads the outcome from
  *   `document.fonts`, so it never changes after the first paint (CLS 0); false, the furniture keeps its Hafs text.
+ *   `settleBundledFaces` loads and reads it again once every store is initialised: WebKit drops a loaded CSS face back
+ *   to "unloaded" when the root's `lang` or `dir` changes, as settings' `init` does for the Arabic UI.
  * - `ensure(style, pages, priority)` resolves once every page is final. Requests are batched (≤ 12 pages, the command's
  *   limit) and deduplicated per family; an interactive request overtakes a prefetch already in flight. `Ready` pages
  *   are loaded into `document.fonts` (`fontRegistry`), prefetched ones too (a local file load is cheap, §8.5).
@@ -115,6 +117,28 @@ const NO_DECOR: DecorStatus = {
 }
 
 const isPage = (p: number) => Number.isInteger(p) && p >= 1 && p <= PAGE_COUNT
+
+/**
+ * Loads the bundled faces (§8.5) and waits for them: the Hafs font, so the first paint never shows a system-font flash,
+ * and the print's furniture labels (LEAD 25), so the running heads and margin labels never change after it (CLS 0). A
+ * face that fails is left out (`printLabelsLoaded` then reads false and the furniture keeps its Hafs text).
+ */
+export async function loadBundledFaces(): Promise<void> {
+  if (typeof document === 'undefined' || !('fonts' in document)) return
+  const faces = [
+    [HAFS_FAMILY, 'بسم'],
+    [PRINT_LABELS_FAMILY, String.fromCodePoint(0xf800 + 1)],
+  ] as const
+  await Promise.all(
+    faces.map(async ([family, text]) => {
+      try {
+        await document.fonts.load(`32px "${family}"`, text)
+      } catch (e) {
+        console.warn(`${family} did not load before the first paint`, e)
+      }
+    }),
+  )
+}
 
 /**
  * Whether the bundled `qd-print-labels` face (`src/styles/fonts.css`) is loaded in this document: `main.ts` awaited it
@@ -442,6 +466,18 @@ class FontsStore implements Store {
   }
 
   /** Stops the store's effects and listeners (tests). `init` calls it first. */
+  /**
+   * Once every store is initialised, before the first paint (`main.ts`): loads the bundled faces again and reads
+   * `printLabelsReady` anew. WebKit (WKWebView, WebKitGTK) drops every CSS face back to "unloaded" when the root's `lang`
+   * or `dir` changes, which settings' `init` does for the Arabic UI; the Hafs face is reloaded as soon as text uses it,
+   * but nothing draws the print labels until they are known ready, so `init` read false and the furniture kept its Hafs
+   * text. A face already loaded resolves at once.
+   */
+  async settleBundledFaces(): Promise<void> {
+    await loadBundledFaces()
+    this.printLabelsReady = printLabelsLoaded()
+  }
+
   dispose(): void {
     for (const dispose of this.#disposers.splice(0)) dispose()
   }

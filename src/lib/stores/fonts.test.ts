@@ -106,8 +106,16 @@ const { fontBytes } = await import('$lib/ipc')
 const { app } = await import('./app.svelte')
 const { settings } = await import('./settings.svelte')
 const { ui } = await import('./ui.svelte')
-const { aroundPages, DECOR_FACES, ENSURE_BATCH, fonts, pageFamily, parseFamily, printLabelsLoaded } =
-  await import('./fonts.svelte')
+const {
+  aroundPages,
+  DECOR_FACES,
+  ENSURE_BATCH,
+  fonts,
+  loadBundledFaces,
+  pageFamily,
+  parseFamily,
+  printLabelsLoaded,
+} = await import('./fonts.svelte')
 const { hasFace } = await import('$lib/mushaf/fontRegistry')
 const { PALETTE_STYLE_ID } = await import('$lib/mushaf/palettes')
 const { V4_SUPPORT_KEY } = await import('$lib/mushaf/colrProbe')
@@ -599,6 +607,44 @@ describe('the bundled print-labels face (LEAD 25)', () => {
     }
     fontSet([{ family: 'qd-hafs', status: 'loaded' }])
     expect(printLabelsLoaded()).toBe(false)
+  })
+
+  it('loads the bundled faces again once the stores are initialised: WebKit drops them when lang or dir changes', async () => {
+    // Loaded before init, then dropped back to "unloaded" (settings' init set lang="ar" dir="rtl"): init reads false.
+    const list = [
+      { family: 'qd-hafs', status: 'loaded' },
+      { family: 'qd-print-labels', status: 'unloaded' },
+    ]
+    const loads: string[] = []
+    Object.defineProperty(document, 'fonts', {
+      configurable: true,
+      value: {
+        add: () => {},
+        delete: () => {},
+        [Symbol.iterator]: () => list[Symbol.iterator](),
+        load: (font: string) => {
+          loads.push(font)
+          for (const face of list) if (font.includes(face.family)) face.status = 'loaded'
+          return Promise.resolve([])
+        },
+      },
+    })
+    fonts.init(bootstrap())
+    expect(fonts.printLabelsReady).toBe(false)
+    await fonts.settleBundledFaces()
+    expect(loads).toEqual(['32px "qd-hafs"', '32px "qd-print-labels"'])
+    expect(fonts.printLabelsReady).toBe(true)
+    // A face that cannot load stays out: the furniture keeps its Hafs text.
+    list[1] = { family: 'qd-print-labels', status: 'error' }
+    Object.defineProperty(document.fonts, 'load', {
+      configurable: true,
+      value: () => Promise.reject(new Error('404')),
+    })
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    await fonts.settleBundledFaces()
+    expect(fonts.printLabelsReady).toBe(false)
+    expect(warn).toHaveBeenCalled()
+    await expect(loadBundledFaces()).resolves.toBeUndefined()
   })
 
   it('is not ready where the document has no font set to read (jsdom, a test double)', () => {

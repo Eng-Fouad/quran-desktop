@@ -116,7 +116,9 @@ summarises them); item 17's data rulings are also corrected in place in ARCHITEC
     font, like the Hafs font: `public/fonts/QuranPrintLabels.woff2` (family "Quran Print Labels", CSS `qd-print-labels`,
     CFF in a WOFF2 container, 111,228 B; the generator's OTF of the same tables is 1,235,388 B, which first shipped:
     +1.18 MiB of `dist/` against its 6 MiB, 114 KB as LZMA, `xz -9`) is committed with
-    `QuranPrintLabels.LICENSE.txt` beside it, and `main.ts` loads it before the first paint like qd-hafs (CLS 0).
+    `QuranPrintLabels.LICENSE.txt` beside it, and `main.ts` loads it before the first paint like qd-hafs (CLS 0), and again
+    once the stores are initialised (`fonts.settleBundledFaces`): WebKit drops loaded CSS faces when the Arabic UI sets
+    the root's `lang` and `dir`, which left the Arabic UI with the Hafs text in place of the print's calligraphy.
     - **Source:** outlines cut from 123 pages of the Mushaf Database "Ligature-Based SVG Mushaf" V1.01
       (github.com/mushafdatabase/MushafDatabase-Ligature-Based-SVG, folder `SVG V1.01`), whose artwork derives from the
       KFGQPC printing-use Madinah Mushaf (free use in computer programs, dm.qurancomplex.gov.sa/rights). The generator,
