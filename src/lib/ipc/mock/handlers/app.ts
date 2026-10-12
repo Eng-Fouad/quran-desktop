@@ -51,7 +51,18 @@ function params(): URLSearchParams {
   return new URLSearchParams(typeof location === 'undefined' ? '' : location.search)
 }
 
+/**
+ * The host's platform, so browser tests follow the OS they run on. `navigator.platform` first ("MacIntel", "Win32",
+ * "Linux x86_64"): Playwright's WebKit sends a Mac user agent on every OS, so on Linux CI the user agent alone would run
+ * the macOS app (Meta shortcuts, the glass chrome) on WebKitGTK. jsdom reports no platform: its user agent decides.
+ */
 function platform(): Platform {
+  const host = navigator.platform
+  if (host) {
+    if (/^Mac/i.test(host)) return 'macos'
+    if (/^Win/i.test(host)) return 'windows'
+    if (/Linux|X11|CrOS/i.test(host)) return 'linux'
+  }
   const ua = navigator.userAgent
   if (/Mac OS X|Macintosh/i.test(ua)) return 'macos'
   if (/Linux|X11|CrOS/i.test(ua)) return 'linux'
