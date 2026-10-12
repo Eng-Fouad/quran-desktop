@@ -1016,14 +1016,58 @@ describe('The 1441H print’s calligraphy (§8.9; LEAD 25)', () => {
     return y
   }
 
-  /** The ink (client px) of an element's glyph: its baseline and the glyph's canvas ink box in the element's size. */
-  function inkOf(el: HTMLElement): { top: number; bottom: number; base: number } {
-    const ctx = document.createElement('canvas').getContext('2d')
+  /** Ink extents (em above and below the baseline) by text, measured once per engine. */
+  const inkEm = new Map<string, { top: number; bottom: number }>()
+
+  /**
+   * The ink of a text in the face, in em above and below its baseline, as the engine draws it: the inked rows of a
+   * 1000 px canvas rendition, exact to a thousandth of an em (0.27 px at qfs 160). Canvas text metrics will not do:
+   * Skia with FreeType (Chromium and WebKit on Linux) reports the outline's control box, which overshoots this face's
+   * curves by up to 0.015 em, rounded out to whole pixels; Core Text reports the ink.
+   */
+  function glyphInk(text: string): { top: number; bottom: number } {
+    const known = inkEm.get(text)
+    if (known) return known
+    const px = 1000
+    const font = `${px}px "${FACE}"`
+    const probe = document.createElement('canvas').getContext('2d')
+    if (!probe) throw new Error('no canvas')
+    probe.font = font
+    // An em of room around the advance, and the face's whole height and more above and below the baseline.
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.ceil(probe.measureText(text).width) + 2 * px
+    canvas.height = 2 * px
+    const ctx = canvas.getContext('2d', { willReadFrequently: true })
     if (!ctx) throw new Error('no canvas')
-    ctx.font = `${getComputedStyle(el).fontSize} "${FACE}"`
-    const m = ctx.measureText(el.textContent ?? '')
+    ctx.font = font
+    ctx.textAlign = 'center'
+    ctx.fillText(text, canvas.width / 2, px)
+    const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height)
+    const stride = canvas.width * 4
+    let first = -1
+    let last = -1
+    for (let y = 0; y < canvas.height; y++) {
+      for (let a = y * stride + 3; a < (y + 1) * stride; a += 4) {
+        if ((data[a] ?? 0) > 0) {
+          if (first < 0) first = y
+          last = y
+          break
+        }
+      }
+    }
+    if (first <= 0 || last >= canvas.height - 1)
+      throw new Error(`no ink, or ink cut off, for ${JSON.stringify(text)}`)
+    const ink = { top: (px - first) / px, bottom: (last + 1 - px) / px }
+    inkEm.set(text, ink)
+    return ink
+  }
+
+  /** The ink (client px) of an element's glyph: its baseline and the glyph's ink (`glyphInk`) at the element's size. */
+  function inkOf(el: HTMLElement): { top: number; bottom: number; base: number } {
+    const size = Number.parseFloat(getComputedStyle(el).fontSize)
+    const ink = glyphInk(el.textContent ?? '')
     const base = baselineOf(el)
-    return { top: base - m.actualBoundingBoxAscent, bottom: base + m.actualBoundingBoxDescent, base }
+    return { top: base - ink.top * size, bottom: base + ink.bottom * size, base }
   }
 
   /** An element's box where layout put it: its client rect less its `translate` (which moves only the ink). */
