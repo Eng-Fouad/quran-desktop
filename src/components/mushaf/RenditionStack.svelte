@@ -14,8 +14,9 @@
         not yet painted in its QCF font at this size shows the fallback (a new page's glyphs would stall the flip's
         frames, warmup.ts), and the QCF rendition cross-fades in once the flip has ended;
     (c) else the fallback rendition (Unicode text in `qd-hafs`, hafs metrics, the same line boxes). When the face
-        becomes ready, a second rendition mounts at opacity 0, is fitted and measured, then cross-fades in over
-        `--dur-glyph-swap` (0 ms under reduced motion) while the old one fades out and is removed.
+        becomes ready, a second rendition mounts at opacity 0 (page.css hides a rendition stacked over another from
+        its first style), is fitted and measured, then cross-fades in over `--dur-glyph-swap` (0 ms under reduced
+        motion) while the old one fades out and is removed.
   A style change on the same page is a swap too: the old style's rendition stays until the new one cross-fades in.
   A different page starts afresh (no cross-fade between pages). Every QCF rendition holds its face (`fonts.track`)
   while it is in the stack, so leaving a style unloads its faces only once nothing draws them any more.
@@ -44,7 +45,7 @@
 </script>
 
 <script lang="ts">
-  import { untrack } from 'svelte'
+  import { tick, untrack } from 'svelte'
   import Tooltip from '$components/ui/Tooltip.svelte'
   import type { RenditionKind, RenditionStackProps, WordBox } from '$lib/contracts/components'
   import type { MushafStyle, PageData } from '$lib/ipc/bindings'
@@ -462,15 +463,23 @@
     const timer = setTimeout(end, duration + 80)
   }
 
-  /** After a cross-fade: the shown rendition stays, everything older goes. */
+  /**
+   * After a cross-fade: the shown rendition stays, everything older goes. It keeps its inline opacity until they have
+   * left the DOM: stacked over them, page.css would hide it again.
+   */
   function finish(key: number): void {
     if (disposed) return
     const el = elements[key]
-    if (el) el.style.removeProperty('opacity')
     const gone = layers.filter((l) => l.key < key).map((l) => l.key)
-    if (gone.length === 0) return
+    if (gone.length === 0) {
+      el?.style.removeProperty('opacity')
+      return
+    }
     drop(gone)
     layers = layers.filter((l) => l.key >= key)
+    void tick().then(() => {
+      if (!disposed && elements[key] === el) el?.style.removeProperty('opacity')
+    })
   }
 
   /**

@@ -438,8 +438,14 @@ describe('style and page changes', () => {
     expect(after.block).toEqual(before.block)
     expect(after.lines).toEqual(before.lines)
     if (shifts.supported) expect(shifts.total()).toBe(0)
+    // Both renditions were on screen together, the new one invisible on its first frame, then the old one fading out
+    // as the new one faded in.
     expect(seen.mounted).toEqual(['qcf'])
-    expect(seen.frames.some((f) => f.length === 2)).toBe(true)
+    expect(seen.frames.find((f) => f.length === 2)?.[1]).toBe(0)
+    expect(seen.fades.map((f) => [f.from, f.to])).toEqual([
+      [1, 0],
+      [0, 1],
+    ])
   })
 
   it('drops a pending rendition when the style returns to the one on screen', async () => {

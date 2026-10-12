@@ -85,6 +85,12 @@ The values, the date and the statistics live in `metrics.ts` (`STYLE_METRICS`, `
     (QCF when `ready`, else the fallback and the dot), so they hold in the real app once WP5c/WP5e implement the
     command. S11 also runs the §8.4 line-fit gate on a hafs sweep of 50 pages (the 47 fixture pages first in the mock).
     S30 additionally shows the Arabic tooltip and, in the mock only, the `failed` → Retry recovery.
+13. **A rendition stacked over another is hidden by page.css** (`.mp-glyphs ~ .mp-glyphs { opacity: 0 }`), not only by
+    the stack's inline `opacity: 0`. On a same-page style change with the new face ready, the refit effect laid the
+    page out before that inline 0 was written, so the new rendition's first style was at full opacity and the 0 started
+    a fade-out: for a frame or two both fonts were drawn at once (found by the CI pass, round 2). After a cross-fade
+    the shown rendition keeps its inline opacity until the older ones have left the DOM. The browser tests drive the
+    120 ms and glyph waits on a fake clock and check each fade by its opacity transition (CI pass, round 2).
 
 ## Data findings
 

@@ -75,6 +75,15 @@
     transition: opacity var(--dur-glyph-swap) linear;
   }
 
+  /*
+   * A rendition stacked over another is invisible from its first style: RenditionStack fades it in (and the older ones
+   * out) with inline opacities. Hidden only by its own script, its first style could be computed at full opacity (any
+   * layout read in the flush that mounts it), and that script's 0 would start a fade-out: both fonts on screen at once.
+   */
+  .mp-glyphs ~ .mp-glyphs {
+    opacity: 0;
+  }
+
   @media (forced-colors: active) {
     /* The page shadow is dropped in forced colours; an outline keeps the paper's edge visible. */
     .mp-paper {
