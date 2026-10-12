@@ -6,11 +6,11 @@
  */
 import { flushSync } from 'svelte'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { page, server, userEvent } from 'vitest/browser'
+import { page, userEvent } from 'vitest/browser'
 import '../../app.css'
 import { api, call } from '$lib/ipc'
 import type { SidebarTab } from '$lib/ipc/bindings'
-import { app, history, library, reader, settings, ui } from '$lib/stores'
+import { history, library, reader, settings, ui } from '$lib/stores'
 import { bootApp, resetApp, settle } from '../shell/testing/boot'
 import { panelPrefs, previews } from './library.svelte'
 
@@ -307,20 +307,6 @@ describe('Delete keeps keyboard focus in the panel', () => {
     const removeVia = async (row: HTMLElement) => {
       row.focus()
       await userEvent.keyboard('{Shift>}{F10}{/Shift}')
-      // WebKitGTK opens the menu from GTK's popup-menu key binding, in the UI process; Playwright's WebKit on Linux
-      // hands the keys straight to the page, past that binding, so here the test sends the event it would.
-      if (server.browser === 'webkit' && app.isLinux) {
-        const r = row.getBoundingClientRect()
-        row.dispatchEvent(
-          new MouseEvent('contextmenu', {
-            bubbles: true,
-            cancelable: true,
-            composed: true,
-            clientX: r.left + 1,
-            clientY: r.bottom - 1,
-          }),
-        )
-      }
       await settle(120)
       await userEvent.click(
         $$('[role="menuitem"]').find((m) => /^Delete/.test(plain(m).trim())) as HTMLElement,
