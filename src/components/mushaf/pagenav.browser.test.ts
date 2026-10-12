@@ -379,9 +379,27 @@ describe('DivisionChip (§8.12)', () => {
 })
 
 describe('HintChip (§8.11)', () => {
+  /**
+   * Boots on page 262 itself (a restored position, §7.8) rather than turning there: the hint comes 1.2 s after the
+   * reader settles and a turn while it shows marks it seen, so on a runner that takes longer than that to boot, a turn
+   * from page 1 dismissed it for good before the test looked for it.
+   */
+  async function bootOn262(): Promise<void> {
+    await boot({
+      settings: { onboardingDone: true, hintsSeen: [] },
+      edit: (b) => ({
+        ...b,
+        positions: [
+          { context: 'mushaf', layout: 'v2', page: 262, ayahId: 1_803, scrollPx: null, updatedAt: 0 },
+        ],
+      }),
+    })
+    expect(quran.ayahRef(1_803)).toEqual({ surah: 15, ayah: 1 })
+    expect(reader.visiblePages).toContain(262)
+  }
+
   it('shows once after the welcome flow, with the arrow keycaps, until "Got it"', async () => {
-    await boot({ settings: { onboardingDone: true, hintsSeen: [] } })
-    await goTo(262)
+    await bootOn262()
     await until(() => $(HINT) !== null, 3_000, 'the hint')
     const hint = $(HINT) as HTMLElement
     expect(hint.getAttribute('role')).toBe('status')
@@ -395,8 +413,7 @@ describe('HintChip (§8.11)', () => {
   })
 
   it('leaves for good when a page is turned', async () => {
-    await boot({ settings: { onboardingDone: true, hintsSeen: [] } })
-    await goTo(262)
+    await bootOn262()
     await until(() => $(HINT) !== null, 3_000, 'the hint')
     reader.next()
     await until(() => $(HINT) === null, 2_000, 'the hint gone')
