@@ -2,13 +2,13 @@
  * Select and Combobox (§9.5): keyboard selection, typeahead on the closed trigger, the listbox direction and alignment
  * in the Arabic UI, groups, the floating-layer registration, and combobox filtering (Arabic letter folding).
  */
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { userEvent } from 'vitest/browser'
 import { render } from 'vitest-browser-svelte'
 import '../../app.css'
 import { ui } from '$lib/stores/ui.svelte'
 import Select from './Select.svelte'
-import { installShortcuts, resetUi, setUi, settle, spyShortcut } from './testing/harness'
+import { installShortcuts, parkPointer, resetUi, setUi, settle, spyShortcut } from './testing/harness'
 import type { SelectItem } from './types'
 
 const RECITERS: SelectItem[] = [
@@ -27,6 +27,8 @@ const trigger = () => document.querySelector<HTMLElement>('[data-select-trigger]
 const listbox = () => document.querySelector<HTMLElement>('[role="listbox"]')
 const highlighted = () =>
   document.querySelector('[role="option"][data-highlighted]')?.textContent?.trim() ?? ''
+
+beforeEach(() => parkPointer())
 
 afterEach(() => {
   resetUi()

@@ -3,12 +3,12 @@
  * rows, disabled rows, focus return, the floating-layer registration, and the §7.7 guarantee that typeahead in an open
  * context menu never runs the reader's own letter shortcut.
  */
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { userEvent } from 'vitest/browser'
 import { render } from 'vitest-browser-svelte'
 import '../../app.css'
 import { ui } from '$lib/stores/ui.svelte'
-import { installShortcuts, resetUi, setUi, settle, spyShortcut } from './testing/harness'
+import { installShortcuts, parkPointer, resetUi, setUi, settle, spyShortcut } from './testing/harness'
 import MenuHarness from './testing/MenuHarness.svelte'
 
 const highlighted = () =>
@@ -23,6 +23,8 @@ async function openMenu(onAction = vi.fn()): Promise<ReturnType<typeof vi.fn>> {
   await settle(150)
   return onAction
 }
+
+beforeEach(() => parkPointer())
 
 afterEach(() => resetUi())
 
