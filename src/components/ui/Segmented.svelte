@@ -112,6 +112,33 @@
     pill = active ? { x: active.offsetLeft, w: active.offsetWidth } : null
   }
 
+  /** Fits and places the pill again, without the glide (a resize or a font changed the options' widths). */
+  function refit(): void {
+    animate = false
+    fit()
+    measure()
+    requestAnimationFrame(() => (animate = true))
+    awaitFonts()
+  }
+
+  /** A `document.fonts.ready` wait is pending (`awaitFonts`). */
+  let fontWait = false
+
+  /**
+   * A web font that the labels' layout just started loading changes their widths without resizing a full-width group.
+   * Chromium reports it with `loadingdone`; WebKit (WKWebView, WebKitGTK) fires no FontFaceSet event for a load that
+   * CSS starts, so after every measurement a pending load is awaited through `document.fonts.ready` as well.
+   */
+  function awaitFonts(): void {
+    const fonts = typeof document !== 'undefined' ? document.fonts : undefined
+    if (!fonts || fonts.status !== 'loading' || fontWait) return
+    fontWait = true
+    void fonts.ready.then(() => {
+      fontWait = false
+      if (root) refit()
+    })
+  }
+
   $effect(() => {
     void value
     void options
@@ -119,6 +146,7 @@
     void size
     fit()
     measure()
+    awaitFonts()
     const id = requestAnimationFrame(() => (animate = true))
     return () => cancelAnimationFrame(id)
   })
@@ -126,15 +154,8 @@
   $effect(() => {
     const el = root
     if (!el) return
-    const refit = () => {
-      animate = false
-      fit()
-      measure()
-      requestAnimationFrame(() => (animate = true))
-    }
     const observer = new ResizeObserver(refit)
     observer.observe(el)
-    // A web font arriving changes the labels' widths without resizing a full-width group.
     const fonts = typeof document !== 'undefined' ? document.fonts : undefined
     fonts?.addEventListener('loadingdone', refit)
     return () => {
