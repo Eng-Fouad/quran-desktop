@@ -5,7 +5,11 @@
 //!
 //! - **Ticks.** At most `tick_hz` per second while playing or buffering; otherwise one tick per change, during a short
 //!   window after each control wake-up (a seek while paused is published as soon as the callback has heard it), then the
-//!   thread parks on its channel: no busy loop.
+//!   thread parks on its channel: no busy loop. Ticks fall on a fixed grid of `1000 / tick_hz` ms slots ([`next_slot`]):
+//!   a late wake-up skips the slots it missed instead of bursting to catch up, and keeps the grid instead of restarting
+//!   it a whole period later, so a late timer costs only the slots it overran. (macOS coalesces the timers of a
+//!   throttled process by tens of milliseconds: restarting the grid after every late wake-up there lost a third of the
+//!   ticks.)
 //! - **Edges.** A new (generation, segment, marker kind) heard at the callback emits `state`; entering a segment whose
 //!   ayah differs from the last one reported also emits `ayah_changed` (the basmala as ayah 0). Repeats of one ayah and
 //!   seeks inside it are not ayah changes, but a new play or pass of a repeat is a `state` edge: the repeat counters
@@ -141,11 +145,7 @@ impl Ticker {
             let now = Instant::now();
             if now >= self.next_tick {
                 self.step(now);
-                // Fixed cadence; after a stall, restart from now instead of bursting.
-                self.next_tick += self.period;
-                if self.next_tick < now {
-                    self.next_tick = now + self.period;
-                }
+                self.next_tick = next_slot(self.next_tick, now, self.period);
             }
         }
     }
@@ -329,6 +329,22 @@ impl Ticker {
             log::debug!("qd-audio-tick: control is gone");
         }
     }
+}
+
+/// The slot after the tick due at `due` that ran at `now`: the first one of the `period` grid through `due` that is
+/// still ahead. On time (or late by less than a period) that is `due + period`; later, the missed slots are skipped
+/// (no burst) and the grid's phase is kept.
+fn next_slot(due: Instant, now: Instant, period: Duration) -> Instant {
+    let next = due + period;
+    if next > now {
+        return next;
+    }
+    let missed = now.duration_since(next).as_nanos() / period.as_nanos().max(1) + 1;
+    u32::try_from(missed)
+        .ok()
+        .and_then(|n| period.checked_mul(n))
+        .and_then(|skip| next.checked_add(skip))
+        .unwrap_or(now + period)
 }
 
 /// Playing or buffering: ticks run at `tick_hz`.
@@ -530,6 +546,35 @@ mod tests {
             ctl.try_recv(),
             Ok(CtlCmd::Heard(Heard::Buffering(false)))
         ));
+    }
+
+    /// The cadence keeps its grid: a late tick neither bursts to catch up nor pushes every later tick back.
+    #[test]
+    fn late_ticks_skip_the_missed_slots_of_the_grid() {
+        let p = Duration::from_micros(33_333);
+        let t0 = Instant::now();
+        let ms = |n: u64| Duration::from_millis(n);
+        // On time, or late by less than a period: the next slot.
+        assert_eq!(next_slot(t0, t0, p), t0 + p);
+        assert_eq!(next_slot(t0, t0 + ms(30), p), t0 + p);
+        // Late by a period or more (a coalesced timer, a descheduled thread): the first slot still ahead, so the next
+        // tick comes sooner than a full period later and the slots in between are not sent at once.
+        assert_eq!(next_slot(t0, t0 + p, p), t0 + p * 2);
+        assert_eq!(next_slot(t0, t0 + ms(90), p), t0 + p * 3);
+        assert_eq!(next_slot(t0, t0 + ms(100), p), t0 + p * 4);
+        // Ticks run at slots of one grid, so a stretch of time never holds more ticks than slots, however late each
+        // wake-up is.
+        let mut due = t0;
+        let mut ticks = 0u32;
+        for late in [0, 45, 3, 80, 34, 0, 120, 1, 66, 33] {
+            let now = due + ms(late);
+            ticks += 1;
+            let next = next_slot(due, now, p);
+            assert!(next > now && next <= now + p, "late by {late} ms");
+            assert_eq!((next - t0).as_micros() % p.as_micros(), 0, "on the grid");
+            due = next;
+        }
+        assert!(u128::from(ticks) <= (due - t0).as_micros() / p.as_micros());
     }
 
     #[test]

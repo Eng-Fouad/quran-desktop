@@ -7,13 +7,13 @@
 #[path = "engine_common.rs"]
 mod common;
 
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use common::{RATE, RECITER, Rig, markers, read_log, read_wav, request, u};
 use quran_audio::decode::ms_to_frame;
 use quran_audio::fake_out::fixtures::{FixtureTimings, ramp_frame};
 use quran_audio::sink::SinkKind;
-use quran_audio::{OutputKind, SegmentKind, plan};
+use quran_audio::{EngineConfig, OutputKind, SegmentKind, plan};
 use quran_types::{AyahRef, PlaybackStatus};
 
 #[test]
@@ -26,6 +26,7 @@ fn a_1_1_to_1_7_play_matches_its_plan_in_the_marker_log() {
     assert_eq!(plan.len(), 7);
     assert!(plan.iter().all(|s| s.kind == SegmentKind::Ayah));
 
+    let started = Instant::now();
     rig.engine.play(req);
     // `audio_play` returns this: loading, with the request's range.
     let s = rig.engine.snapshot();
@@ -45,6 +46,7 @@ fn a_1_1_to_1_7_play_matches_its_plan_in_the_marker_log() {
     });
     assert!(end.error.is_none() && end.current.is_none());
     rig.engine.shutdown();
+    let elapsed = started.elapsed();
 
     // --- marker log --------------------------------------------------------------------------------------------------
     let log = read_log(&SinkKind::log_path(&wav));
@@ -121,7 +123,6 @@ fn a_1_1_to_1_7_play_matches_its_plan_in_the_marker_log() {
         .filter(|l| l["event"] == "tick")
         .map(|l| &l["tick"])
         .collect();
-    assert!(ticks.len() > 100, "30 Hz ticks over ~7 s: {}", ticks.len());
     let ayahs: Vec<u64> = ticks
         .iter()
         .filter(|t| t["status"] == "playing" && t["surah"] == 1)
@@ -130,6 +131,30 @@ fn a_1_1_to_1_7_play_matches_its_plan_in_the_marker_log() {
     assert!(ayahs.windows(2).all(|w| w[1] >= w[0]), "ayahs in order");
     assert_eq!(ayahs.first(), Some(&1));
     assert_eq!(ayahs.last(), Some(&7));
+    // The rate. The ticker asks for `tick_hz` (30), but when its thread wakes is the OS's call: GitHub's macOS runners
+    // run the job throttled and the kernel coalesces its timers by tens of milliseconds (as `taskpolicy -b` does here),
+    // which leaves 10–14 Hz. What the player needs (§7.3) is ticks all through the play, often enough that the position
+    // it interpolates from the last one (up to 250 ms past the ayah's end, `AYAH_END_SLACK_MS`) does not stall: every
+    // ayah ticks while it plays, at 5 Hz or more on average (a tick per 200 ms). A ticker that stopped ticking while
+    // playing (ticks only at control wake-ups) fails that; one that ticked faster than `tick_hz` fails the cap: ticks
+    // fall on distinct slots of one grid (`ticker::next_slot`), one per slot of the run plus one per restart of the
+    // grid at a wake-up while parked.
+    let plan_ms: u64 = plan.iter().map(|s| u64::from(s.duration_ms())).sum();
+    for a in 1..=7 {
+        assert!(ayahs.contains(&a), "no tick while 1:{a} played");
+    }
+    assert!(
+        ayahs.len() as u64 * 200 >= plan_ms,
+        "{} ticks while playing {plan_ms} ms",
+        ayahs.len()
+    );
+    let tick_hz = EngineConfig::default().tick_hz;
+    let slots = elapsed.as_micros() * u128::from(tick_hz) / 1_000_000;
+    assert!(
+        ticks.len() as u128 <= slots + 5,
+        "{} ticks in {elapsed:?}: above {tick_hz} Hz",
+        ticks.len()
+    );
     // Every tick's word is the planned active word at its position.
     for t in ticks
         .iter()
