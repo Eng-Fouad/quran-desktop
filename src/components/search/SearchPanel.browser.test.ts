@@ -301,6 +301,14 @@ describe('hits', () => {
     await userEvent.keyboard('{Shift>}{F3}{/Shift}{Shift>}{F3}{/Shift}')
     await until(() => search.activeIndex === 299)
     await until(() => hitRow(299) !== null)
+    // virtua corrects the scroll frame by frame while the rows it lands on are measured: wait for it to settle (slow
+    // frames, as WebKit's under load, only make that take longer), then the hit sits below the sticky header.
+    const inView = () => {
+      const row = (hitRow(299) as HTMLElement).getBoundingClientRect()
+      const box = scroller().getBoundingClientRect()
+      return row.top >= box.top + 31 && row.bottom <= box.bottom + 1
+    }
+    await until(inView).catch(() => undefined)
     const row = (hitRow(299) as HTMLElement).getBoundingClientRect()
     const box = scroller().getBoundingClientRect()
     expect(row.top).toBeGreaterThanOrEqual(box.top + 31)
