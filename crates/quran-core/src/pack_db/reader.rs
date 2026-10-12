@@ -13,6 +13,7 @@ use quran_types::{AYAH_COUNT, Footnote};
 use r2d2_sqlite::SqliteConnectionManager;
 use rusqlite::{Connection, OpenFlags, OptionalExtension, params};
 
+use super::pool::{Closer, Manager, OpenConns};
 use super::{PACK_FORMAT, PackDb, PackEntry, PackMeta, PackTokenizer, parse_dir, parse_kind};
 use crate::{CoreError, Result};
 
@@ -41,15 +42,17 @@ impl PackDb {
         let manager = SqliteConnectionManager::file(&uri)
             .with_flags(flags)
             .with_init(|c| c.execute_batch("PRAGMA query_only = 1; PRAGMA temp_store = MEMORY;"));
+        let open = Arc::new(OpenConns::default());
         let pool = r2d2::Pool::builder()
             .max_size(POOL_SIZE)
             .min_idle(Some(0))
             .connection_timeout(Duration::from_secs(10))
-            .build(manager)?;
+            .build(Manager::new(manager, Arc::clone(&open)))?;
         Ok(Self {
             pool,
             meta: Arc::new(meta),
             path: path.to_path_buf(),
+            _closer: Arc::new(Closer(open)),
         })
     }
 
@@ -257,7 +260,7 @@ impl PackDb {
         Ok(out)
     }
 
-    fn conn(&self) -> Result<r2d2::PooledConnection<SqliteConnectionManager>> {
+    fn conn(&self) -> Result<r2d2::PooledConnection<Manager>> {
         Ok(self.pool.get()?)
     }
 
@@ -485,5 +488,55 @@ mod tests {
             .join("1.1.2")
             .join("pack.db");
         assert_eq!(short(&p), "tr.en.saheeh/1.1.2/pack.db");
+    }
+
+    /// The last handle's drop returns once the file is closed, so the pack can be deleted right after (Windows refuses
+    /// to delete an open file). r2d2 opens connections on its worker thread, which frees the pool, idle connections
+    /// included, when it lets go of it a moment later: a few rounds give that race its chance.
+    #[test]
+    fn dropping_the_last_handle_closes_the_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("pack.db");
+        let meta = PackMeta {
+            pack_id: "tr.en.test".into(),
+            kind: quran_types::PackKind::Translation,
+            lang: "en".into(),
+            dir: quran_types::TextDir::Ltr,
+            name: "Test".into(),
+            author: String::new(),
+            source: "quranenc".into(),
+            source_version: "1".into(),
+            licence: String::new(),
+            attribution: String::new(),
+            tokenizer: PackTokenizer::PorterUnicode61,
+            normalizer_version: crate::NORMALIZER_VERSION,
+            format: PACK_FORMAT,
+        };
+        for round in 0..20 {
+            let mut w = crate::PackDbWriter::create(&path, &meta).unwrap();
+            w.entry(&crate::PackEntryInput {
+                ayah_id: 1,
+                to_ayah_id: 1,
+                html: "<p>a</p>".into(),
+                plain: "a".into(),
+            })
+            .unwrap();
+            w.finish().unwrap();
+            let db = PackDb::open(&path).unwrap();
+            let other = db.clone();
+            std::thread::scope(|s| {
+                s.spawn(|| other.entries(1, 1).unwrap());
+                db.entries(1, 1).unwrap();
+            });
+            let open = Arc::clone(&db._closer.0);
+            drop(other);
+            assert!(!open.wait_closed(Duration::ZERO), "a clone keeps the pool");
+            drop(db);
+            assert!(
+                open.wait_closed(Duration::ZERO),
+                "round {round}: a connection outlived the last handle"
+            );
+            std::fs::remove_file(&path).unwrap();
+        }
     }
 }

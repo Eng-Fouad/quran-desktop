@@ -259,7 +259,7 @@ async fn validators_packs_are_versioned_by_their_etag() {
     assert_eq!(m.name, "arabic_moyassar");
     let e = db.entry_for(262).unwrap().unwrap();
     assert_eq!((e.ayah_id, e.to_ayah_id), (262, 262));
-    drop(db);
+    drop(db); // closes pack.db (its last handle), so the rebuild below may replace it (Windows)
 
     // An update within the same month as the installed version gets a day version.
     let now = env.user.now_ms();

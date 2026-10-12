@@ -6,6 +6,7 @@
 //! `plain` are built in Rust from `plain` (§2.2.5 step 7), which [`PackDb::plain_texts`] serves; copied translations
 //! read the same column through [`PackDb::plain_range`].
 
+mod pool;
 mod reader;
 mod writer;
 
@@ -13,7 +14,6 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use quran_types::{PackKind, TextDir};
-use r2d2_sqlite::SqliteConnectionManager;
 use serde::{Deserialize, Serialize};
 
 pub use writer::PackDbWriter;
@@ -23,12 +23,15 @@ use crate::normalize::{Level, fold_latin, normalize_ar};
 /// `meta.format` of this schema (§3.4).
 pub const PACK_FORMAT: u32 = 1;
 
-/// Read-only handle on one pack DB (`READ_ONLY | URI`, not immutable; pool of 2). `Clone + Send + Sync`.
+/// Read-only handle on one pack DB (`READ_ONLY | URI`, not immutable; pool of 2). `Clone + Send + Sync`. Dropping the
+/// last clone closes the file before it returns, so the pack can be deleted or replaced right after (Windows).
 #[derive(Clone)]
 pub struct PackDb {
-    pool: r2d2::Pool<SqliteConnectionManager>,
+    pool: r2d2::Pool<pool::Manager>,
     meta: Arc<PackMeta>,
     path: PathBuf,
+    /// After `pool`, so dropped after it: the last clone waits here for the file to close (the `pool` module).
+    _closer: Arc<pool::Closer>,
 }
 
 /// The `meta` table of a pack DB (§3.4).

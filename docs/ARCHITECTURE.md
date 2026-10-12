@@ -621,7 +621,9 @@ pub struct ClearReport { pub timings: Vec<(u32, u32)>, pub chapters: Vec<(String
 pub struct TafsirRow { pub from_ayah_id: u32, pub to_ayah_id: u32, pub html: String }
 pub struct StaleItem { pub kind: StaleKind /* Timings | Tafsir | Wbw */, pub pack_id: String, pub surah: u32, pub reciter_id: Option<u32> }
 
-#[derive(Clone)] pub struct PackDb { pool: r2d2::Pool<SqliteConnectionManager>, meta: Arc<PackMeta>, path: PathBuf }
+#[derive(Clone)] pub struct PackDb { pool: r2d2::Pool<pool::Manager> /* SqliteConnectionManager, connections counted */,
+                                    meta: Arc<PackMeta>, path: PathBuf,
+                                    _closer: Arc<pool::Closer> } // the last clone's drop returns once the file is closed
 pub struct PackMeta { pub pack_id: String, pub kind: PackKind, pub lang: String, pub dir: TextDir, pub name: String,
                       pub author: String, pub source: String, pub source_version: String, pub licence: String,
                       pub attribution: String, pub tokenizer: PackTokenizer, pub normalizer_version: u32, pub format: u32 }
