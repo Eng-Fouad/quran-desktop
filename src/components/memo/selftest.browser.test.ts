@@ -20,11 +20,16 @@ const $$ = (selector: string) => [...document.querySelectorAll<HTMLElement>(sele
 const plain = (text: string | null | undefined) =>
   (text ?? '').replace(/[⁦-⁩]/g, '').replace(/\s+/g, ' ').trim()
 
+/**
+ * Waits (real time) until `done()` holds, checked after every wait, the last one included: a long task (WebKit on Linux
+ * paints in software, seconds at a time in CI) can keep the loop asleep past the deadline while the condition holds.
+ */
 async function until(done: () => boolean, timeout = 5_000, message = 'condition'): Promise<void> {
   const end = performance.now() + timeout
-  while (performance.now() < end) {
+  for (;;) {
     flushSync()
     if (done()) return
+    if (performance.now() >= end) break
     await new Promise((resolve) => setTimeout(resolve, 20))
   }
   throw new Error(`${message} not met within ${timeout} ms`)
@@ -52,7 +57,9 @@ afterEach(async () => {
 
 describe('the self-test (§8.16)', () => {
   it('Shift+E → setup → start → hints and mistakes → E → keep reciting → rate with 3; then discard another', async () => {
-    await bootApp({ settings: { mushafStyle: 'hafs', pageMode: 'single' } })
+    // The blank hide style: Playwright's WebKit on Linux paints the blur of hidden words on the CPU, about a second a
+    // frame (WP9b 14), and this flow does not look at them (memo.browser.test.ts checks both styles).
+    await bootApp({ settings: { mushafStyle: 'hafs', pageMode: 'single', memoHideStyle: 'blank' } })
     reader.goToPage(50, { transition: false })
     await until(() => reader.visiblePages.includes(50), 5_000, 'page 50')
     await settle(300)

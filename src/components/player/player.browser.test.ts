@@ -24,12 +24,16 @@ const plain = (text: string | null | undefined) =>
     .replace(/\s+/g, ' ')
     .trim()
 
-/** Waits (real time) until `done()` holds. */
+/**
+ * Waits (real time) until `done()` holds, checked after every wait, the last one included: a long task (WebKit on Linux
+ * paints in software, seconds at a time in CI) can keep the loop asleep past the deadline while the condition holds.
+ */
 async function until(done: () => boolean, timeout = 5_000, message = 'condition'): Promise<void> {
   const end = performance.now() + timeout
-  while (performance.now() < end) {
+  for (;;) {
     flushSync()
     if (done()) return
+    if (performance.now() >= end) break
     await new Promise((resolve) => setTimeout(resolve, 20))
   }
   throw new Error(`${message} not met within ${timeout} ms`)
