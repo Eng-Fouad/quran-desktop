@@ -438,7 +438,9 @@ describe('the pointer (§8.11, §10.2)', () => {
   })
 
   it('never reveals over the memorisation toolbar, and floats above it when revealed from the page number', async () => {
-    await boot({ settings: { pageMode: 'spread' } })
+    // The blank style: WebKitGTK without a GPU (CI) blurs every hidden word in software, seconds a frame (MushafView's
+    // toolbar test).
+    await boot({ settings: { pageMode: 'spread', memoHideStyle: 'blank' } })
     await goTo(50)
     await userEvent.hover(document.querySelector('.titlebar, header') ?? document.body)
     await userEvent.keyboard('e')

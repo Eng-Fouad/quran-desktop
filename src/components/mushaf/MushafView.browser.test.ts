@@ -924,7 +924,15 @@ describe('follow-along chip and the overlay slot (§7.5, §8.12)', () => {
     async (_label, pageMode, dock) => {
       await bootApp({
         size: [1600, 1000],
-        settings: { pageMode, mushafStyle: 'hafs', sidebar: { open: false, widthPx: 300, tab: 'index' } },
+        // The blank style: the same toolbar and hidden words. Playwright's WebKitGTK has no GPU in CI and blurs each of
+        // a spread's ~540 hidden words in software, several seconds a frame, which this layout check does not need
+        // (the frame budget of hiding is memo.browser.test.ts's).
+        settings: {
+          pageMode,
+          mushafStyle: 'hafs',
+          memoHideStyle: 'blank',
+          sidebar: { open: false, widthPx: 300, tab: 'index' },
+        },
       })
       await goTo(50)
       expect(reader.dock).toBe(dock)
