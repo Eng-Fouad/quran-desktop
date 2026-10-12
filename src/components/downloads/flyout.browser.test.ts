@@ -54,6 +54,10 @@ async function openFlyout(): Promise<void> {
 }
 
 afterEach(async () => {
+  // The mouse is shared by the tests: parked on the title bar, it leaves no rail tooltip open in the next app, where
+  // that tooltip, not the view, would take the first Escape.
+  await userEvent.hover(document.querySelector('.titlebar, header') ?? document.body)
+  await settle(250)
   resetApp()
   packsMock.reset()
   history.replaceState(null, '', '/')
@@ -106,8 +110,9 @@ describe('Downloads flyout (owner request 2026-10-11)', () => {
     await expect.poll(() => flyout()?.querySelector('.total')?.textContent?.trim()).toMatch(/used$/)
     expect(flyout()?.querySelector('[data-qd-usage-strip] [role="img"]')).not.toBeNull()
     const manage = flyout()?.querySelector('[data-action="manage"]') as HTMLElement
+    // macOS prints the modifiers in Apple's order, ⌃⌥⇧⌘ (`formatChord`). WebKit reports a Mac on every OS.
     expect(manage.textContent?.replace(/\s+/g, '')).toBe(
-      app.isMac ? 'Managedownloads⌘⇧D' : 'ManagedownloadsCtrl+Shift+D',
+      app.isMac ? 'Managedownloads⇧⌘D' : 'ManagedownloadsCtrl+Shift+D',
     )
 
     await userEvent.keyboard('{Escape}')
