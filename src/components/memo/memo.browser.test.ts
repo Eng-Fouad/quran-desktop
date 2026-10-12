@@ -33,6 +33,15 @@ async function until(done: () => boolean, timeout = 5_000, message = 'condition'
   throw new Error(`${message} not met within ${timeout} ms`)
 }
 
+/**
+ * Playwright's WebKit on Linux paints CSS filters on the CPU (CI's runner has no GPU): a frame of the hidden spread takes
+ * about a second there (300 spans under `blur()` on an empty page take 100–450 ms a frame; Chromium on the same runner,
+ * 16.7 ms), mostly on the main thread, and every pointer action waits for frames. Hide mode's tests get three times the
+ * time there, and the frame budget checks only the reveal's own work (WP9b 14).
+ */
+const cpuFilters = server.browser === 'webkit' && server.platform === 'linux'
+const hideOptions = cpuFilters ? { timeout: 45_000 } : {}
+
 /** Word spans of the visible pages' interactive renditions. */
 function words(): HTMLElement[] {
   return $$('section.mp .mp-glyphs[data-interactive] .w')
@@ -68,7 +77,7 @@ afterEach(async () => {
   await page.viewport(1280, 800)
 })
 
-describe('hide mode on the page (§8.16)', () => {
+describe('hide mode on the page (§8.16)', hideOptions, () => {
   it('E hides every word of the spread but the ayah markers; W and Shift+W reveal; E shows the text again', async () => {
     await bootOn50()
     await userEvent.keyboard('e')
@@ -143,15 +152,8 @@ describe('hide mode on the page (§8.16)', () => {
     await until(() => document.getElementById('qd-memo-blank') === null, 2_000, 'filter removed')
   })
 
-  /**
-   * Playwright's WebKit on Linux paints CSS filters on the CPU (CI's runner has no GPU): a frame of the hidden spread
-   * takes about a second there, whatever the reveals do (300 spans under `blur()` on an empty page take 100–450 ms a
-   * frame; Chromium on the same runner, 16.7 ms), and it holds the main thread for most of it. Its frames time that
-   * rasteriser, not the reveal, so there the W presses come back to back, with no frame between them, and only the
-   * reveal's own work is held to its budget (WP9b 14).
-   */
-  const cpuFilters = server.browser === 'webkit' && server.platform === 'linux'
-
+  // Where filters are painted on the CPU, frames time that rasteriser, not the reveal: there the W presses come back to
+  // back, with no frame between them, and only the reveal's own work is held to its budget.
   // The timings share the runner's CPUs with the other test files: a sample they slow down is taken again, and a reveal
   // that is really over budget fails every attempt.
   it(
@@ -212,7 +214,7 @@ describe('hide mode on the page (§8.16)', () => {
   )
 })
 
-describe('the hide-mode toolbar', () => {
+describe('the hide-mode toolbar', hideOptions, () => {
   it('a click on Next word keeps the keys working; Peek reveals while held; × shows the text', async () => {
     await bootOn50()
     await userEvent.keyboard('e')
