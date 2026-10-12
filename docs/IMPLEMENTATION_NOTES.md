@@ -242,7 +242,7 @@ is the lead's fold-in of every accepted deviation (`docs/deviations/WP*.md`), ev
   `KFGQPC-Hafs-V30.LICENSE.txt` from the font's name table (WP3c 5). `fetch-dev-packs` fetches the `decor` pack (3 files)
   plus 3 × 47 fixture pages, validates WOFF2 headers and decor hashes (WP3c 6).
 - **`thirdparty.json`** is `{ packages, texts }` with shared text segments, built from the Rust normal-dependency closure of
-  the four release targets and the npm production closure (WP3c 1–2). `cargo xtask licenses` enforces a licence policy
+  the six release targets (release.yml's x64 and arm64 builds) and the npm production closure (WP3c 1–2). `cargo xtask licenses` enforces a licence policy
   compatible with GPL-3.0-or-later and **fails unless every shipped package's texts contain each licence it is credited
   under**; packages that ship no text get reviewed stand-ins in `xtask/licenses/<cargo|npm>/<name>/` (version-pinned
   `source.toml`). The credited licence is chosen by what the files contain (WP3c 3–4 were "nothing invented,

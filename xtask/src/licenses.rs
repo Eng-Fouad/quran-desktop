@@ -2,8 +2,8 @@
 //! (docs/ARCHITECTURE.md §4.1; the About screen's "Open-source licences", §9.7). Owner: WP3c.
 //!
 //! Inputs:
-//! - **Rust**: `cargo metadata --locked --filter-platform <each release target>` (§13.4: Windows x64, macOS x64 and
-//!   arm64, Linux x64). The crates are the *normal* dependency closure of the app crate `quran-desktop`: build
+//! - **Rust**: `cargo metadata --locked --filter-platform <target>` once per release target, merged (§13.4: Windows
+//!   x64 and arm64, macOS x64 and arm64, Linux x64 and arm64). The crates are the *normal* dependency closure of the app crate `quran-desktop`: build
 //!   scripts' and dev-dependencies' crates are not shipped, and workspace crates are our own. Filtering by the release
 //!   targets (not the host) keeps the output identical on every OS, which the CI drift check relies on.
 //! - **npm**: `pnpm licenses list --json --prod` (the `dependencies` closure; devDependencies are build tools) plus each
@@ -51,12 +51,14 @@ pub const VENDORED: &str = "xtask/licenses";
 /// The shipped app crate whose dependency closure is listed.
 pub const APP_CRATE: &str = "quran-desktop";
 
-/// The release targets (§13.4): NSIS on Windows x64, a universal macOS dmg, deb/AppImage on Linux x64.
-pub const RELEASE_TARGETS: [&str; 4] = [
+/// The release targets (§13.4, release.yml's matrix): Windows x64 and arm64, a universal macOS app, Linux x64 and arm64.
+pub const RELEASE_TARGETS: [&str; 6] = [
     "x86_64-pc-windows-msvc",
+    "aarch64-pc-windows-msvc",
     "x86_64-apple-darwin",
     "aarch64-apple-darwin",
     "x86_64-unknown-linux-gnu",
+    "aarch64-unknown-linux-gnu",
 ];
 
 pub fn run() -> anyhow::Result<()> {
@@ -64,7 +66,7 @@ pub fn run() -> anyhow::Result<()> {
 
     let cargo = std::env::var_os("CARGO").unwrap_or_else(|| OsString::from("cargo"));
     let manifest = root.join("Cargo.toml");
-    let mut args: Vec<OsString> = [
+    let mut base: Vec<OsString> = [
         "metadata",
         "--format-version",
         "1",
@@ -74,15 +76,24 @@ pub fn run() -> anyhow::Result<()> {
     .into_iter()
     .map(OsString::from)
     .collect();
-    args.push(manifest.into_os_string());
+    base.push(manifest.into_os_string());
+    // One `cargo metadata` per target, the closures merged (`assemble` drops the duplicates): cargo 1.99 panics ("no
+    // entry found for key") when one call filters for both Windows targets, x86_64- and aarch64-pc-windows-msvc.
+    let mut candidates = Vec::new();
     for target in RELEASE_TARGETS {
+        let mut args = base.clone();
         args.push("--filter-platform".into());
         args.push(target.into());
+        let metadata: Metadata =
+            serde_json::from_slice(&capture(std::slice::from_ref(&cargo), &args, &root)?)
+                .with_context(|| format!("parse the `cargo metadata` output for {target}"))?;
+        candidates.extend(cargo_packages(&metadata, APP_CRATE)?);
     }
-    let metadata: Metadata = serde_json::from_slice(&capture(&[cargo], &args, &root)?)
-        .context("parse the `cargo metadata` output")?;
-    let mut candidates = cargo_packages(&metadata, APP_CRATE)?;
-    let crates = candidates.len();
+    let crates = candidates
+        .iter()
+        .map(|c| (c.name.as_str(), c.version.as_str()))
+        .collect::<BTreeSet<_>>()
+        .len();
 
     let pnpm_args: Vec<OsString> = ["licenses", "list", "--json", "--prod"]
         .into_iter()
