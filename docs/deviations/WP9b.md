@@ -160,13 +160,13 @@ Tests:
       they are about the blur, and hide mode's tests get 45 s (pointer actions wait for frames). The self-test's
       browser test hides with `blank`.
     - The other test files (this file's WebKit run among them) share the runner's CPUs, and time the OS gives to other
-      processes only adds to a timing. So the 90 presses run three times: each press counts with its least time of
-      the three, and the frames with the run that kept them best. Each run starts once the page gets 30 frames in a
-      row on time (5 s at most). Late frames are set aside when the main thread was idle (as in the word glide's test,
-      never more than 10 %) or when a worker thread of the page stalled too (the machine gave the process no CPU). A
-      run with more than 10 % of the latter is not judged; when no run is (a saturated runner, such as a CPU-quota
-      container on a busy host), the frame half is skipped with a note in the test's annotation and left to the
-      metrics suite (§8.18, §12.6). The work check always runs.
+      processes only adds to a timing. So the 90 presses run three times, and each press counts with its least time
+      of the three. The frames are judged beside the page at rest under the same load (CI pass, round 2: heartbeats
+      could not tell the OS holding the main thread from the page's own work, and a busy runner failed two of three
+      runs): each run alternates 30 frames with a W press and 30 without, three times, and the pressed frames may be
+      over 20 ms or over 34 ms no more often than on a quiet runner (a twentieth, one) or than twice the frames at
+      rest. A run that keeps that passes the frame half; 25 ms of work after each reveal fails every run. The work
+      check always runs.
 
 15. **Ports**: shots and scratch servers on 1740–1741 (the orchestrator's range); §14.3 says 1520.
 
