@@ -9,7 +9,7 @@
 #[path = "engine_common.rs"]
 mod common;
 
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use common::{Rig, read_log, read_wav, request, u};
 use quran_audio::dsp::signals::Lcg;
@@ -18,6 +18,11 @@ use quran_audio::shared::OutCmd;
 use quran_audio::sink::SinkKind;
 use quran_audio::{OutputKind, plan};
 use quran_types::{AbLoop, GapSetting, PlaybackStatus, SeekTarget, SkipDirection};
+
+/// Commands per storm (about 6 s of them at the pace below, a 20–150 ms pause before each). A count, not a wall-clock
+/// window: the seed then decides the whole storm, and a CI machine whose timers fire late (macOS coalesces the timers
+/// of a throttled job by tens of milliseconds) runs the same storm, more slowly, instead of a shorter one.
+const COMMANDS: u32 = 64;
 
 /// A uniform integer in `0..n`.
 fn pick(rng: &mut Lcg, n: u32) -> u32 {
@@ -37,9 +42,7 @@ fn storm(seed: u64) {
     rig.wait_status(PlaybackStatus::Playing, Duration::from_secs(5));
 
     let mut rng = Lcg::new(seed);
-    let until = Instant::now() + Duration::from_secs(6);
-    let mut commands = 0;
-    while Instant::now() < until {
+    for _ in 0..COMMANDS {
         std::thread::sleep(Duration::from_millis(u64::from(20 + pick(&mut rng, 130))));
         let e = &rig.engine;
         match pick(&mut rng, 12) {
@@ -86,7 +89,6 @@ fn storm(seed: u64) {
             }),
             _ => e.toggle(),
         }
-        commands += 1;
         // The handle always answers; the only error a storm may cause is the rebuild back-off (a device that keeps
         // failing), which the next successful stream clears.
         let s = rig.engine.snapshot();
@@ -98,7 +100,6 @@ fn storm(seed: u64) {
             "seed {seed}: {s:#?}"
         );
     }
-    assert!(commands > 30);
     // Still alive: resume, take the loop off, and let it play.
     rig.engine.set_ab_loop(None);
     rig.engine.resume();
