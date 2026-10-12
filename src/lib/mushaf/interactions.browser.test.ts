@@ -49,7 +49,12 @@ let bars: boolean[] = []
 const onDwell = (e: CustomEvent<WordDwell | null>) => dwells.push(e.detail)
 const onBar = (e: CustomEvent<{ open: boolean }>) => bars.push(e.detail.open)
 
-beforeEach(() => {
+beforeEach(async () => {
+  // The mouse is shared by every test file of a browser session. Left by another file where this page draws a word
+  // (they draw page 262 at the top-left too), it gets a real pointerover once the word appears under it, at a moment of
+  // the browser's own, and the dwell rule counts the way from the last synthetic move to it as travel: a tooltip for a
+  // word no test pointed at (seen once in Chromium). It rests in the bottom-right corner, off the page, instead.
+  await userEvent.hover(document.body, { position: { x: innerWidth - 4, y: innerHeight - 4 } })
   settings.value = {
     ...previous,
     wbwTooltip: true,
