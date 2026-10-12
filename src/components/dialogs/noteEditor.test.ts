@@ -177,4 +177,32 @@ describe('NoteDraft', () => {
     e.remember({ selectionStart: 0, selectionEnd: 0, scrollTop: 0, mode: 'write', inTitle: false })
     expect(resumeMemory.has('note:n1')).toBe(false)
   })
+
+  it('never brings back a draft another editor finished: a suspend writes only its own edits', () => {
+    // "Discard note?": the covered editor wrote its draft; when the question resolves, a fresh editor on that draft
+    // can be shown for a moment before the covered one discards it and closes the editor.
+    const covered = new NoteDraft('note:new:262-262', fieldsOf(null))
+    covered.body = 'typed'
+    covered.flush()
+    covered.suspend()
+    const fresh = new NoteDraft('note:new:262-262', fieldsOf(null), true)
+    expect(fresh.body).toBe('typed')
+    covered.finish()
+    expect(ui.draft('note:new:262-262')).toBe('')
+    fresh.suspend()
+    expect(ui.draft('note:new:262-262')).toBe('')
+
+    // An editor that changed something writes it: its new text, or no draft once it is back to the saved note.
+    ui.setDraft('note:n1', encodeDraft({ ...fieldsOf(note), body: 'stored' }))
+    const edited = new NoteDraft('note:n1', fieldsOf(note))
+    edited.body = 'stored, then more'
+    edited.touch()
+    edited.suspend()
+    expect(decodeDraft(ui.draft('note:n1'))?.body).toBe('stored, then more')
+    vi.advanceTimersByTime(AUTOSAVE_MS)
+    const reverted = new NoteDraft('note:n1', fieldsOf(note))
+    reverted.body = note.body
+    reverted.suspend()
+    expect(ui.draft('note:n1')).toBe('')
+  })
 })

@@ -139,6 +139,12 @@ export class NoteDraft {
   #unquit: (() => void) | null = null
   #closed = false
   #finished = false
+  /**
+   * This editor's fields as it last read them from the store or wrote them there (`encodeDraft`), or '' for no draft.
+   * A suspend writes only edits made since: another editor of the same note may have finished meanwhile (saved, or
+   * discarded after a "Discard note?" question), and its draft must not come back from one that changed nothing.
+   */
+  #synced = ''
 
   /**
    * Opens a working copy of `baseline` under `key`, starting from the stored draft when one differs from it. `resumed`
@@ -156,6 +162,12 @@ export class NoteDraft {
     this.tagIds = [...start.tagIds]
     this.restored = differs && !resumed
     if (differs) this.savedAt = Date.now()
+    this.#synced = differs ? encodeDraft(start) : ''
+  }
+
+  /** What the store should hold for this editor: its fields while they differ from the saved note, else no draft. */
+  #wanted(): string {
+    return this.dirty ? encodeDraft(this.fields) : ''
   }
 
   /** An edit happened: the draft is written after a short pause, or when the app quits first (`app.beforeQuit`). */
@@ -173,8 +185,9 @@ export class NoteDraft {
     this.#unquit?.()
     this.#unquit = null
     if (this.#closed) return
-    if (this.dirty) {
-      ui.setDraft(this.key, encodeDraft(this.fields))
+    this.#synced = this.#wanted()
+    if (this.#synced !== '') {
+      ui.setDraft(this.key, this.#synced)
       this.savedAt = Date.now()
     } else {
       ui.clearDraft(this.key)
@@ -211,9 +224,17 @@ export class NoteDraft {
     this.savedAt = null
   }
 
-  /** The editor goes away while editing (covered or closed from outside): what was typed stays as the draft. */
+  /**
+   * The editor goes away while editing (covered or closed from outside): what was typed in it stays as the draft. An
+   * editor that changed nothing since it last read or wrote the draft leaves the store as it is, so a fresh editor shown
+   * for a moment after "Discard" (the question resolves before the covered editor closes) cannot bring the draft back.
+   */
   suspend(): void {
-    this.flush()
+    if (this.#wanted() !== this.#synced) this.flush()
+    clearTimeout(this.#timer)
+    this.#timer = undefined
+    this.#unquit?.()
+    this.#unquit = null
     this.#closed = true
   }
 

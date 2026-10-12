@@ -64,7 +64,9 @@ paragraphs, headings and list items, and an explicit `dir` from the first strong
   closes at once (and drops its draft). The question is the `confirm` overlay, which covers the editor: cancelling it
   brings a fresh editor back on the draft with the same caret, scroll and Write/Preview view and no "restored" notice
   (`resumeMemory`). An editor closed from outside (another overlay replaced the stack, `closeOverlays`) keeps its
-  draft, and reopening says "Unsaved draft restored · Revert".
+  draft, and reopening says "Unsaved draft restored · Revert". An editor that goes away writes only edits it made
+  itself: answering Discard can show the uncovered editor for a moment before the covered one discards the draft (in
+  dev builds `await` takes extra microtasks), and that editor must not write the draft back as it leaves (CI fix).
 - **Saving** (`Mod+Enter`, also `Mod+S`) goes through `library.saveNote` (toast with Undo); a failure keeps the editor
   open with its draft. A saved note with no changes just closes (no write, no undo entry). Delete (saved notes) uses
   `library.deleteNote` without a confirmation: the toast's Undo restores it, as in the Notes panel.

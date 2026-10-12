@@ -199,8 +199,14 @@ describe('NoteEditorDialog: closing (§10.1)', () => {
 
     await userEvent.keyboard('{Escape}')
     await until(() => ui.topOverlay?.kind === 'confirm')
-    ui.resolveConfirm(true)
+    await until(() => $('[data-confirm]') !== null)
+    await settle(120)
+    await userEvent.click($('[data-confirm]') as HTMLElement)
     await until(() => !ui.isOpen('note-editor'))
+    expect(ui.draft('note:new:262-262')).toBe('')
+    // Still none once every editor instance has gone after its exit: the editor the answer uncovers can show for a
+    // moment before the covered one discards the draft, and it must not write it back as it goes.
+    await until(() => editor() === null)
     expect(ui.draft('note:new:262-262')).toBe('')
     expect(library.notes).toHaveLength(0)
   })
