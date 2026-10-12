@@ -178,7 +178,7 @@ describe('hide mode on the page (§8.16)', hideOptions, () => {
   it(
     'stays within the frame budget while W reveals word after word on a spread (§8.18)',
     { retry: 2, timeout: 60_000 },
-    async () => {
+    async ({ annotate }) => {
       await bootOn50()
       await userEvent.keyboard('e')
       await until(() => $$('.w-hid').length > 0)
@@ -203,14 +203,24 @@ describe('hide mode on the page (§8.16)', hideOptions, () => {
         return performance.now() - start
       }
       /** One W keydown per animation frame (twice the OS key-repeat rate), for 90 frames. */
-      const frames: number[] = []
+      const frames: { from: number; to: number }[] = []
       const work: number[] = []
+      // A main-thread heartbeat, as in the word glide's test: a frame that comes late while it kept beating was not held
+      // up by script, style, layout or paint on this thread; the browser drew the other test files' iframes first.
+      const beats: number[] = []
       if (cpuFilters) for (let n = 0; n < 90; n++) work.push(press(n))
       else {
+        let running = true
+        const channel = new MessageChannel()
+        channel.port1.onmessage = () => {
+          beats.push(performance.now())
+          if (running) setTimeout(() => channel.port2.postMessage(0), 2)
+        }
+        channel.port2.postMessage(0)
         await new Promise<void>((resolve) => {
           let last = 0
           const step = (t: number) => {
-            if (last > 0) frames.push(t - last)
+            if (last > 0) frames.push({ from: last, to: t })
             last = t
             work.push(press(work.length))
             if (work.length < 90) requestAnimationFrame(step)
@@ -218,6 +228,8 @@ describe('hide mode on the page (§8.16)', hideOptions, () => {
           }
           requestAnimationFrame(step)
         })
+        running = false
+        channel.port1.close()
       }
       expect(memo.wordCounts.revealed).toBe(90)
       const sorted = (xs: number[]) => [...xs].sort((a, b) => a - b)
@@ -226,10 +238,21 @@ describe('hide mode on the page (§8.16)', hideOptions, () => {
       expect(p95(work)).toBeLessThan(8)
       if (cpuFilters) return
       // …and the frames keep coming at the display rate (≤ 16 ms of work each; one late frame of the
-      // shared test runner is tolerated).
-      const late = frames.filter((d) => d > 34).length
+      // shared test runner is tolerated). Late frames with an idle main thread are set aside, never most of them.
+      /** The longest the main thread went without a heartbeat during a frame gap. */
+      const blocked = (g: { from: number; to: number }) => {
+        const points = [g.from, ...beats.filter((b) => b > g.from && b < g.to), g.to]
+        return Math.max(...points.slice(1).map((p, i) => p - (points[i] ?? p)))
+      }
+      const own = frames.filter((g) => g.to - g.from <= 20 || blocked(g) > 16).map((g) => g.to - g.from)
+      await annotate(
+        `work p95 ${p95(work).toFixed(1)} ms; ${own.length} of ${frames.length} frames this thread's, p95 ` +
+          `${p95(own).toFixed(1)} ms, ${own.filter((d) => d > 34).length} late`,
+      )
+      expect(own.length).toBeGreaterThan(frames.length * 0.9)
+      const late = own.filter((d) => d > 34).length
       expect(late).toBeLessThanOrEqual(1)
-      expect(p95(frames)).toBeLessThan(20)
+      expect(p95(own)).toBeLessThan(20)
     },
   )
 })

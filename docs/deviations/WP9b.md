@@ -158,7 +158,8 @@ Tests:
     - So the browser test's frame-rate half (§8.18) does not run there: on WebKit under Linux the W presses come back
       to back and only their work is checked (`memo.browser.test.ts`); there the memo tests hide with `blank` unless
       they are about the blur, and hide mode's tests get 45 s (pointer actions wait for frames). The self-test's
-      browser test hides with `blank`. Elsewhere the frames are timed once the page gets 30 in a row on time, and the
+      browser test hides with `blank`. Elsewhere the frames are timed once the page gets 30 in a row on time, frames
+      late while the main thread was idle are set aside as in the word glide's test (never more than 10 %), and the
       test is retried twice, since the other test files (this file's WebKit run among them) share the runner's CPUs.
 
 15. **Ports**: shots and scratch servers on 1740–1741 (the orchestrator's range); §14.3 says 1520.
