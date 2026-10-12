@@ -215,7 +215,9 @@ always uses a fresh temporary `QD_DATA_DIR`, so it never touches either.
   run WebKit locally, install Playwright's browsers once (this downloads them):
   `pnpm exec playwright install chromium webkit`, then `QD_BROWSERS=chromium,webkit pnpm test:browser`.
   Failure screenshots go to `artifacts/vitest-browser/`; the viewport defaults to 1280×800. Test files run in parallel
-  and share the real mouse: a test about hover parks the pointer first.
+  and share the real mouse: a test about hover parks the pointer first. `userEvent.keyboard` types a character outside
+  the US layout (Arabic) with `insertText`, which fires no `keydown`: dispatch the `keydown` an Arabic layout sends
+  when a key handler is under test.
 - Both projects compile with `__MOCK_IPC__ = true`, and the aliases `$lib`, `$components`, `$styles` work everywhere.
 - A filtered run with no matching test files fails ("No test files found") on purpose: an acceptance line that names a
   path must find tests there.

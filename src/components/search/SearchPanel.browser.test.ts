@@ -209,7 +209,12 @@ describe('2,000 hits', () => {
     await until(() => document.activeElement === field())
     await userEvent.keyboard('{ArrowDown}')
     await until(() => document.activeElement === hitRow(0))
-    await userEvent.keyboard('ر')
+    // Type to search on an Arabic layout: ر is its V key. Playwright types a character outside the US layout with
+    // `insertText`, which sends no keydown at all (and Chromium's CDP puts the text into the last focused field by
+    // itself), so the keydown goes to the focused hit as that layout reports it.
+    hitRow(0)?.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ر', code: 'KeyV', bubbles: true, cancelable: true }),
+    )
     await until(() => document.activeElement === field())
     expect(field().value).toBe('اللهر')
   })
