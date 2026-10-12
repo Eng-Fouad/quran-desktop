@@ -26,10 +26,18 @@ Tests:
     measured **120 fps, worst frame 8.5–8.9 ms** in headless Edge. It also covers glide vs jump and reduced motion.
   - **How late frames are counted.** Vitest runs each browser test file in an iframe of one page. When the whole
     `src/components/mushaf` folder runs, another file's iframe can hold the compositor for ~240 ms. A heartbeat showed
-    this document's main thread idle the whole time, with no long task in any context. The test therefore sets aside a
+    this document's main thread idle the whole time, with no long task in any context. The test therefore set aside a
     late frame only while a main-thread heartbeat kept beating, since script, style, layout and paint all block the
     heartbeat. It requires ≥ 90 % of the frames to count. In the folder run: one frame set aside, 119–120 fps, worst
     8.5–17.5 ms.
+  - **On a shared CI runner** (CI pass, round 2), that judgement measured the runner: Playwright's WebKit in an
+    arm64 Linux container drew the page at rest at 52–55 fps, and with both engines' files on 4 CPUs the OS held the
+    page's main thread for 50–70 ms in every run, glide or not (no heartbeat tells that from the page's own work). The
+    recitation now alternates with the page at rest (pill shown and still) in three blocks of 6 words and 1.2 s, and
+    the glide is judged beside the rest under the same load: its frames on time keep the rest's rate but for 2 in 60
+    (≥ 58 fps where the page draws 60 at rest), and its late frames (over 32 ms) are at most twice as frequent as at
+    rest (none on a quiet runner). Up to three runs; the first that keeps the budget passes. 12 ms of main-thread work
+    on each glide frame fails every run in both engines (19–30 late frames against none at rest).
   - `src/lib/mushaf/interactions.browser.test.ts` (13): every §8.17 gesture with real pointer input, the dwell rule,
     and the §8.14 rule.
 
