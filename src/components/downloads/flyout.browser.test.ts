@@ -110,7 +110,7 @@ describe('Downloads flyout (owner request 2026-10-11)', () => {
     await expect.poll(() => flyout()?.querySelector('.total')?.textContent?.trim()).toMatch(/used$/)
     expect(flyout()?.querySelector('[data-qd-usage-strip] [role="img"]')).not.toBeNull()
     const manage = flyout()?.querySelector('[data-action="manage"]') as HTMLElement
-    // macOS prints the modifiers in Apple's order, ⌃⌥⇧⌘ (`formatChord`). WebKit reports a Mac on every OS.
+    // macOS prints the modifiers in Apple's order, ⌃⌥⇧⌘ (`formatChord`).
     expect(manage.textContent?.replace(/\s+/g, '')).toBe(
       app.isMac ? 'Managedownloads⇧⌘D' : 'ManagedownloadsCtrl+Shift+D',
     )
