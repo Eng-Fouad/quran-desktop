@@ -151,6 +151,13 @@ Tests:
 
 14. **Linux hide style.** §8.16 makes `blank` the Linux default if WebKitGTK misses the budget. This machine has no
     WebKitGTK, so it could not be measured. The default stays `blur`; the WP13b smoke list should check it.
+    - Playwright's WebKit on Linux without a GPU (the CI runner, 2026-10-12) misses it badly: it paints CSS filters
+      on the CPU, about 1 s a frame for the hidden spread (`blank`: about 50 ms), mostly on the main thread; 300 spans
+      under `blur()` on an empty page take 100–450 ms a frame. Chromium on the same machine keeps 16.7 ms, and
+      reveals cost 1–2 ms of script, style and layout in both. WebKitGTK with a GPU is still unmeasured.
+    - So the browser test's frame-rate half (§8.18) does not run there: on WebKit under Linux the W presses come back
+      to back and only their work is checked (`memo.browser.test.ts`). The test is retried twice everywhere, since
+      the other test files share the runner's CPUs.
 
 15. **Ports**: shots and scratch servers on 1740–1741 (the orchestrator's range); §14.3 says 1520.
 
