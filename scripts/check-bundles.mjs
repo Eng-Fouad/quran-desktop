@@ -9,8 +9,10 @@
 // <target>/<triple>/release/bundle) is unpacked with the platform's own tool and checked. Every binary must be built
 // for --arch (default: this machine's): a PE or ELF machine, or the slices of a Mach-O (lipo).
 //   nsis      tauri's NSIS script (product, identifier, current-user install, WebView2 bootstrapper, the app icon on
-//             the setup and uninstall executables, the files it packs) and, with 7-Zip, the unpacked installer:
-//             quran-desktop.exe, data/core.db, data/catalog.json
+//             the setup and uninstall executables, the files it packs, the uninstaller it writes) and, with 7-Zip, the
+//             unpacked installer: quran-desktop.exe, data/core.db, data/catalog.json. 7-Zip also rebuilds the
+//             uninstaller the script writes at install time (uninstall.exe), itself an NSIS executable: it must be an
+//             uninstaller by its NSIS header, and is unpacked in turn and may pack only NSIS plugins ($PLUGINSDIR)
 //   dmg       hdiutil (macOS): Quran.app with the identifier, executable, minimum macOS 13.3, the resources, a
 //             universal binary (--universal), a valid code signature with the hardened runtime (ad-hoc or Developer
 //             ID), and the /Applications link
@@ -58,6 +60,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const KINDS = /** @type {const} */ (['nsis', 'dmg', 'deb', 'appimage', 'portable'])
 /** @typedef {(typeof KINDS)[number]} Kind */
 /** @typedef {'placeholder' | 'qul'} CoreMode */
+/** @typedef {import('./check-artifacts.mjs').VerifiedInstaller} VerifiedInstaller */
 export const ARCHES = /** @type {const} */ (['x64', 'arm64'])
 /** @typedef {(typeof ARCHES)[number]} Arch */
 
@@ -270,8 +273,10 @@ export function checkLinuxTree(files, expect, { appimage = false } = {}) {
 }
 
 /**
- * Tauri's generated NSIS script.
- * @param {string} text @param {Expect} expect @returns {{ problems: string[], files: { name: string, source: string }[] }}
+ * Tauri's generated NSIS script. `uninstaller` is the path the script writes the uninstaller to, relative to $INSTDIR
+ * with forward slashes, as 7-Zip names it among the unpacked files (`uninstall.exe`); null when it writes none.
+ * @param {string} text @param {Expect} expect
+ * @returns {{ problems: string[], files: { name: string, source: string }[], uninstaller: string | null }}
  */
 export function checkNsisScript(text, expect) {
   /** @type {Record<string, string>} */
@@ -308,7 +313,40 @@ export function checkNsisScript(text, expect) {
     if (!files.some((f) => f.name === name)) problems.push(`the NSIS script does not install ${name}`)
   if (!/^\s*File "\$\{MAINBINARYSRCPATH\}"/m.test(text))
     problems.push('the NSIS script does not install the main binary')
-  return { problems, files }
+  const written = /^\s*WriteUninstaller "([^"]+)"/m.exec(text)?.[1]
+  const uninstaller = written ? written.replace(/^\$INSTDIR[\\/]/i, '').replace(/\\/g, '/') : null
+  if (!uninstaller) problems.push('the NSIS script writes no uninstaller')
+  return { problems, files, uninstaller }
+}
+
+/**
+ * The first header of an NSIS executable (exehead's `firstheader`: flags, 0xDEADBEEF, "NullsoftInst", …), which sits
+ * at a 512-byte boundary after the stub; null when `bin` has none. Flag bit 0 (FH_FLAGS_UNINSTALL) marks an
+ * uninstaller: what `WriteUninstaller` writes at install time.
+ * @param {Buffer} bin @returns {{ offset: number, flags: number, uninstaller: boolean } | null}
+ */
+export function nsisFirstHeader(bin) {
+  for (let at = 0; at + 20 <= bin.length; at += 512)
+    if (
+      bin.readUInt32LE(at + 4) === 0xdeadbeef &&
+      bin.toString('latin1', at + 8, at + 20) === 'NullsoftInst'
+    ) {
+      const flags = bin.readUInt32LE(at)
+      return { offset: at, flags, uninstaller: (flags & 1) === 1 }
+    }
+  return null
+}
+
+/**
+ * The files 7-Zip unpacks from the NSIS uninstaller: only the plugins its pages and functions call ($PLUGINSDIR, e.g.
+ * System.dll, LangDLL.dll, nsis_tauri_utils.dll). It removes the installation and installs nothing itself.
+ * @param {Set<string>} files @param {string} name @returns {string[]}
+ */
+export function checkUninstallerFiles(files, name) {
+  const other = [...files].filter((f) => !f.startsWith('$PLUGINSDIR/')).sort()
+  return other.length
+    ? [`${name} packs ${other.join(', ')}: an NSIS uninstaller carries only its plugins ($PLUGINSDIR)`]
+    : []
 }
 
 /**
@@ -335,10 +373,12 @@ export function checkInfoPlist(plist, expect) {
 
 /**
  * check-artifacts' release rules on an unpacked tree. The 0-byte placeholder core.db is expected in CI bundles.
- * @param {string} dir @param {CoreMode} core @returns {string[]}
+ * `verified`: the nested installers this script unpacked and checked itself (the NSIS uninstaller), which the release
+ * rules otherwise refuse as uninspectable.
+ * @param {string} dir @param {CoreMode} core @param {VerifiedInstaller[]} [verified] @returns {string[]}
  */
-export function inspectTree(dir, core) {
-  const report = inspect(['.'], { cwd: dir, release: true })
+export function inspectTree(dir, core, verified = []) {
+  const report = inspect(['.'], { cwd: dir, release: true, verified })
   /** @type {string[]} */
   const problems = []
   for (const finding of report.forbidden) {
@@ -485,9 +525,13 @@ function checkNsis(file, ctx, r) {
     ARCH[arch].nsis,
     'installer.nsi',
   )
+  /** The uninstaller the script writes, which 7-Zip rebuilds among the unpacked files. @type {string | null} */
+  let uninstaller = null
   if (!fs.existsSync(script)) r.problems.push(`tauri's NSIS script ${script} is missing`)
   else {
-    const { problems, files } = checkNsisScript(fs.readFileSync(script, 'utf8'), expect)
+    const parsed = checkNsisScript(fs.readFileSync(script, 'utf8'), expect)
+    const { problems, files } = parsed
+    uninstaller = parsed.uninstaller
     r.problems.push(...problems)
     const coreSource = files.find((f) => f.name === 'data/core.db')?.source
     if (coreSource && fs.existsSync(coreSource))
@@ -518,13 +562,55 @@ function checkNsis(file, ctx, r) {
     }
     if (files.has('data/core.db'))
       r.problems.push(...checkCore(fs.readFileSync(path.join(out, 'data', 'core.db')), core))
-    r.problems.push(...inspectTree(out, core))
     r.checks.push(`unpacked with ${exe}: ${files.size} files, ${arch}`)
+    /** @type {VerifiedInstaller[]} */
+    const verified = []
+    if (uninstaller && files.has(uninstaller)) {
+      const checked = checkNsisUninstaller(exe, path.join(out, uninstaller), uninstaller, ctx, r)
+      if (checked) verified.push(checked)
+    }
+    r.problems.push(...inspectTree(out, core, verified))
     return
   }
   const text = 'cannot unpack the installer: 7-Zip (7z) is not installed'
   if (core === 'qul' || process.env.GITHUB_ACTIONS === 'true') r.problems.push(text)
   else r.notes.push(`${text}; checked tauri's NSIS script and the files it packs instead`)
+}
+
+/**
+ * The uninstaller the NSIS script writes at install time (`WriteUninstaller "$INSTDIR\uninstall.exe"`). 7-Zip lists it
+ * among the setup's files, rebuilt from the uninstaller data the setup carries, so it is an NSIS executable too, which
+ * check-artifacts' release rules refuse until it is verified. It is verified here as the setup is: it must be an
+ * uninstaller by its NSIS header, unpack with the same 7-Zip, carry only NSIS plugins and pass the same rules. Returns
+ * it (size and SHA-256) for `inspectTree` when it passed, else null with the problems in `r`.
+ * @param {string} exe the 7-Zip that unpacked the setup @param {string} file @param {string} name its unpacked path
+ * @param {Ctx} ctx @param {InstallerResult} r @returns {VerifiedInstaller | null}
+ */
+function checkNsisUninstaller(exe, file, name, { core, scratch }, r) {
+  const bytes = fs.readFileSync(file)
+  const header = nsisFirstHeader(bytes)
+  if (!header?.uninstaller) {
+    r.problems.push(
+      `${name}, the uninstaller the NSIS script writes, is ${header ? 'an NSIS installer, not an uninstaller' : 'not an NSIS executable'}`,
+    )
+    return null
+  }
+  const out = path.join(scratch, 'nsis-uninstaller')
+  const x = run(exe, ['x', '-y', `-o${out}`, file])
+  if (!x.ok) {
+    r.problems.push(`${exe} could not unpack ${name}: ${x.out.trim().split('\n').slice(-3).join(' ')}`)
+    return null
+  }
+  // An uninstaller without plugins unpacks to nothing, and 7-Zip then creates no directory.
+  const files = fs.existsSync(out) ? filesUnder(out) : new Set()
+  const problems = [
+    ...checkUninstallerFiles(files, name),
+    ...(files.size ? inspectTree(out, core).map((p) => `${name}: ${p}`) : []),
+  ]
+  r.problems.push(...problems)
+  if (problems.length) return null
+  r.checks.push(`${name}: the NSIS uninstaller, unpacked: ${files.size} plugin files ($PLUGINSDIR)`)
+  return { sha256: createHash('sha256').update(bytes).digest('hex'), bytes: bytes.length }
 }
 
 /**

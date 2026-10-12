@@ -1,8 +1,9 @@
 // @ts-check
 // node --test scripts/check-bundles.test.mjs
 //
-// The pure checks, and the deb path end to end (a deb is read in Node, so a synthetic one exercises everything). The
-// NSIS, dmg and AppImage paths need 7-Zip, hdiutil or Linux; CI runs them on the real installers.
+// The pure checks, the deb path end to end (a deb is read in Node, so a synthetic one exercises everything) and the NSIS
+// path end to end with a stand-in for 7-Zip (synthetic NSIS executables carry their files for it). The dmg and AppImage
+// paths need hdiutil or Linux; CI runs every path on the real installers.
 import assert from 'node:assert/strict'
 import { Buffer } from 'node:buffer'
 import { spawnSync } from 'node:child_process'
@@ -21,8 +22,10 @@ import {
   checkInfoPlist,
   checkLinuxTree,
   checkNsisScript,
+  checkUninstallerFiles,
   expectations,
   findPortable,
+  nsisFirstHeader,
   pngSize,
 } from './check-bundles.mjs'
 import { recompressDeb } from './deb-xz.mjs'
@@ -148,6 +151,68 @@ function pe(machine) {
   return head
 }
 
+/** The parts of tauri's installer.nsi that check-bundles reads. */
+const NSIS_SCRIPT = `!define PRODUCTNAME "Quran"
+!define VERSION "${expect.version}"
+!define INSTALLMODE "currentUser"
+!define MAINBINARYNAME "quran-desktop"
+!define BUNDLEID "com.quran.labs.desktop"
+!define INSTALLWEBVIEW2MODE "downloadBootstrapper"
+!define INSTALLERICON "C:\\repo\\src-tauri\\icons\\windows\\icon.ico"
+!define UNINSTALLERICON "C:\\repo\\src-tauri\\icons\\windows\\icon.ico"
+  File "\${MAINBINARYSRCPATH}"
+    File /a "/oname=data\\catalog.json" "C:\\repo\\src-tauri\\resources\\catalog.json"
+    File /a "/oname=data\\core.db" "C:\\repo\\src-tauri\\resources\\core.db"
+  WriteUninstaller "$INSTDIR\\uninstall.exe"
+`
+
+/** What the stand-in 7-Zip looks for in a synthetic NSIS executable: the files it unpacks follow as JSON. */
+const FAKE_7Z_MARK = 'QD-STAND-IN-7Z'
+
+/**
+ * A synthetic NSIS executable: a 32-bit PE stub, the first header at 512 (flags, 0xDEADBEEF, "NullsoftInst"), and the
+ * files the stand-in 7-Zip unpacks. `flags` 1 is an uninstaller (FH_FLAGS_UNINSTALL), 0 a setup.
+ * @param {number} flags @param {Record<string, string | Buffer>} [files]
+ */
+function nsis(flags, files = {}) {
+  const header = Buffer.alloc(28)
+  header.writeUInt32LE(flags, 0)
+  header.writeUInt32LE(0xdeadbeef, 4)
+  header.write('NullsoftInst', 8, 'latin1')
+  const packed = Object.fromEntries(
+    Object.entries(files).map(([name, content]) => [name, Buffer.from(content).toString('base64')]),
+  )
+  const stub = Buffer.concat([pe(0x14c), Buffer.alloc(512 - 0x100)])
+  return Buffer.concat([stub, header, Buffer.from(`${FAKE_7Z_MARK}${JSON.stringify(packed)}`, 'latin1')])
+}
+
+/**
+ * A directory holding a stand-in for 7-Zip (`7z x -y -o<dir> <file>`) that unpacks what `nsis()` packed, for PATH.
+ * Like 7-Zip, it creates no directory when there is nothing to unpack. A shebang script: not on Windows.
+ */
+function fake7z() {
+  const bin = fresh()
+  const script = `#!/usr/bin/env node
+const fs = process.getBuiltinModule('node:fs')
+const path = process.getBuiltinModule('node:path')
+const [command, , outArg, file] = process.argv.slice(2)
+const bytes = fs.readFileSync(file)
+const at = bytes.indexOf(${JSON.stringify(FAKE_7Z_MARK)})
+if (command !== 'x' || !outArg?.startsWith('-o') || at < 0) {
+  console.error('ERROR: ' + file + ': Can not open the file as archive')
+  process.exit(2)
+}
+const files = JSON.parse(bytes.subarray(at + ${FAKE_7Z_MARK.length}).toString('latin1'))
+for (const [name, content] of Object.entries(files)) {
+  const target = path.join(outArg.slice(2), name)
+  fs.mkdirSync(path.dirname(target), { recursive: true })
+  fs.writeFileSync(target, Buffer.from(content, 'base64'))
+}
+`
+  fs.writeFileSync(path.join(bin, '7z'), script, { mode: 0o755 })
+  return bin
+}
+
 /** The installed tree of a correct deb. @param {Buffer} core @param {Buffer} [binary] */
 function debTree(core, binary = elf(62)) {
   /** @type {Record<string, string | Buffer>} */
@@ -255,24 +320,18 @@ describe('checks', () => {
   })
 
   it("reads tauri's NSIS script", () => {
-    const script = `!define PRODUCTNAME "Quran"
-!define VERSION "${expect.version}"
-!define INSTALLMODE "currentUser"
-!define MAINBINARYNAME "quran-desktop"
-!define BUNDLEID "com.quran.labs.desktop"
-!define INSTALLWEBVIEW2MODE "downloadBootstrapper"
-!define INSTALLERICON "C:\\repo\\src-tauri\\icons\\windows\\icon.ico"
-!define UNINSTALLERICON "C:\\repo\\src-tauri\\icons\\windows\\icon.ico"
-  File "\${MAINBINARYSRCPATH}"
-    File /a "/oname=data\\catalog.json" "C:\\repo\\src-tauri\\resources\\catalog.json"
-    File /a "/oname=data\\core.db" "C:\\repo\\src-tauri\\resources\\core.db"
-`
+    const script = NSIS_SCRIPT
     const ok = checkNsisScript(script, expect)
     assert.deepEqual(ok.problems, [])
     assert.deepEqual(ok.files, [
       { name: 'data/catalog.json', source: 'C:\\repo\\src-tauri\\resources\\catalog.json' },
       { name: 'data/core.db', source: 'C:\\repo\\src-tauri\\resources\\core.db' },
     ])
+    // 7-Zip names the uninstaller by the path the script writes it to, relative to $INSTDIR.
+    assert.equal(ok.uninstaller, 'uninstall.exe')
+    const none = checkNsisScript(script.replace(/^\s*WriteUninstaller .*$/m, ''), expect)
+    assert.equal(none.uninstaller, null)
+    assert.deepEqual(none.problems, ['the NSIS script writes no uninstaller'])
     const preview = checkNsisScript(
       script.replace('"com.quran.labs.desktop"', '"com.quran.labs.desktop.preview"'),
       expect,
@@ -288,6 +347,33 @@ describe('checks', () => {
     assert.deepEqual(generic.problems, [
       'NSIS INSTALLERICON is "", expected the app icon icons/windows/icon.ico',
     ])
+  })
+
+  it('reads the NSIS first header: a setup, or the uninstaller it writes', () => {
+    assert.deepEqual(nsisFirstHeader(nsis(0)), { offset: 512, flags: 0, uninstaller: false })
+    assert.deepEqual(nsisFirstHeader(nsis(1)), { offset: 512, flags: 1, uninstaller: true })
+    // Silent-install flags sit beside it.
+    assert.equal(nsisFirstHeader(nsis(1 | 2))?.uninstaller, true)
+    assert.equal(nsisFirstHeader(pe(0x8664)), null)
+    // Only at a 512-byte boundary, as exehead looks for it.
+    const shifted = Buffer.concat([Buffer.alloc(4), nsis(0)])
+    assert.equal(nsisFirstHeader(shifted), null)
+  })
+
+  it('the NSIS uninstaller packs only plugins', () => {
+    const plugins = new Set([
+      '$PLUGINSDIR/System.dll',
+      '$PLUGINSDIR/LangDLL.dll',
+      '$PLUGINSDIR/nsis_tauri_utils.dll',
+    ])
+    assert.deepEqual(checkUninstallerFiles(plugins, 'uninstall.exe'), [])
+    assert.deepEqual(checkUninstallerFiles(new Set(), 'uninstall.exe'), [])
+    assert.deepEqual(
+      checkUninstallerFiles(new Set([...plugins, 'quran-desktop.exe', 'data/core.db']), 'uninstall.exe'),
+      [
+        'uninstall.exe packs data/core.db, quran-desktop.exe: an NSIS uninstaller carries only its plugins ($PLUGINSDIR)',
+      ],
+    )
   })
 
   it('Info.plist', () => {
@@ -390,6 +476,101 @@ describe('a deb end to end', () => {
     fs.writeFileSync(file, deb(control, debTree(Buffer.alloc(0), elf(62))))
     const [bad] = checkBundles({ bundleDirs: [bundle], ...opts })
     assert.deepEqual(bad?.problems, ['usr/bin/quran-desktop is built for x64, expected arm64'])
+  })
+})
+
+describe('an NSIS installer end to end (a stand-in 7-Zip)', () => {
+  const needsShebang = process.platform === 'win32' ? { skip: 'the stand-in 7-Zip is a shebang script' } : {}
+  const plugins = { '$PLUGINSDIR/System.dll': pe(0x14c), '$PLUGINSDIR/nsis_tauri_utils.dll': pe(0x14c) }
+
+  /**
+   * Checks a setup that unpacks to `files`, laid out as tauri does (release/bundle/nsis/…-setup.exe beside
+   * release/nsis/x64/installer.nsi), with the stand-in 7-Zip first on PATH.
+   * @param {Record<string, string | Buffer>} files
+   */
+  function checkSetup(files) {
+    const release = path.join(fresh(), 'release')
+    const bundle = path.join(release, 'bundle')
+    const setup = path.join(bundle, 'nsis', `Quran_${expect.version}_x64-setup.exe`)
+    fs.mkdirSync(path.dirname(setup), { recursive: true })
+    fs.mkdirSync(path.join(release, 'nsis', 'x64'), { recursive: true })
+    fs.writeFileSync(path.join(release, 'nsis', 'x64', 'installer.nsi'), NSIS_SCRIPT)
+    fs.writeFileSync(setup, nsis(0, files))
+    const PATH = process.env.PATH
+    process.env.PATH = `${fake7z()}${path.delimiter}${PATH ?? ''}`
+    try {
+      const results = checkBundles({
+        bundleDirs: [bundle],
+        core: 'placeholder',
+        universal: false,
+        expect,
+        arch: 'x64',
+      })
+      assert.equal(results.length, 1)
+      return /** @type {import('./check-bundles.mjs').InstallerResult} */ (results[0])
+    } finally {
+      process.env.PATH = PATH
+    }
+  }
+
+  /** What tauri's setup unpacks to: the app, its data, the plugins and the uninstaller 7-Zip rebuilds. */
+  const setupFiles = (/** @type {Buffer} */ uninstaller = nsis(1, plugins)) => ({
+    'quran-desktop.exe': pe(0x8664),
+    'data/core.db': '',
+    'data/catalog.json': '{"packs":[]}',
+    ...plugins,
+    'uninstall.exe': uninstaller,
+  })
+
+  it('passes a setup whose uninstaller unpacks to NSIS plugins only', needsShebang, () => {
+    const r = checkSetup(setupFiles())
+    assert.deepEqual(r.problems, [])
+    assert.equal(r.ok, true)
+    assert.ok(
+      r.checks.includes('uninstall.exe: the NSIS uninstaller, unpacked: 2 plugin files ($PLUGINSDIR)'),
+      r.checks.join('\n'),
+    )
+    // An uninstaller without plugins unpacks to nothing.
+    assert.deepEqual(checkSetup(setupFiles(nsis(1))).problems, [])
+  })
+
+  it('refuses an uninstaller that packs anything else, or is not one', needsShebang, () => {
+    const packing = checkSetup(setupFiles(nsis(1, { ...plugins, 'data/core.db': '' })))
+    assert.equal(packing.ok, false)
+    const text = packing.problems.join('\n')
+    assert.match(text, /uninstall\.exe packs data\/core\.db: an NSIS uninstaller carries only its plugins/)
+    // Unverified, it stays what check-artifacts' release rules refuse.
+    assert.match(
+      text,
+      /^uninstall\.exe: .*uninspectable \(an installer whose contents this guard cannot open/m,
+    )
+
+    const setup = checkSetup(setupFiles(nsis(0, plugins)))
+    assert.match(
+      setup.problems.join('\n'),
+      /uninstall\.exe, the uninstaller the NSIS script writes, is an NSIS installer/,
+    )
+    assert.match(setup.problems.join('\n'), /^uninstall\.exe: .*uninspectable/m)
+
+    // The stub and the first header only: nothing 7-Zip can unpack.
+    const opaque = checkSetup(setupFiles(nsis(1).subarray(0, 512 + 28)))
+    assert.match(
+      opaque.problems.join('\n'),
+      /could not unpack uninstall\.exe: .*Can not open the file as archive/,
+    )
+  })
+
+  it('still refuses any other installer inside the setup', needsShebang, () => {
+    // Verified by size and SHA-256: only the uninstaller's own bytes pass, not another NSIS executable.
+    const other = nsis(0, { 'other.exe': pe(0x8664) })
+    const r = checkSetup({ ...setupFiles(), 'redist/other-setup.exe': other })
+    assert.deepEqual(
+      r.problems.map((p) => p.replace(/ \(sha256 .*$/, '')),
+      [
+        'redist/other-setup.exe: executable (an NSIS installer (PE): application builds and installers are never ' +
+          'uploaded); uninspectable (an installer whose contents this guard cannot open',
+      ],
+    )
   })
 })
 

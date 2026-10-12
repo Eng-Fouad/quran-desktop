@@ -193,3 +193,17 @@ Linux on x64 and arm64, with code signing, and publishing to the Windows Store, 
    watch: clang on `windows-latest` for the arm64 crates, `gh` and the snap actions on the arm64 runners, the Store's
    acceptance of GitHub's redirecting asset URLs, the snap's audio and D-Bus slots under strict confinement, and the
    sandboxed app's behaviour (downloads, backup dialogs, single instance, tray). Each has a checklist row.
+
+## CI fix 2026-10-12: the NSIS uninstaller in check-bundles
+
+`build (windows-latest)` had never passed `check-bundles`: 7-Zip lists `uninstall.exe` among the setup's files (it
+rebuilds the uninstaller that tauri's `WriteUninstaller "$INSTDIR\uninstall.exe"` writes at install time from the data
+the setup carries), and check-artifacts' release rules refuse an NSIS executable they cannot open unless it is verified.
+`check-bundles` now verifies it as it verifies the setup: the file at the path the script writes must be an uninstaller
+by its NSIS first header (flag `FH_FLAGS_UNINSTALL`), unpack with the same 7-Zip, carry only NSIS plugins
+(`$PLUGINSDIR`: System.dll, LangDLL.dll, nsis_tauri_utils.dll) and pass the same rules; only then is it passed to
+check-artifacts as verified (size and SHA-256). Any other NSIS executable inside a setup is still refused, and the
+upload guard is unchanged (it refuses every executable). Checked on a setup made from tauri 2.12.1's NSIS template
+(makensis 3.09; 7-Zip 26.04, 26.02 and 23.01 list and unpack the uninstaller, p7zip 16.02 does not list it) and in
+`check-bundles.test.mjs` with a stand-in 7-Zip. A signed uninstaller (`!uninstfinalize`) still unpacks and keeps the
+flag (checked with a stand-in signing command).

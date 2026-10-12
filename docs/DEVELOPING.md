@@ -366,6 +366,8 @@ Store, App Store Connect). Decisions on budgets, signing and stores: [`deviation
 - **Installer contents** (`node scripts/check-bundles.mjs`): unpacks each installer (7-Zip for NSIS, `hdiutil` on
   macOS, Node for a deb, `--appimage-extract` on Linux) and checks identity, resources, the core.db
   (`--core placeholder` in CI, `qul` for a release), deb `Depends`, the desktop entry, icons and the macOS signature.
+  7-Zip also rebuilds the NSIS uninstaller (`uninstall.exe`, an NSIS executable itself); it is unpacked in turn and
+  may carry only NSIS plugins (`$PLUGINSDIR`).
   `--arch x64|arm64` (default: this machine's) checks every binary's architecture, `portable` zips are a kind of their
   own, `--signed` requires the Authenticode or Developer ID signature, and `--webview offlineInstaller` checks the
   Microsoft Store installer.
