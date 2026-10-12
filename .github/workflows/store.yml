@@ -257,7 +257,16 @@ jobs:
             rm -f "$RUNNER_TEMP/$name.p12"
           done
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$password" "$keychain" >/dev/null
-          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+          # Put the new keychain first in the user search list, keeping the existing ones. `list-keychains` prints one
+          # indented, double-quoted path per line; read them whole (a path may contain spaces; bash 3.2 has no mapfile).
+          keychains=("$keychain")
+          while IFS= read -r line; do
+            line="${line#"${line%%[![:space:]]*}"}"
+            line="${line#\"}"
+            line="${line%\"}"
+            if [ -n "$line" ]; then keychains+=("$line"); fi
+          done < <(security list-keychains -d user)
+          security list-keychains -d user -s "${keychains[@]}"
           security find-identity -v "$keychain"
           echo "QD_KEYCHAIN=$keychain" >> "$GITHUB_ENV"
 
