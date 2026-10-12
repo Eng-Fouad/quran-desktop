@@ -25,7 +25,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { delimiter, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { parseArgs } from 'node:util'
+import { parseArgs, stripVTControlCharacters } from 'node:util'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const SPEC = join(ROOT, 'docs', 'ARCHITECTURE.md')
@@ -55,7 +55,12 @@ const record = (status, subject, detail, source) => {
 // ---------------------------------------------------------------------------------------------------------------------
 // Helpers
 
-/** Runs a command without a shell; returns trimmed stdout, or null when it can't be run or exits non-zero. */
+/**
+ * Runs a command without a shell; returns trimmed stdout, or null when it can't be run or exits non-zero.
+ * The output is parsed, so it must be plain text: CI sets CARGO_TERM_COLOR=always (ci.yml), which makes cargo wrap
+ * every `cargo --list` name in ANSI escapes even into a pipe. Colour is switched off here and any escape that still
+ * gets through (another tool forcing colour) is stripped.
+ */
 function run(file, args, { cwd = ROOT, shell = false } = {}) {
   const r = spawnSync(file, args, {
     cwd,
@@ -63,9 +68,10 @@ function run(file, args, { cwd = ROOT, shell = false } = {}) {
     shell,
     windowsHide: true,
     maxBuffer: 64 * 1024 * 1024,
+    env: { ...process.env, CARGO_TERM_COLOR: 'never' },
   })
   if (r.error || r.status !== 0) return null
-  return r.stdout.trim()
+  return stripVTControlCharacters(r.stdout).trim()
 }
 
 /** Finds an executable on PATH (honouring PATHEXT on Windows). */
