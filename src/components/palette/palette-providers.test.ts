@@ -32,7 +32,6 @@ import {
   SETTING_CHOICES,
   settingLabel,
   splitScope,
-  suraNameGlyph,
   syntheticKeyEvent,
   toggleKeys,
 } from './palette-providers'
@@ -118,13 +117,6 @@ describe('scopes and helpers', () => {
     expect(splitScope('  @ husary')).toEqual({ scope: 'reciters', rest: 'husary' })
     expect(splitScope('2:255')).toEqual({ scope: null, rest: '2:255' })
     expect(splitScope('')).toEqual({ scope: null, rest: '' })
-  })
-
-  it('maps a surah to its sura-names glyph (§9.7: the padded number read as hex)', () => {
-    expect(suraNameGlyph(1).codePointAt(0)).toBe(0xe001)
-    expect(suraNameGlyph(10).codePointAt(0)).toBe(0xe010)
-    expect(suraNameGlyph(99).codePointAt(0)).toBe(0xe099)
-    expect(suraNameGlyph(114).codePointAt(0)).toBe(0xe114)
   })
 
   it('spells out a field name', () => {

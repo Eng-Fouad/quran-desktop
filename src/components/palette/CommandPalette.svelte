@@ -21,6 +21,7 @@
   import { onDestroy, onMount, untrack } from 'svelte'
   import { Dialog, Kbd, Menu, type MenuEntry } from '$components/ui'
   import type { OverlayComponentProps } from '$lib/contracts/components'
+  import { SURA_NAMES_FAMILY } from '$lib/mushaf/suraNames'
   import { fonts, history, i18n, quran, ui } from '$lib/stores'
   import { overlayOpen } from '../shell/overlay'
   import {
@@ -32,7 +33,6 @@
     SCOPE_PREFIXES,
     SCOPES,
     splitScope,
-    SURA_NAMES_FAMILY,
   } from './palette-providers'
   import PaletteRow from './PaletteRow.svelte'
 

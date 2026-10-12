@@ -2653,3 +2653,29 @@ persistent setting for the ornaments in every style; the preview fetches while o
 - **Known gaps.** "Download all pages" still installs `decor` through Rust's `requires` with the ornaments off (installed,
   not drawn; the starter set lists it then). A `packs-changed` for `decor` (after a removal in Downloads) still calls
   `decor_ensure`, which re-installs it while online whatever the setting; this predates the setting.
+
+## Owner feedback 2026-10-12 (surah names in calligraphy)
+
+In the English UI the sura-names glyph of Yusuf sat to the right of the others in the Index. The face draws Yusuf's
+first letter 0.25 em past its advance (6.4 px at 26 px); every glyph also keeps 0.17–0.41 em of empty advance on its
+left, so in the Arabic UI, where the names align on the left, their ink was 4.5–9 px from the edge, unevenly.
+cf8f2c4 had only moved the Index column's clip edge 7 px out so Yusuf's letter was not cut.
+
+- **Fix.** `SuraName.svelte` (Index, command palette, surah info popover) boxes each name by its ink: its box starts at
+  the ink (a negative margin of the ink's offset from the glyph's origin) and is as wide as the ink, whatever the
+  advance, so the ink lines up at the inline end in both UI directions. The Index column keeps a 2 px clip allowance
+  (WebKit snaps the glyph to its pixel grid; without it the ink's outer pixel column was shaved in the Arabic UI).
+- **A table, not a measurement.** `src/lib/mushaf/suraNames.ts` holds each glyph's advance and ink extent from
+  `scripts/sura_names_ink.py` (fontTools), for the file the catalog pins (a unit test compares the hashes). Canvas
+  `measureText` will not do: WebKit reports `actualBoundingBoxLeft/Right` only where the ink passes the advance (every
+  left bearing reads 0), and Chromium on Linux hints advances to whole pixels. A pixel scan of the 114 glyphs would cost
+  tens of milliseconds of main thread.
+- **Measured** (macOS, 4× screenshots of the Index around Hud, Yusuf and Ar-Ra'd): before, Yusuf's ink ended 6.4 px past
+  the column edge in Chromium and WebKit (the others 0.1–0.6 px inside it), and in the Arabic UI the ink started
+  4.5–9.0 px from the edge; after, every row ends within the screenshot's 0.25 px step of the edge, in both engines,
+  both directions (Linux Chromium and WebKit too).
+- **Test.** `SuraName.browser.test.ts` checks all 114 names in the Index and the palette (both UI languages) and the
+  popover (English UI): each ink end within 0.5 px (measured: within 0.23 px). The ink is found on a canvas at 8×,
+  independently of the table. Without `data/dev-packs` (CI: the decor fonts are never committed or fetched) the face
+  is a stand-in built in the test, one box per surah with the table's advance and ink; the check of the table against
+  the real face is then skipped, with that reason.

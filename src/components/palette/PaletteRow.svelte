@@ -7,10 +7,11 @@
 -->
 <script lang="ts">
   import Rosette from '$components/index/Rosette.svelte'
+  import SuraName from '$components/index/SuraName.svelte'
   import { Badge, Kbd } from '$components/ui'
   import { i18n } from '$lib/stores'
   import { splitMarks } from './match'
-  import { type PaletteItem, SURA_NAMES_FAMILY, suraNameGlyph } from './palette-providers'
+  import type { PaletteItem } from './palette-providers'
 
   interface Props {
     item: PaletteItem
@@ -62,9 +63,7 @@
 
 {#if arabic}
   {#if glyphs}
-    <span class="glyph" lang="ar" dir="rtl" aria-hidden="true" style:font-family={SURA_NAMES_FAMILY}
-      >{suraNameGlyph(arabic.surah)}</span
-    >
+    <SuraName n={arabic.surah} size={26} />
   {:else}
     <span class="naskh" lang="ar" dir="rtl">{arabic.text}</span>
   {/if}
@@ -208,14 +207,6 @@
 
   :global([data-disabled]) .label {
     color: var(--text-muted);
-  }
-
-  .glyph {
-    flex: none;
-    color: var(--text);
-    font-size: 26px;
-    line-height: 1;
-    white-space: nowrap;
   }
 
   .naskh {

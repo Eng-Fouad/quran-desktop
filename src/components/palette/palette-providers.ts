@@ -206,17 +206,6 @@ export function splitScope(input: string): { scope: PaletteScope | null; rest: s
 // ---------------------------------------------------------------------------------------------------------------------
 // Shared helpers
 
-/** The sura-names decor face (§8.5, §9.7). */
-export const SURA_NAMES_FAMILY = 'qd-sura-names'
-
-/**
- * The sura-names glyph of surah `n` (§9.7): the zero-padded decimal number read as hex, from U+E000 (`uniE001` …
- * `uniE114`; surah 10 is U+E010; U+E000 itself is "سورة").
- */
-export function suraNameGlyph(n: number): string {
-  return String.fromCodePoint(0xe000 + Number.parseInt(String(n).padStart(3, '0'), 16))
-}
-
 /** Rows shown at most per group in the "Everything" scope (scoped lists are not capped). */
 export const GROUP_LIMITS: Readonly<Record<ProviderId, number>> = {
   goto: 5,

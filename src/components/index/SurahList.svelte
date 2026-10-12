@@ -30,20 +30,18 @@
     SearchInput,
   } from '$components/ui'
   import type { SurahInfo } from '$lib/ipc/bindings'
+  import { SURA_NAMES_FAMILY } from '$lib/mushaf/suraNames'
   import { fonts, i18n, memo, packs, player, quran, reader, settings, ui } from '$lib/stores'
   import { asciiDigits } from '$lib/text/normalize'
   import { describeTarget, listSeparator, parseReference, type ParseResult } from '$lib/text/refparse'
   import { numRange } from './format'
   import { openTarget } from './navigate'
   import Rosette from './Rosette.svelte'
+  import SuraName from './SuraName.svelte'
   import { centerInView, keepInView, rovingKeydown, typeIntoFilter } from './roving'
   import { indexView } from './state.svelte'
 
   const sep = $derived(listSeparator())
-  /** The sura-names decor face (§9.7): the glyph of surah n is U+E000 + the zero-padded number read as hex. */
-  const SURA_NAMES_FAMILY = 'qd-sura-names'
-  const suraGlyph = (n: number) =>
-    String.fromCodePoint(0xe000 + Number.parseInt(String(n).padStart(3, '0'), 16))
 
   let list: HTMLElement | null = $state(null)
   let filterInput: HTMLInputElement | null = $state(null)
@@ -395,9 +393,7 @@
               </span>
               <span class="end">
                 {#if glyphs}
-                  <span class="glyph" lang="ar" dir="rtl" style:font-family={SURA_NAMES_FAMILY}
-                    >{suraGlyph(s.id)}</span
-                  >
+                  <SuraName n={s.id} size={26} />
                 {:else if !arabicUi}
                   <span class="ar" lang="ar" dir="rtl">{s.nameAr}</span>
                 {/if}
@@ -603,10 +599,10 @@
     /* Clips a wide name glyph sideways; its Naskh ink (dots, marks) may pass the line box above and below. */
     overflow-x: clip;
     overflow-y: visible;
-    /* The clip edge sits 7 px into the row's padding at the inline end, where the glyph aligns: Yusuf's glyph draws its
-       first letter 6.4 px past its advance (0.25 em at 26 px; every other surah 0.2 px at most), which the edge cut. */
-    margin-inline-end: -7px;
-    padding-inline-end: 7px;
+    /* The name glyph's ink ends on the content edge at the inline end (SuraName); the clip edge sits 2 px further out,
+       in the row's padding, so an engine that snaps the glyph to its pixel grid (WebKit) keeps its outermost pixels. */
+    margin-inline-end: -2px;
+    padding-inline-end: 2px;
   }
 
   .ar {
@@ -619,13 +615,6 @@
     line-height: 1.25;
     white-space: nowrap;
     text-overflow: ellipsis;
-  }
-
-  .glyph {
-    font-size: 26px;
-    line-height: 1;
-    color: var(--text);
-    white-space: nowrap;
   }
 
   .meta {

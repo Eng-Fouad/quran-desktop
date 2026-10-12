@@ -58,11 +58,13 @@
 </script>
 
 <script lang="ts">
+  import SuraName from '$components/index/SuraName.svelte'
   import { Button, Popover } from '$components/ui'
   import Check from '@lucide/svelte/icons/check'
   import Download from '@lucide/svelte/icons/download'
   import Play from '@lucide/svelte/icons/play'
   import { khatam } from '$lib/mushaf/ornaments'
+  import { SURA_NAMES_FAMILY } from '$lib/mushaf/suraNames'
   import { app, fonts, i18n, packs, player, quran, reader, settings, ui } from '$lib/stores'
 
   const info = $derived(surahInfo.surah > 0 ? quran.surah(surahInfo.surah) : undefined)
@@ -89,11 +91,7 @@
   )
   const canDownload = $derived(app.online && settings.value.networkAllowed && reciter !== null)
   /** The Arabic name in the decor calligraphy when installed (`qd-sura-names`, §9.7), else Naskh text. */
-  const nameGlyph = $derived(
-    fonts.status.get('qd-sura-names') === 'ready' && info
-      ? String.fromCodePoint(0xe000 + Number.parseInt(String(info.id).padStart(3, '0'), 16))
-      : null,
-  )
+  const glyphs = $derived(fonts.status.get(SURA_NAMES_FAMILY) === 'ready')
   const subtitle = $derived(info ? (i18n.locale === 'ar' ? info.nameSimple : info.nameEn) : '')
 
   // Load the reciter's per-surah state when the popover opens, so "Downloaded" is accurate.
@@ -178,9 +176,11 @@
           {/if}
         </span>
         {#if i18n.locale !== 'ar'}
-          <span class={['si-arabic', nameGlyph && 'si-glyph']} lang="ar" dir="rtl"
-            >{nameGlyph ?? info.nameAr}</span
-          >
+          {#if glyphs}
+            <SuraName n={info.id} size={30} />
+          {:else}
+            <span class="si-arabic" lang="ar" dir="rtl">{info.nameAr}</span>
+          {/if}
         {/if}
       </header>
       <dl class="si-facts">
@@ -333,12 +333,6 @@
     font-family: var(--font-naskh);
     font-size: 22px;
     line-height: 1.2;
-  }
-
-  .si-glyph {
-    font-family: 'qd-sura-names', var(--font-naskh);
-    font-size: 30px;
-    line-height: 1;
   }
 
   .si-facts {
