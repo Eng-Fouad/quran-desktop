@@ -1,6 +1,6 @@
 # Quran Print Labels
 
-The generator of `public/fonts/QuranPrintLabels.otf`, the bundled font (CSS family `qd-print-labels`) that draws the
+The generator of `public/fonts/QuranPrintLabels.woff2`, the bundled font (CSS family `qd-print-labels`) that draws the
 1441H Madinah print's own furniture calligraphy: the running heads «سُورَةُ name» and «الجُزۡءُ …» and the stacked hizb
 labels in the margin (owner decision, [LEAD 25](../../docs/deviations/LEAD.md)). **The font is committed**, so a build
 never runs this script; run it only to change or verify the font.
@@ -8,7 +8,7 @@ never runs this script; run it only to change or verify the font.
 | File                     | What it is                                                                                             |
 | ------------------------ | ------------------------------------------------------------------------------------------------------ |
 | `build_print_labels.py`  | The generator (Python 3, fontTools). Deterministic: the same inputs give the same file, byte for byte. |
-| `requirements.txt`       | Its one dependency, pinned (`fonttools==4.66.1`).                                                      |
+| `requirements.txt`       | Its dependencies, pinned (`fonttools==4.66.1`; `brotli==1.2.0` for the WOFF2).                         |
 | `pages.txt`              | The 123 printed pages it reads, one page number per line.                                              |
 | `print_label_metrics.py` | Prints the numbers-only metrics table of `src/lib/mushaf/printLabels.ts` from the committed font.      |
 
@@ -60,16 +60,20 @@ python3 -m venv /path/to/venv && /path/to/venv/bin/pip install -r assets/print-l
 # 3. Build into a scratch directory and compare.
 /path/to/venv/bin/python -I assets/print-labels/build_print_labels.py --pages pages --license mdb/LICENSE \
   --db src-tauri/resources/core.db --out /path/to/scratch/print-labels
-shasum -a 256 /path/to/scratch/print-labels/QuranPrintLabels.otf public/fonts/QuranPrintLabels.otf
+shasum -a 256 /path/to/scratch/print-labels/QuranPrintLabels.woff2 public/fonts/QuranPrintLabels.woff2
 ```
 
-The committed font is 1,235,388 B, sha256 `6b86a924466abf981a55130e10b1683b50c6da41c77f6f460af57ff533790cbc`, built
-on 2026-10-11 from these 123 pages and a development (qdc) `core.db`; any `core.db` whose mushaf-1 page ranges and rub
-flags agree gives the same file. Besides the font, the generator writes `map.json` (every glyph's code point, advance,
-ink box and source), `report.json` (its checks and measurements) and `qa-*.html` sheets that set every glyph beside
-`core.db`'s names. **Those stay in the scratch directory and are never committed:** they carry surah names and ayah
-references read from `core.db`, which is development data (QF terms, BRIEF §4).
+The generator writes the font twice: `QuranPrintLabels.otf` (CFF OpenType, 1,235,388 B, sha256
+`6b86a924466abf981a55130e10b1683b50c6da41c77f6f460af57ff533790cbc`) and the same tables in a WOFF2 container,
+`QuranPrintLabels.woff2` (111,228 B, sha256 `67062851e94137deb06a6adfa893e72842565e018993f21eeaa9c900d0991ab7`). Only
+the WOFF2 is committed and shipped: every webview reads it, it is a tenth of the OTF in `dist/`, and inside the app
+binary (tauri embeds `dist/` Brotli-compressed, once per architecture of the universal macOS app) it is 16 KB smaller
+than the OTF. Both were built on 2026-10-11 from these 123 pages and a development (qdc) `core.db`; any `core.db` whose
+mushaf-1 page ranges and rub flags agree gives the same files. Besides the font, the generator writes `map.json` (every
+glyph's code point, advance, ink box and source), `report.json` (its checks and measurements) and `qa-*.html` sheets
+that set every glyph beside `core.db`'s names. **Those stay in the scratch directory and are never committed:** they
+carry surah names and ayah references read from `core.db`, which is development data (QF terms, BRIEF §4).
 
-After a change, copy the font to `public/fonts/`, update its size and sha256 here and in its LICENSE.txt, regenerate
-the metrics table (`/path/to/venv/bin/python -I assets/print-labels/print_label_metrics.py public/fonts/QuranPrintLabels.otf`, pasted over
+After a change, copy the WOFF2 to `public/fonts/`, update both files' sizes and sha256 here and in its LICENSE.txt,
+regenerate the metrics table (`/path/to/venv/bin/python -I assets/print-labels/print_label_metrics.py public/fonts/QuranPrintLabels.woff2`, pasted over
 `PRINT_METRICS`), and look at the furniture in both engines (`src/components/mushaf/furniture.browser.test.ts`).

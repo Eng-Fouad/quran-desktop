@@ -200,7 +200,7 @@ const HAFS_FONT: AttributionEntry = {
 
 /**
  * The print's furniture calligraphy (LEAD 25): the running heads and margin labels of the 1441H Madinah print, cut from
- * the Mushaf Database SVG Mushaf into a font that ships with the app (`public/fonts/QuranPrintLabels.otf`).
+ * the Mushaf Database SVG Mushaf into a font that ships with the app (`public/fonts/QuranPrintLabels.woff2`).
  */
 const PRINT_LABELS_FONT: AttributionEntry = {
   id: 'print-labels',

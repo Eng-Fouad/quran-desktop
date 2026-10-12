@@ -113,8 +113,9 @@ summarises them); item 17's data rulings are also corrected in place in ARCHITEC
 25. **The print's own furniture calligraphy, bundled** (owner decision, 2026-10-11): the running heads «سُورَةُ name»
     and «الجُزۡءُ …» and the margin hizb labels, stacked as the print sets them («رُبُع» / «الحِزۡبُ» / «٢٧»; «الجُزۡءُ ١٤» /
     «الحِزۡبُ ٢٧» at a juz start), are drawn in the 1441H Madinah print's own calligraphy. The owner chose to bundle the
-    font, like the Hafs font: `public/fonts/QuranPrintLabels.otf` (family "Quran Print Labels", CSS `qd-print-labels`,
-    CFF, 1,235,388 B: +1.18 MiB of `dist/` against its 6 MiB, 114 KB as LZMA, `xz -9`) is committed with
+    font, like the Hafs font: `public/fonts/QuranPrintLabels.woff2` (family "Quran Print Labels", CSS `qd-print-labels`,
+    CFF in a WOFF2 container, 111,228 B; the generator's OTF of the same tables is 1,235,388 B, which first shipped:
+    +1.18 MiB of `dist/` against its 6 MiB, 114 KB as LZMA, `xz -9`) is committed with
     `QuranPrintLabels.LICENSE.txt` beside it, and `main.ts` loads it before the first paint like qd-hafs (CLS 0).
     - **Source:** outlines cut from 123 pages of the Mushaf Database "Ligature-Based SVG Mushaf" V1.01
       (github.com/mushafdatabase/MushafDatabase-Ligature-Based-SVG, folder `SVG V1.01`), whose artwork derives from the

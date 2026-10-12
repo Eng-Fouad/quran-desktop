@@ -953,11 +953,11 @@ describe('stylesheet wiring', () => {
       },
       {
         'font-family': "'qd-print-labels'",
-        src: "url('/fonts/QuranPrintLabels.otf') format('opentype')",
+        src: "url('/fonts/QuranPrintLabels.woff2') format('woff2')",
         'font-display': 'block',
       },
     ])
-    expect(existsSync(resolve(process.cwd(), 'public/fonts/QuranPrintLabels.otf'))).toBe(true)
+    expect(existsSync(resolve(process.cwd(), 'public/fonts/QuranPrintLabels.woff2'))).toBe(true)
     expect(existsSync(resolve(process.cwd(), 'public/fonts/QuranPrintLabels.LICENSE.txt'))).toBe(true)
   })
 

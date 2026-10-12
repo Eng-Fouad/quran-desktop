@@ -37,7 +37,7 @@ is the lead's fold-in of every accepted deviation (`docs/deviations/WP*.md`), ev
 | LEAD 22 | Release build: `opt-level = "z"` with decode, resampling and WSOLA at 3; tauri without `dynamic-acl`; rustls stays on aws-lc-rs; the setup and uninstall executables carry the app icon; the MSI upgrade code is pinned (NSIS is the only Windows release asset). |
 | LEAD 23 | Contract: event `quit-requested`. A user's quit hides the window and lets the page save its debounced writes before `app_quit` (§8 below). |
 | LEAD 24 | The unmodified KFGQPC Hafs V30 TTF is committed at `xtask/assets/KFGQPC-Hafs-V30.ttf`; `fetch-assets` falls back to it, checked against the same pin, when the download fails (GitHub's runners cannot reach fonts.qurancomplex.gov.sa). Changes D23; answers ARCHITECTURE §15.3 item 5. |
-| LEAD 25 | The running heads and the margin hizb labels are the 1441H print's own calligraphy, from a bundled font: `public/fonts/QuranPrintLabels.otf` (`qd-print-labels`, committed with its licence; cut from the Mushaf Database SVG Mushaf V1.01 under its open permission, from the KFGQPC printing-use Mushaf; generator in `assets/print-labels/`), loaded before the first paint like qd-hafs. It replaces the Hafs head text from qfs 20, quran-common's juz calligraphy in the head and the Hafs label lines under a rub marker; drawn whatever `ornateHeaders` says (§10.2, §10.4). |
+| LEAD 25 | The running heads and the margin hizb labels are the 1441H print's own calligraphy, from a bundled font: `public/fonts/QuranPrintLabels.woff2` (`qd-print-labels`, committed with its licence; cut from the Mushaf Database SVG Mushaf V1.01 under its open permission, from the KFGQPC printing-use Mushaf; generator in `assets/print-labels/`), loaded before the first paint like qd-hafs. It replaces the Hafs head text from qfs 20, quran-common's juz calligraphy in the head and the Hafs label lines under a rub marker; drawn whatever `ornateHeaders` says (§10.2, §10.4). |
 
 ## 1. Process, tooling and acceptance (§0.2, §13.1–13.2, §14)
 
@@ -570,7 +570,7 @@ is the lead's fold-in of every accepted deviation (`docs/deviations/WP*.md`), ev
   (WP8b 8), and only while `ornateHeaders` is on; turning `ornateHeaders` on requests it in any style (owner 2026-10-11).
   The faces load whenever decor is installed: the setting gates the drawing, not the loading. The font-status dot sits in the footer band, drawn by `RenditionStack`, and retries a failed page (WP8b 7).
 - **Two bundled faces** (LEAD 25): `main.ts` awaits qd-hafs and `qd-print-labels` (the print's running heads and margin
-  labels, `public/fonts/QuranPrintLabels.otf`) before mounting, each on its own, so one failing never holds the other;
+  labels, `public/fonts/QuranPrintLabels.woff2`) before mounting, each on its own, so one failing never holds the other;
   `fonts.init` records whether the second loaded (`fonts.printLabelsReady`, read from `document.fonts`), so a page never
   switches between the print's glyphs and the Hafs text after the first paint.
 - **Shaping warm-up** (`warmup.ts`): the next and previous spreads are laid out off screen in idle time (3 lines per

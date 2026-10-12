@@ -1,10 +1,11 @@
 /**
  * `printLabels.ts` (§8.9; LEAD 25): the code points of the bundled print-labels face, the kinds of margin label, the
  * one-line quarter, the head's placement, and the metrics table checked against the committed font itself (its cmap
- * and its vertical metrics, read here with a minimal OpenType reader).
+ * and its vertical metrics, read here with a minimal WOFF2 and OpenType reader).
  */
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { brotliDecompressSync } from 'node:zlib'
 import { describe, expect, it } from 'vitest'
 import { HEAD } from './geometry'
 import { arabicNum } from './ornaments'
@@ -26,15 +27,51 @@ import {
   printSurahHead,
 } from './printLabels'
 
+/**
+ * The tables of a WOFF2 font (W3C WOFF2 §4–5): its table directory, then one Brotli stream holding every table back to
+ * back. Only the tags the tests read are named (known-tag indices 0–2); glyf/loca (10, 11), whose default transform
+ * changes their length, cannot occur in this CFF font.
+ */
+function woff2Tables(buf: Buffer): { data: Buffer; tables: Map<string, number> } {
+  if (buf.toString('latin1', 0, 4) !== 'wOF2') throw new Error('not a WOFF2 file')
+  const numTables = buf.readUInt16BE(12)
+  let pos = 48
+  const base128 = (): number => {
+    let value = 0
+    for (let i = 0; i < 5; i++) {
+      const byte = buf.readUInt8(pos++)
+      value = value * 128 + (byte & 0x7f)
+      if (!(byte & 0x80)) return value
+    }
+    throw new Error('bad UIntBase128')
+  }
+  const known = ['cmap', 'head', 'hhea']
+  const tables = new Map<string, number>()
+  let offset = 0
+  for (let i = 0; i < numTables; i++) {
+    const flags = buf.readUInt8(pos++)
+    const index = flags & 0x3f
+    let tag = known[index] ?? `#${index}`
+    if (index === 63) {
+      tag = buf.toString('latin1', pos, pos + 4)
+      pos += 4
+    }
+    if (index === 10 || index === 11) throw new Error('a glyf/loca table in a CFF font')
+    const length = base128()
+    if (flags >> 6 !== 0) throw new Error(`table ${tag} is transformed`)
+    tables.set(tag, offset)
+    offset += length
+  }
+  const compressed = buf.readUInt32BE(20)
+  return { data: brotliDecompressSync(buf.subarray(pos, pos + compressed)), tables }
+}
+
 /** The committed font's cmap (format 4, Windows Unicode BMP) and its hhea ascender/descender. */
 function readFont(): { cmap: Set<number>; ascent: number; descent: number; unitsPerEm: number } {
-  const buf = readFileSync(resolve(process.cwd(), 'public/fonts/QuranPrintLabels.otf'))
+  const { data: buf, tables } = woff2Tables(
+    readFileSync(resolve(process.cwd(), 'public/fonts/QuranPrintLabels.woff2')),
+  )
   const view = new DataView(buf.buffer, buf.byteOffset, buf.byteLength)
-  const tables = new Map<string, number>()
-  for (let i = 0, n = view.getUint16(4); i < n; i++) {
-    const rec = 12 + 16 * i
-    tables.set(buf.toString('latin1', rec, rec + 4), view.getUint32(rec + 8))
-  }
   const table = (tag: string): number => {
     const offset = tables.get(tag)
     if (offset === undefined) throw new Error(`no ${tag} table`)

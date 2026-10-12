@@ -1,6 +1,6 @@
 /**
  * The 1441H print's own furniture calligraphy (§8.9; LEAD 25): the bundled "Quran Print Labels" face
- * (`public/fonts/QuranPrintLabels.otf`, CSS family `qd-print-labels`), its code points, its metrics and the sizes that
+ * (`public/fonts/QuranPrintLabels.woff2`, CSS family `qd-print-labels`), its code points, its metrics and the sizes that
  * set it in the print's proportion. Owner: WP8c.
  *
  * The face carries the non-Quranic furniture of the KFGQPC Madinah print as outlines cut from the Mushaf Database
@@ -41,7 +41,7 @@ export const PRINT_WORD = {
 
 /**
  * The face's metrics in font units (UPM 1000), numbers only: generated from the committed font by
- * `python assets/print-labels/print_label_metrics.py public/fonts/QuranPrintLabels.otf` (fontTools; the union of the
+ * `python assets/print-labels/print_label_metrics.py public/fonts/QuranPrintLabels.woff2` (fontTools; the union of the
  * ink boxes of each kind of glyph, rounded outwards, and its widest advance). The header glyphs share the running-head
  * baseline; every margin label and word shares the baseline of its «الحِزۡبُ» (the bottom of its alef), so a margin
  * label's extent depends on its stacked layout: a juz start «الجُزۡءُ j» over «الحِزۡبُ h» (the numbers beside the

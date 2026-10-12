@@ -18,9 +18,10 @@ Inputs are read-only data; nothing from them is executed.
   --reference-pages DIR  optional pages used ONLY to check composed glyphs in
                          the QA pages (never used for outlines)
 
-Outputs: QuranPrintLabels.otf, map.json (every glyph: kind, key, code point,
-source), report.json (checks and measurements) and qa-*.html (QA sheets that
-load the font through @font-face; render them with any browser).
+Outputs: QuranPrintLabels.otf, QuranPrintLabels.woff2 (the same tables in a
+WOFF2 container: the file the app ships), map.json (every glyph: kind, key,
+code point, source), report.json (checks and measurements) and qa-*.html (QA
+sheets that load the font through @font-face; render them with any browser).
 
 Code points (fixed scheme):
   U+0660..U+0669   Eastern Arabic digits cut from the margin labels
@@ -1333,6 +1334,18 @@ def write_map(out: Path, glyphs, ymax, ymin, space_adv):
     return entries, missing
 
 
+def write_woff2(otf: Path, woff2: Path) -> int:
+    """Repackage the OpenType font as WOFF2, the file the app ships (Brotli; a tenth of the OTF).
+
+    Lossless: the same tables, byte for byte, except the two `head` fields the WOFF2 format sets (flags bit 11 and
+    checkSumAdjustment); no timestamp or bounding box is recalculated. Deterministic for the fontTools and brotli
+    versions of requirements.txt."""
+    font = TTFont(str(otf), recalcBBoxes=False, recalcTimestamp=False)
+    font.flavor = "woff2"
+    font.save(str(woff2))
+    return woff2.stat().st_size
+
+
 def reload_check(path: Path, glyphs):
     """Parse the written font again and draw every glyph."""
     font = TTFont(str(path))
@@ -1552,6 +1565,8 @@ def main(argv=None):
 
     font_path = out / "QuranPrintLabels.otf"
     ymax, ymin = build_font(glyphs, args.license.read_text(encoding="utf-8"), font_path)
+    woff2_path = out / "QuranPrintLabels.woff2"
+    woff2_size = write_woff2(font_path, woff2_path)
     entries, missing = write_map(out, glyphs, ymax, ymin, space_adv)
     report.update({
         "space_advance": space_adv, "vertical_metrics": {"ascender": ymax, "descender": ymin},
@@ -1559,7 +1574,8 @@ def main(argv=None):
                          for k in ("digit", "word", "surah", "juz", "margin")},
         "composed_counts": {k: sum(e["kind"] == k and bool(e["source"].get("composed")) for e in entries)
                             for k in ("surah", "juz", "margin")},
-        "missing": missing, "reload": reload_check(font_path, glyphs)})
+        "missing": missing, "reload": reload_check(font_path, glyphs),
+        "reload_woff2": reload_check(woff2_path, glyphs)})
 
     juz1_ref = juz1_reference(args, meta, juz1_glyph, heads["baseline"], report)
     layout_lines = [f"{k}: {v}" for k, v in report["layout"].items()] + [f"space advance: {space_adv}"]
@@ -1568,6 +1584,7 @@ def main(argv=None):
                                      encoding="utf-8")
     print(f"{font_path}: {font_path.stat().st_size} bytes, {len(glyphs)} glyphs; composed: "
           f"{report['composed_counts']}; missing: {[m['codepoint'] for m in missing]}")
+    print(f"{woff2_path}: {woff2_size} bytes (the shipped file)")
     return 0
 
 

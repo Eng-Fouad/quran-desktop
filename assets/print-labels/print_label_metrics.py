@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Print the numbers-only metrics table of src/lib/mushaf/printLabels.ts from the committed font.
 
-    python print_label_metrics.py ../../public/fonts/QuranPrintLabels.otf
+    python print_label_metrics.py ../../public/fonts/QuranPrintLabels.woff2
 
 Reads only the font (no core.db, no map.json): the vertical metrics, the space advance, and per kind of glyph the
 union of the ink boxes (rounded outwards) and the widest advance, in font units (UPM 1000). The margin labels are
@@ -63,4 +63,4 @@ def main(path: str) -> None:
 
 
 if __name__ == "__main__":
-    main(sys.argv[1] if len(sys.argv) > 1 else "public/fonts/QuranPrintLabels.otf")
+    main(sys.argv[1] if len(sys.argv) > 1 else "public/fonts/QuranPrintLabels.woff2")

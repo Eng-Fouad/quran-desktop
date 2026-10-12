@@ -3789,7 +3789,7 @@ the measurement date are recorded in `metrics.ts`. Target: ≥ 99 % of lines fit
 - **Bundled:** `@font-face { font-family: "qd-hafs"; src: url("/fonts/KFGQPC-Hafs-V30.ttf") format("truetype"); font-display: block; }`.
   `main.ts` awaits `document.fonts.load('32px "qd-hafs"', 'بسم')` before mounting, and the window is shown only after first paint
   (`windowReady`). The user never sees a system-font flash. **(v1.2, LEAD 25)** A second bundled face,
-  `@font-face { font-family: "qd-print-labels"; src: url("/fonts/QuranPrintLabels.otf") format("opentype"); font-display: block; }`
+  `@font-face { font-family: "qd-print-labels"; src: url("/fonts/QuranPrintLabels.woff2") format("woff2"); font-display: block; }`
   (the 1441H print's running heads and margin labels, §8.9), is awaited the same way, in parallel; `fonts.printLabelsReady`
   records whether it loaded.
 - **Page fonts:** family `qcf-{v1|v2|v4}-p{N}`. By transport (D30, `AppInfo.fontTransport`):
