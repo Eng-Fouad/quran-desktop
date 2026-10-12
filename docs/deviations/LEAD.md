@@ -134,3 +134,11 @@ summarises them); item 17's data rulings are also corrected in place in ARCHITEC
       tooltips (Hafs words) are unchanged. It is print furniture, not decor: drawn whatever `ornateHeaders` says; the
       surah-header cartouche, the basmala calligraphy and the margin ornaments stay gated by it. Without the face (a
       failed load) the furniture keeps its Hafs text.
+26. **A universal macOS app has its own installed-footprint budget, 40 MB** (owner decision, 2026-10-12; §13.6): it
+    carries the binary twice, an arm64 and an x86_64 slice, so the 35 MB that fits a single-architecture install left
+    the universal app (34.8 MiB after deviation 11 of WP-CI.md, 35.5 MiB before) without room. Every single-architecture
+    install (Windows, Linux, a one-arch macOS build) keeps 35 MB. `scripts/size-budget.mjs` holds the `installed` row to
+    `INSTALLED_UNIVERSAL` when the measured .app's executable is a fat Mach-O of two or more slices.
+27. **reqwest without its `charset` feature** (lead, 2026-10-12; a `[workspace.dependencies]` change, DEVELOPING §6):
+    every body is read as JSON or bytes; only stream-download reads one as text, an HTTP error's, for its message, which
+    is now decoded as lossy UTF-8. It drops encoding_rs, 333 KB of the universal macOS app (WP-CI.md deviation 11).

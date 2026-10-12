@@ -253,9 +253,6 @@ summarised here:
   - **Optional `package.json` scripts:** `"check:artifacts": "node scripts/check-artifacts.mjs"` and `"check:ci": "node
     .github/actions/policy/policy.mjs"`.
   - **ubuntu-22.04:** §13.3 pins this runner image for its glibc baseline. Watch GitHub's deprecation schedule for it.
-  - **reqwest without `charset` (deviation 11):** a change to `[workspace.dependencies]`, which needs your agreement
-    (DEVELOPING §6). ARCHITECTURE.md's listing already matches. Please record it in LEAD.md, or revert that commit and
-    choose another 0.33 MB: without it the universal macOS app is 81 KB over its footprint budget again.
-  - **Headroom (deviation 11):** the footprint is now 0.24 MiB under 35 MiB here (about 0.21 MiB on CI, which measured
-    34 KB more before these changes), not the 1 MiB aimed for. rustls on ring would add 1.01 MiB; it reverses LEAD 22
-    (X25519MLKEM768), so it is yours to decide.
+  - **reqwest without `charset` (deviation 11):** agreed and recorded as LEAD 27.
+  - **Headroom (deviation 11):** settled by the owner (LEAD 26): a universal macOS app's footprint is held to 40 MB,
+    so it has about 5.2 MiB of room; single-architecture installs keep 35 MB.

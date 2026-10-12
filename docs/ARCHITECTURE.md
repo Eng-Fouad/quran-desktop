@@ -5403,6 +5403,7 @@ Plugins registered in `lib.rs` (§2.8.1):
 | macOS dmg (universal) | ≤ 25 MB |
 | deb / AppImage | ≤ 9 MB / ≤ 90 MB |
 | installed footprint (without packs) | ≤ 35 MB |
+| installed footprint, macOS universal (without packs) | ≤ 40 MB (both binary slices; owner, 2026-10-12, LEAD 26) |
 | `dist/` (frontend bundle, no mock/fixtures) | ≤ 6 MB (`check:dist`) |
 | cold start to first paint (Windows, SSD) | ≤ 800 ms |
 | RSS with a spread + playback | ≤ 350 MB (webview included) |

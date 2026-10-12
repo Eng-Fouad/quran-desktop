@@ -11,7 +11,8 @@
 //                                  $CARGO_TARGET_DIR or ./target)
 //   [installed]                    what an installation puts on disk, packs excluded: Windows, the release exe and
 //                                  the bundled resources next to the bundle directory (what the NSIS script installs);
-//                                  macOS, the .app; Linux, the deb's Installed-Size
+//                                  macOS, the .app (a universal app, two binary slices, has its own budget:
+//                                  INSTALLED_UNIVERSAL); Linux, the deb's Installed-Size
 //   [dist]                         dist/ (also enforced by check:dist); not measured when it holds a debug build
 //                                  (source maps: `pnpm tauri build --debug`, which the metrics run needs)
 //   [cold-start] [rss] [idle-cpu] [playback-cpu-1x] [playback-cpu-1.5x]
@@ -33,6 +34,7 @@
 // lead decision recorded in docs/deviations/WP13b.md.
 //
 // Exit codes: 0 every measured row within budget and every required row measured, 1 otherwise, 2 bad usage.
+import { Buffer } from 'node:buffer'
 import console from 'node:console'
 import { spawnSync } from 'node:child_process'
 import fs from 'node:fs'
@@ -102,6 +104,20 @@ export const BUDGETS = Object.freeze([
   },
 ])
 
+/**
+ * The `installed` row's budget for a universal macOS app (owner decision 2026-10-12, LEAD 26): it carries the binary
+ * twice, an arm64 and an x86_64 slice, so it gets 40 MB; every single-architecture install keeps the 35 MB above. The
+ * row takes it when the measured .app's executable is a fat Mach-O of two or more slices (`macSlices`).
+ * @type {Budget}
+ */
+export const INSTALLED_UNIVERSAL = Object.freeze({
+  id: 'installed',
+  what: 'installed footprint, macOS universal (without packs)',
+  spec: '≤ 40 MB',
+  unit: 'bytes',
+  max: 40 * MIB,
+})
+
 export const INSTALLER_ROWS = /** @type {const} */ (['nsis', 'dmg', 'deb', 'appimage'])
 export const RUNTIME_ROWS = /** @type {const} */ ([
   'cold-start',
@@ -122,7 +138,8 @@ const SUPERSEDED_REPORT_FORMATS = Object.freeze({
 })
 
 /**
- * @typedef {{ id: RowId, value: number, source: string, notes?: string[] }} Measurement
+ * @typedef {{ id: RowId, value: number, source: string, notes?: string[], budget?: Budget }} Measurement
+ *   `budget`: the budget this measurement is held to when not its row's (a universal macOS app's footprint)
  * @typedef {{ budget: Budget, measurement: Measurement | null, status: 'ok' | 'over' | 'missing' | 'not measured' }} Row
  */
 
@@ -266,6 +283,33 @@ export function findInstallers(bundleDirs) {
   return found
 }
 
+/**
+ * The architecture slices of a macOS app's executables (Contents/MacOS): a fat Mach-O names its count, a thin one is
+ * one; the most among them, 0 when there is no Mach-O.
+ * @param {string} appDir @returns {number}
+ */
+export function macSlices(appDir) {
+  const dir = path.join(appDir, 'Contents', 'MacOS')
+  let most = 0
+  for (const name of list(dir)) {
+    const head = Buffer.alloc(8)
+    try {
+      const fd = fs.openSync(path.join(dir, name), 'r')
+      try {
+        if (fs.readSync(fd, head, 0, 8, 0) < 8) continue
+      } finally {
+        fs.closeSync(fd)
+      }
+    } catch {
+      continue
+    }
+    const magic = head.readUInt32BE(0)
+    if (magic === 0xcafebabe || magic === 0xcafebabf) most = Math.max(most, head.readUInt32BE(4))
+    else if ([0xfeedface, 0xfeedfacf, 0xcefaedfe, 0xcffaedfe].includes(magic)) most = Math.max(most, 1)
+  }
+  return most
+}
+
 /** Total size of the files under `p` (or of `p`). @param {string} p @returns {number} */
 export function treeSize(p) {
   const stat = fs.lstatSync(p)
@@ -329,14 +373,15 @@ export function windowsInstalled(bundleDir) {
  * @returns {Row[]}
  */
 export function evaluate(budgets, measurements, required) {
-  return budgets.map((budget) => {
-    const measurement = measurements.find((m) => m.id === budget.id) ?? null
+  return budgets.map((row) => {
+    const measurement = measurements.find((m) => m.id === row.id) ?? null
+    const budget = measurement?.budget ?? row
     /** @type {Row['status']} */
     const status = measurement
       ? measurement.value <= budget.max
         ? 'ok'
         : 'over'
-      : required.has(budget.id)
+      : required.has(row.id)
         ? 'missing'
         : 'not measured'
     return { budget, measurement, status }
@@ -488,11 +533,17 @@ export function measure({ bundleDirs, dist, metrics, placeholderCore }) {
   for (const dir of bundleDirs) {
     const app = list(path.join(dir, 'macos')).find((n) => n.endsWith('.app'))
     if (app) {
+      const appDir = path.join(dir, 'macos', app)
+      const slices = macSlices(appDir)
       installed = {
         id: 'installed',
-        value: treeSize(path.join(dir, 'macos', app)) + coreBytes,
+        value: treeSize(appDir) + coreBytes,
         source: app,
         notes: coreNote,
+      }
+      if (slices > 1) {
+        installed.budget = INSTALLED_UNIVERSAL
+        installed.notes = [...(coreNote ?? []), `universal: ${slices} architecture slices`]
       }
       break
     }

@@ -17,8 +17,10 @@ import {
   defaultBundleDirs,
   evaluate,
   findInstallers,
+  INSTALLED_UNIVERSAL,
   isDebugDist,
   lzmaSize,
+  macSlices,
   main,
   markdown,
   measure,
@@ -140,6 +142,23 @@ describe('budgets', () => {
     )
   })
 
+  it("holds a universal macOS app's footprint to its own 40 MB, every other install to 35 MB", () => {
+    assert.equal(INSTALLED_UNIVERSAL.id, 'installed')
+    assert.equal(INSTALLED_UNIVERSAL.max, 40 * MIB)
+    const app = { id: /** @type {const} */ ('installed'), value: 36 * MIB, source: 'Quran.app' }
+    const [single] = evaluate(BUDGETS, [app], new Set()).filter((r) => r.budget.id === 'installed')
+    assert.equal(single?.status, 'over')
+    const [universal] = evaluate(BUDGETS, [{ ...app, budget: INSTALLED_UNIVERSAL }], new Set()).filter(
+      (r) => r.budget.id === 'installed',
+    )
+    assert.equal(universal?.status, 'ok')
+    assert.equal(universal?.budget.what, 'installed footprint, macOS universal (without packs)')
+    assert.match(
+      markdown([universal]).join('\n'),
+      /\| installed footprint, macOS universal \(without packs\) \| ≤ 40 MB/,
+    )
+  })
+
   it('expands --require groups and rejects unknown rows', () => {
     assert.deepEqual([...parseRequire(['installers', 'dist'])], ['nsis', 'dmg', 'deb', 'appimage', 'dist'])
     assert.equal(parseRequire(['all']).size, BUDGETS.length)
@@ -168,6 +187,32 @@ describe('measurement', () => {
     assert.equal(path.basename(found.nsis ?? ''), 'Quran_0.1.0_x64-setup.exe')
     assert.equal(path.basename(found.dmg ?? ''), 'Quran_0.1.0_universal.dmg')
     assert.equal(found.deb, undefined)
+  })
+
+  it("counts a macOS app's binary slices and gives a universal app the universal footprint budget", () => {
+    const header = (/** @type {number[]} */ ...words) => {
+      const b = Buffer.alloc(64)
+      words.forEach((w, i) => b.writeUInt32BE(w, i * 4))
+      return b
+    }
+    const app = (/** @type {string} */ name, /** @type {Buffer} */ exe) => {
+      const bundle = path.join(fresh(), 'target', 'release', 'bundle')
+      put(path.join(bundle, 'macos', name, 'Contents', 'MacOS', 'quran-desktop'), exe)
+      put(path.join(bundle, 'macos', name, 'Contents', 'Info.plist'), '<plist/>')
+      return bundle
+    }
+    const fat = app('Quran.app', header(0xcafebabe, 2))
+    const thin = app('Quran.app', header(0xcffaedfe, 0x0100000c))
+    assert.equal(macSlices(path.join(fat, 'macos', 'Quran.app')), 2)
+    assert.equal(macSlices(path.join(thin, 'macos', 'Quran.app')), 1)
+    assert.equal(macSlices(path.join(fresh(), 'None.app')), 0)
+    const installed = (/** @type {string} */ bundle) =>
+      measure({ bundleDirs: [bundle], dist: null, metrics: null, placeholderCore: null }).measurements.find(
+        (m) => m.id === 'installed',
+      )
+    assert.equal(installed(fat)?.budget, INSTALLED_UNIVERSAL)
+    assert.match(installed(fat)?.notes?.join(' ') ?? '', /universal: 2 architecture slices/)
+    assert.equal(installed(thin)?.budget, undefined)
   })
 
   it("reads a deb's Installed-Size", () => {

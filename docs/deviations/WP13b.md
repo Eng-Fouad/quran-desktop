@@ -207,3 +207,13 @@ upload guard is unchanged (it refuses every executable). Checked on a setup made
 (makensis 3.09; 7-Zip 26.04, 26.02 and 23.01 list and unpack the uninstaller, p7zip 16.02 does not list it) and in
 `check-bundles.test.mjs` with a stand-in 7-Zip. A signed uninstaller (`!uninstfinalize`) still unpacks and keeps the
 flag (checked with a stand-in signing command).
+
+## Owner decision 2026-10-12: the universal macOS app's footprint budget is 40 MB
+
+The universal app carries the binary twice (arm64 and x86_64 slices) and measured 35.52 MiB on CI against the 35 MB
+`installed` budget, 34.8 MiB after WP-CI.md's deviation 11. The owner gave it its own budget, 40 MB (LEAD 26, §13.6);
+every single-architecture install keeps 35 MB. `size-budget.mjs` exports it as `INSTALLED_UNIVERSAL`; a measurement may
+name the budget it is held to, and the macOS .app's measurement names this one when `macSlices` finds a fat Mach-O of
+two or more slices in `Contents/MacOS` (the report and the CI annotation then read "installed footprint, macOS
+universal"). `size-budget.test.mjs` covers both budgets and the slice count (fat, thin, none).
+
