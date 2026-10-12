@@ -46,17 +46,62 @@ const hideOptions = cpuFilters ? { timeout: 45_000 } : {}
 const quickHide = cpuFilters ? ({ memoHideStyle: 'blank' } as const) : {}
 
 /**
- * Waits, 20 s at most, until this page gets 30 animation frames in a row on time (≤ 20 ms apart): while another test
- * file saturates the runner's CPUs, a timing measures that file, not the code under test.
+ * Waits, `ms` at most, until this page gets 30 animation frames in a row on time (≤ 20 ms apart), and says whether it
+ * did: while another test file saturates the runner's CPUs, a timing measures that file, not the code under test.
  */
-async function framesOnTime(): Promise<void> {
+async function framesOnTime(ms: number): Promise<boolean> {
   const frame = () => new Promise<number>((resolve) => requestAnimationFrame(resolve))
-  const end = performance.now() + 20_000
+  const end = performance.now() + ms
   let last = await frame()
-  for (let streak = 0; streak < 30 && performance.now() < end;) {
+  for (let streak = 0; performance.now() < end;) {
     const t = await frame()
     streak = t - last <= 20 ? streak + 1 : 0
     last = t
+    if (streak >= 30) return true
+  }
+  return false
+}
+
+/**
+ * A heartbeat on a worker thread of this page (a timer every 4 ms or so) that tells the machine's stalls from the main
+ * thread's: nothing the main thread does delays it, but it stops too while the OS gives the page's process no CPU
+ * (other processes have them, or the container's CPU quota is spent). `stop()` gives the gaps over 12 ms, as
+ * `[from, to]` on the page's clock.
+ */
+async function workerHeartbeat(): Promise<{ stop: () => Promise<[number, number][]> }> {
+  const source = `
+    const beats = []
+    let on = true
+    const beat = () => {
+      if (!on) return
+      beats.push(performance.timeOrigin + performance.now())
+      setTimeout(beat, 1)
+    }
+    onmessage = () => {
+      on = false
+      postMessage(beats)
+    }
+    beat()
+    postMessage(null)`
+  const url = URL.createObjectURL(new Blob([source], { type: 'text/javascript' }))
+  const worker = new Worker(url)
+  await new Promise((resolve) => (worker.onmessage = resolve))
+  return {
+    stop: () =>
+      new Promise((resolve) => {
+        worker.onmessage = (e: MessageEvent<number[]>) => {
+          worker.terminate()
+          URL.revokeObjectURL(url)
+          const at = e.data.map((t) => t - performance.timeOrigin)
+          const gaps: [number, number][] = []
+          for (let i = 1; i < at.length; i++) {
+            const [a, b] = [at[i - 1] as number, at[i] as number]
+            if (b - a > 12) gaps.push([a, b])
+          }
+          resolve(gaps)
+        }
+        worker.postMessage('stop')
+      }),
   }
 }
 
@@ -170,20 +215,23 @@ describe('hide mode on the page (§8.16)', hideOptions, () => {
     await until(() => document.getElementById('qd-memo-blank') === null, 2_000, 'filter removed')
   })
 
-  // Where filters are painted on the CPU, frames time that rasteriser, not the reveal: there the W presses come back to
-  // back, with no frame between them, and only the reveal's own work is held to its budget (in the blank style there).
-  // The timings share the runner's CPUs with the other test files (this file's WebKit run among them): the frames are
-  // timed once this page gets them on time, a sample that load still slows down is taken again, and a reveal that is
-  // really over budget fails every attempt.
+  // The timings share the runner's CPUs with the other test files (this file's WebKit run among them), and time the OS
+  // gives to other processes only ever adds to them. So the 90 presses run three times (Restart hides the words again
+  // between runs), each run once this page gets frames on time: a press counts with its least time of the three, and
+  // the frames with the run that kept them best. A reveal that is really over budget is over in every run. Frames that
+  // came late while a worker thread of this page also stalled were held up by the machine, not by this page, and are
+  // set aside; a run with more than a tenth of them is not judged, and when no run is (a saturated runner) the frames
+  // are left to the metrics suite (§8.18, §12.6) with a note. Where filters are painted on the CPU, frames time that
+  // rasteriser, not the reveal: there the W presses come back to back, with no frame between them, and only the
+  // reveal's own work is held to its budget (in the blank style there).
   it(
     'stays within the frame budget while W reveals word after word on a spread (§8.18)',
-    { retry: 2, timeout: 60_000 },
+    { timeout: 60_000 },
     async ({ annotate }) => {
       await bootOn50()
       await userEvent.keyboard('e')
       await until(() => $$('.w-hid').length > 0)
       await settle(300)
-      if (!cpuFilters) await framesOnTime()
 
       /** The script, style and layout (ms) of the `n`th W press. */
       const press = (n: number): number => {
@@ -202,14 +250,31 @@ describe('hide mode on the page (§8.16)', hideOptions, () => {
         void document.body.offsetHeight
         return performance.now() - start
       }
-      /** One W keydown per animation frame (twice the OS key-repeat rate), for 90 frames. */
-      const frames: { from: number; to: number }[] = []
-      const work: number[] = []
-      // A main-thread heartbeat, as in the word glide's test: a frame that comes late while it kept beating was not held
-      // up by script, style, layout or paint on this thread; the browser drew the other test files' iframes first.
-      const beats: number[] = []
-      if (cpuFilters) for (let n = 0; n < 90; n++) work.push(press(n))
-      else {
+      type Gap = { from: number; to: number }
+      const sorted = (xs: number[]) => [...xs].sort((a, b) => a - b)
+      const p95 = (xs: number[]) => sorted(xs)[Math.floor(xs.length * 0.95)] ?? 0
+      const works: number[][] = []
+      const judged: { run: number; late: number; idle: number; frames: number; p95: number }[] = []
+      const notes: string[] = []
+      for (let run = 1; run <= 3; run++) {
+        if (run > 1) {
+          memo.restart()
+          await settle(300)
+        }
+        expect(memo.wordCounts.revealed).toBe(0)
+        const work: number[] = []
+        works.push(work)
+        if (cpuFilters) {
+          for (let n = 0; n < 90; n++) work.push(press(n))
+          expect(memo.wordCounts.revealed).toBe(90)
+          continue
+        }
+        const onTime = await framesOnTime(5_000)
+        /** One W keydown per animation frame (twice the OS key-repeat rate), for 90 frames. */
+        const frames: Gap[] = []
+        // A main-thread heartbeat, as in the word glide's test: a frame that comes late while it kept beating was not
+        // held up by script, style, layout or paint on this thread; the browser drew the other test files' first.
+        const beats: number[] = []
         let running = true
         const channel = new MessageChannel()
         channel.port1.onmessage = () => {
@@ -217,6 +282,7 @@ describe('hide mode on the page (§8.16)', hideOptions, () => {
           if (running) setTimeout(() => channel.port2.postMessage(0), 2)
         }
         channel.port2.postMessage(0)
+        const machine = await workerHeartbeat()
         await new Promise<void>((resolve) => {
           let last = 0
           const step = (t: number) => {
@@ -230,29 +296,40 @@ describe('hide mode on the page (§8.16)', hideOptions, () => {
         })
         running = false
         channel.port1.close()
+        const stalls = await machine.stop()
+        expect(memo.wordCounts.revealed).toBe(90)
+
+        /** The longest the main thread went without a heartbeat during a frame gap. */
+        const blocked = (g: Gap) => {
+          const points = [g.from, ...beats.filter((b) => b > g.from && b < g.to), g.to]
+          return Math.max(...points.slice(1).map((p, i) => p - (points[i] ?? p)))
+        }
+        const lateFrames = frames.filter((g) => g.to - g.from > 20)
+        const starved = lateFrames.filter((g) => stalls.some(([a, b]) => a < g.to && b > g.from))
+        const idle = lateFrames.filter((g) => !starved.includes(g) && blocked(g) <= 16)
+        const own = frames.filter((g) => !starved.includes(g) && !idle.includes(g)).map((g) => g.to - g.from)
+        const late = own.filter((d) => d > 34).length
+        notes.push(
+          `run ${run}${onTime ? '' : ' (frames never on time first)'}: work p95 ${p95(work).toFixed(1)} ms; ` +
+            `of ${frames.length} frames, ${starved.length} late with the machine stalled, ${idle.length} late with ` +
+            `this thread idle; the rest p95 ${p95(own).toFixed(1)} ms, ${late} late`,
+        )
+        if (starved.length <= frames.length * 0.1)
+          judged.push({ run, late, idle: idle.length, frames: frames.length, p95: p95(own) })
       }
-      expect(memo.wordCounts.revealed).toBe(90)
-      const sorted = (xs: number[]) => [...xs].sort((a, b) => a - b)
-      const p95 = (xs: number[]) => sorted(xs)[Math.floor(xs.length * 0.95)] ?? 0
       // The script, style and layout of a reveal is a small part of a frame…
+      const work = (works[0] ?? []).map((_, n) => Math.min(...works.map((w) => w[n] ?? Infinity)))
+      notes.push(`work p95 ${p95(work).toFixed(1)} ms (each press at its least of ${works.length} runs)`)
+      if (!cpuFilters && judged.length === 0) notes.push('frames not judged: the machine stalled every run')
+      await annotate(notes.join('\n'))
       expect(p95(work)).toBeLessThan(8)
-      if (cpuFilters) return
-      // …and the frames keep coming at the display rate (≤ 16 ms of work each; one late frame of the
-      // shared test runner is tolerated). Late frames with an idle main thread are set aside, never most of them.
-      /** The longest the main thread went without a heartbeat during a frame gap. */
-      const blocked = (g: { from: number; to: number }) => {
-        const points = [g.from, ...beats.filter((b) => b > g.from && b < g.to), g.to]
-        return Math.max(...points.slice(1).map((p, i) => p - (points[i] ?? p)))
-      }
-      const own = frames.filter((g) => g.to - g.from <= 20 || blocked(g) > 16).map((g) => g.to - g.from)
-      await annotate(
-        `work p95 ${p95(work).toFixed(1)} ms; ${own.length} of ${frames.length} frames this thread's, p95 ` +
-          `${p95(own).toFixed(1)} ms, ${own.filter((d) => d > 34).length} late`,
-      )
-      expect(own.length).toBeGreaterThan(frames.length * 0.9)
-      const late = own.filter((d) => d > 34).length
-      expect(late).toBeLessThanOrEqual(1)
-      expect(p95(own)).toBeLessThan(20)
+      if (cpuFilters || judged.length === 0) return
+      // …and the frames keep coming at the display rate (≤ 16 ms of work each; one late frame of the shared test runner
+      // is tolerated). Late frames with an idle main thread are set aside, never more than a tenth of them.
+      const best = judged.reduce((a, b) => (b.late < a.late || (b.late === a.late && b.p95 < a.p95) ? b : a))
+      expect(best.idle, `run ${best.run}`).toBeLessThanOrEqual(best.frames * 0.1)
+      expect(best.late, `run ${best.run}`).toBeLessThanOrEqual(1)
+      expect(best.p95, `run ${best.run}`).toBeLessThan(20)
     },
   )
 })

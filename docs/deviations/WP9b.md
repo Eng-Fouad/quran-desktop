@@ -158,9 +158,15 @@ Tests:
     - So the browser test's frame-rate half (§8.18) does not run there: on WebKit under Linux the W presses come back
       to back and only their work is checked (`memo.browser.test.ts`); there the memo tests hide with `blank` unless
       they are about the blur, and hide mode's tests get 45 s (pointer actions wait for frames). The self-test's
-      browser test hides with `blank`. Elsewhere the frames are timed once the page gets 30 in a row on time, frames
-      late while the main thread was idle are set aside as in the word glide's test (never more than 10 %), and the
-      test is retried twice, since the other test files (this file's WebKit run among them) share the runner's CPUs.
+      browser test hides with `blank`.
+    - The other test files (this file's WebKit run among them) share the runner's CPUs, and time the OS gives to other
+      processes only adds to a timing. So the 90 presses run three times: each press counts with its least time of
+      the three, and the frames with the run that kept them best. Each run starts once the page gets 30 frames in a
+      row on time (5 s at most). Late frames are set aside when the main thread was idle (as in the word glide's test,
+      never more than 10 %) or when a worker thread of the page stalled too (the machine gave the process no CPU). A
+      run with more than 10 % of the latter is not judged; when no run is (a saturated runner, such as a CPU-quota
+      container on a busy host), the frame half is skipped with a note in the test's annotation and left to the
+      metrics suite (§8.18, §12.6). The work check always runs.
 
 15. **Ports**: shots and scratch servers on 1740–1741 (the orchestrator's range); §14.3 says 1520.
 
