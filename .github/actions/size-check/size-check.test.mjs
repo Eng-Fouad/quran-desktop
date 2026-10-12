@@ -7,7 +7,7 @@ import fs from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { after, describe, it } from 'node:test'
-import { main } from './size-check.mjs'
+import { CRATES_IO_SOURCES, main, releaseRustflags } from './size-check.mjs'
 
 const work = fs.mkdtempSync(path.join(tmpdir(), 'qd-size-check-'))
 after(() => fs.rmSync(work, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }))
@@ -55,5 +55,24 @@ describe('size-check', () => {
     assert.equal(main(['report'], {}), 2)
     assert.equal(main(['bogus'], {}), 2)
     assert.equal(main(['--nope'], {}), 2)
+  })
+
+  it('remaps the cargo registry sources in release RUSTFLAGS, crates.io last, after any RUSTFLAGS', () => {
+    const posix = '/Users/runner/.cargo/registry/src'
+    assert.equal(
+      releaseRustflags({}, '/Users/runner', path.posix),
+      `--remap-path-prefix=${posix}/= --remap-path-prefix=${posix}/${CRATES_IO_SOURCES}/=`,
+    )
+    const win = 'C:\\Users\\runneradmin\\.cargo\\registry\\src'
+    assert.equal(
+      releaseRustflags(
+        { CARGO_HOME: 'C:\\Users\\runneradmin\\.cargo', RUSTFLAGS: ' -Dwarnings ' },
+        'C:\\Users\\someone',
+        path.win32,
+      ),
+      `-Dwarnings --remap-path-prefix=${win}\\= --remap-path-prefix=${win}\\${CRATES_IO_SOURCES}\\=`,
+    )
+    assert.equal(releaseRustflags({}, '/home/a b', path.posix), null, 'RUSTFLAGS cannot carry whitespace')
+    assert.equal(main(['rustflags'], { CARGO_HOME: path.join(work, 'cargo') }), 0)
   })
 })

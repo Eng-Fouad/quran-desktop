@@ -319,11 +319,16 @@ jobs:
           } >> "$GITHUB_ENV"
           echo "AppImage signing: GPG key $QD_KEY"
 
+      - name: Release RUSTFLAGS (dependency panic locations without $CARGO_HOME/registry/src/…, as CI's size check)
+        id: rustflags
+        run: echo "rustflags=$(node .github/actions/size-check/size-check.mjs rustflags)" >> "$GITHUB_OUTPUT"
+
       - name: Build the installers (tauri-action; build only, it uploads nothing)
         id: tauri
         uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f # v1.0.0
         env:
           QD_REQUIRE_CORE: '1'
+          RUSTFLAGS: ${{ steps.rustflags.outputs.rustflags }}
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
           AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}

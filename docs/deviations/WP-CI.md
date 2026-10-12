@@ -13,7 +13,7 @@ WP-CI owns no i18n dictionary, so it adds no en/ar strings.
 | `.github/actions/upload/` | The only `actions/upload-artifact` use: runs `scripts/check-artifacts.mjs` on exactly the same paths first. |
 | `.github/actions/scrub/` | Last step of the core-building jobs (`if: always()`): removes core.db, fixtures, data/cache, data/dev-packs, `target/*/data/core.db*` and `target/**/bundle/` before the caching actions' post-job steps. |
 | `.github/actions/drift-check/` | Git-free drift check (LEAD decision 1 style) for `cargo xtask licenses` → `src/lib/about/thirdparty.json`. |
-| `.github/actions/size-check/` | Windows installer size check around the placeholder core.db (§13.3, §13.6). |
+| `.github/actions/size-check/` | This OS's installers around the placeholder core.db, their contents and the §13.6 budgets (§13.3, §13.6); `size-check.mjs rustflags` gives the release builds' RUSTFLAGS (deviation 11). |
 | `.github/actions/policy/` | Structural checks on `.github/**` that keep the licensing rules in place (deviation 4). |
 | `.github/actions/tsconfig.json` | Strict type-check of all CI tooling (`// @ts-check` JavaScript): `pnpm exec tsc -p .github/actions/tsconfig.json`. |
 | `scripts/check-artifacts.mjs` | The licensing guard (deviation 2). |
@@ -153,17 +153,25 @@ WP-CI owns no i18n dictionary, so it adds no en/ar strings.
       text body; `Cargo.lock` and `thirdparty.json` lose encoding_rs, core_detect, multiversion_no_op and simdutf8.
     - **The print-labels font as WOFF2** (`public/fonts/QuranPrintLabels.woff2`, from the generator): −33 KB here,
       −1.07 MiB of `dist/`.
+    - **Cargo registry paths remapped in the release builds**: about 760 panic locations per slice carried
+      `$CARGO_HOME/registry/src/index.crates.io-1949cf8c6b5b557f/`. `size-check.mjs rustflags` prints RUSTFLAGS with
+      `--remap-path-prefix` for that directory (and for `registry/src/` as a fallback), so they read
+      `tokio-1.53.2/src/…`. The size-check action and release.yml's tauri-action step build with it, on every OS.
+      −115 KB here (x86_64 slice −55,968 B, arm64 −52,240 B).
 
     Built as CI builds it on main (`--target universal-apple-darwin`, ad-hoc signed, around the placeholder core.db),
-    the footprint went from 35.48 MiB (37,206,459 B; CI measured 35.52) to 34.87 MiB (36,563,147 B), and the dmg
-    from 17.74 to 17.33 MiB. Every platform's binary loses the same code, so NSIS, deb and AppImage only shrink.
+    the footprint went from 35.48 MiB (37,206,459 B; CI measured 35.52) to 34.76 MiB (36,448,363 B), 0.24 MiB under,
+    and the dmg from 17.74 to 17.33 MiB. Every platform's binary loses the same code, so NSIS, deb and AppImage only
+    shrink.
 
     Not applied, for the lead: rustls on ring saves another 1,057,160 B here (measured; reqwest `rustls-no-provider`,
     `rustls/ring`, a provider installed before every client: `Http::new`, xtask, the quran-audio test client), but
-    LEAD 22 keeps aws-lc-rs for X25519MLKEM768. A newer target CPU for the x86_64 slice (`x86-64-v3`) saves nothing
-    (+12 KB). `--remap-path-prefix` of the cargo registry in the release builds would save about 0.1 MB (760 panic
-    locations per slice carry `$CARGO_HOME/registry/src/index.crates.io-…/`), at the cost of RUSTFLAGS in ci.yml and
-    release.yml.
+    LEAD 22 keeps aws-lc-rs for X25519MLKEM768 (LEAD 22's 28 KB was the Windows installer, compressed; the universal
+    app carries aws-lc twice, uncompressed). Measured and dropped: a newer target CPU for the x86_64 slice
+    (`x86-64-v3`, +12 KB); LLVM's machine outliner on x86_64, which arm64 runs by default at opt-level z (−668 KB of
+    code but +628 KB of unwind tables, −26 KB net, and not a default for that target). The x86_64 slice's code is 44 %
+    larger than arm64's. The largest single differences are rustfft's SSE and AVX paths (811 KB against 337 KB; rubato
+    turns on rustfft's default features) and aws-lc's x86 assembly (875 KB against 461 KB).
 
 ## Acceptance
 
@@ -246,8 +254,8 @@ summarised here:
     .github/actions/policy/policy.mjs"`.
   - **ubuntu-22.04:** §13.3 pins this runner image for its glibc baseline. Watch GitHub's deprecation schedule for it.
   - **reqwest without `charset` (deviation 11):** a change to `[workspace.dependencies]`, which needs your agreement
-    (DEVELOPING §6). Please record it in LEAD.md, or revert that commit and choose another 0.33 MB: without it the
-    universal macOS app is over its footprint budget again.
-  - **Headroom (deviation 11):** the footprint is now 0.13 MiB under 35 MiB here (about 0.1 MiB on CI, which measured
-    34 KB more before the change), not the 1 MiB aimed for. rustls on ring would add 1.01 MiB; it reverses LEAD 22
+    (DEVELOPING §6). ARCHITECTURE.md's listing already matches. Please record it in LEAD.md, or revert that commit and
+    choose another 0.33 MB: without it the universal macOS app is 81 KB over its footprint budget again.
+  - **Headroom (deviation 11):** the footprint is now 0.24 MiB under 35 MiB here (about 0.21 MiB on CI, which measured
+    34 KB more before these changes), not the 1 MiB aimed for. rustls on ring would add 1.01 MiB; it reverses LEAD 22
     (X25519MLKEM768), so it is yours to decide.

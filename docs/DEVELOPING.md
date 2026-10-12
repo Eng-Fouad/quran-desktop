@@ -375,6 +375,7 @@ Store, App Store Connect). Decisions on budgets, signing and stores: [`deviation
 
   ```sh
   node .github/actions/size-check/size-check.mjs aside      # prints where the real core.db went
+  export RUSTFLAGS="$(node .github/actions/size-check/size-check.mjs rustflags)"  # the release builds' flags
   pnpm tauri build --bundles nsis                           # build.rs writes the 0-byte placeholder
   node scripts/check-bundles.mjs --core placeholder
   node scripts/size-budget.mjs --placeholder-core <the printed path>

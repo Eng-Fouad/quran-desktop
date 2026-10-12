@@ -49,6 +49,9 @@ runs:
         APPLE_SIGNING_IDENTITY: ${{ runner.os == 'macOS' && '-' || '' }}
       run: |
         if [ -z "$APPLE_SIGNING_IDENTITY" ]; then unset APPLE_SIGNING_IDENTITY; fi
+        # Release RUSTFLAGS, as release.yml builds: dependency panic locations without $CARGO_HOME/registry/src/….
+        RUSTFLAGS="$(node "$GITHUB_ACTION_PATH/size-check.mjs" rustflags)"
+        export RUSTFLAGS
         # shellcheck disable=SC2086 # QD_BUILD_ARGS is a list of arguments
         pnpm tauri build $QD_BUILD_ARGS
 

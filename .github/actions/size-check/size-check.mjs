@@ -11,11 +11,14 @@
 //       moves the real core.db to <state>/core.db and prints that path (also `aside=<path>` to $GITHUB_OUTPUT)
 //   node size-check.mjs restore [--state <dir>]
 //       moves it back over the placeholder (run it with `if: always()`; a second restore is a no-op)
+//   node size-check.mjs rustflags
+//       prints the RUSTFLAGS of a release build (this one and release.yml's): $RUSTFLAGS plus `--remap-path-prefix`
+//       for the cargo registry sources (see `releaseRustflags`)
 //
 // The state lives in --state (default $RUNNER_TEMP/qd-size-check, else the OS temp dir). Nothing is uploaded.
 import console from 'node:console'
 import fs from 'node:fs'
-import { tmpdir } from 'node:os'
+import { homedir, tmpdir } from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
@@ -24,6 +27,28 @@ import { parseArgs } from 'node:util'
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..')
 
 /** @typedef {{ core: string, aside: string, coreBytes: number }} State */
+
+/** Cargo's source directory for crates.io (`$CARGO_HOME/registry/src/<this>`, cargo 1.85 and later). */
+export const CRATES_IO_SOURCES = 'index.crates.io-1949cf8c6b5b557f'
+
+/**
+ * RUSTFLAGS for a release build: `env.RUSTFLAGS` plus `--remap-path-prefix` for the cargo registry sources. A
+ * dependency's panic locations then read `tokio-1.53.2/src/…` instead of
+ * `$CARGO_HOME/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-1.53.2/src/…`: about 55 KB less per binary, 108 KB
+ * of the universal macOS app (§13.6 installed footprint; docs/deviations/WP-CI.md, deviation 11). rustc applies the last
+ * matching prefix, so crates.io's directory is mapped after the registry-wide fallback. Returns null when the path has
+ * whitespace, which RUSTFLAGS cannot carry.
+ * @param {NodeJS.ProcessEnv} env @param {string} home @param {path.PlatformPath} [p] the platform's path module
+ * @returns {string | null}
+ */
+export function releaseRustflags(env, home, p = path) {
+  const sources = p.join(env.CARGO_HOME || p.join(home, '.cargo'), 'registry', 'src')
+  if (/\s/.test(sources)) return null
+  const remap = [sources, p.join(sources, CRATES_IO_SOURCES)].map(
+    (from) => `--remap-path-prefix=${from}${p.sep}=`,
+  )
+  return [env.RUSTFLAGS?.trim() ?? '', ...remap].filter(Boolean).join(' ')
+}
 
 /** @param {string[]} argv @param {NodeJS.ProcessEnv} [env] @returns {number} */
 export function main(argv, env = process.env) {
@@ -88,8 +113,17 @@ export function main(argv, env = process.env) {
     return 0
   }
 
+  if (command === 'rustflags') {
+    const flags = releaseRustflags(env, homedir())
+    if (flags === null) {
+      console.error('size-check: CARGO_HOME has whitespace; the registry paths stay unmapped')
+      console.log(env.RUSTFLAGS ?? '')
+    } else console.log(flags)
+    return 0
+  }
+
   console.error(
-    'usage: size-check.mjs aside|restore [--core <file>] [--state <dir>]  (see the header of this file)',
+    'usage: size-check.mjs aside|restore|rustflags [--core <file>] [--state <dir>]  (see the header of this file)',
   )
   return 2
 }
