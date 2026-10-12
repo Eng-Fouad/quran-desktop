@@ -773,4 +773,18 @@ describe('labels', () => {
     await settings.update({ uiLanguage: 'ar' })
     expect(shortcuts.format(def({ id: 'x', keys: ['Space'] }))).toBe(i18n.t('shortcuts.keys.space'))
   })
+
+  it('takes an empty layout map (Chromium on Linux with no layout to read) for none', async () => {
+    vi.stubGlobal('navigator', {
+      ...navigator,
+      keyboard: { getLayoutMap: () => Promise.resolve(new Map([['Equal', '´']])) },
+    })
+    await shortcuts.refreshLayoutMap()
+    expect(shortcuts.layoutMap?.size).toBe(1)
+    vi.stubGlobal('navigator', { ...navigator, keyboard: { getLayoutMap: () => Promise.resolve(new Map()) } })
+    await shortcuts.refreshLayoutMap()
+    expect(shortcuts.layoutMap).toBeNull()
+    const scaleUp = appShortcuts.find((d) => d.id === 'view.uiScaleUp') as ShortcutDef
+    expect(shortcuts.format(scaleUp)).toBe('Ctrl+Shift+=')
+  })
 })

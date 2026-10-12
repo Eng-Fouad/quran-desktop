@@ -174,12 +174,16 @@ class ShortcutsStore implements Store {
     }
   }
 
-  /** Re-reads the keyboard layout map for labels (`format`). A no-op where the Keyboard Map API is missing. */
+  /**
+   * Re-reads the keyboard layout map for labels (`format`). A no-op where the Keyboard Map API is missing. An empty map
+   * (Chromium on Linux without a keyboard layout to read, as in a headless run) is no map: `null`, the US labels.
+   */
   async refreshLayoutMap(): Promise<void> {
     const keyboard = (navigator as Navigator & { keyboard?: KeyboardWithLayoutMap }).keyboard
     if (typeof keyboard?.getLayoutMap !== 'function') return
     try {
-      const next = new Map(await keyboard.getLayoutMap())
+      const read = new Map(await keyboard.getLayoutMap())
+      const next = read.size > 0 ? read : null
       if (!sameMap(next, this.layoutMap)) this.layoutMap = next
     } catch {
       // Not permitted here (e.g. a cross-origin frame): keep the US labels.

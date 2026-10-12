@@ -259,10 +259,14 @@ describe('labels (§7.7 format)', () => {
     await bootApp({ edit: (b) => ({ ...b, app: { ...b.app, platform: 'windows' } }) })
     const palette = shortcuts.defs.find((d) => d.id === 'app.palette')
     expect(palette && shortcuts.format(palette)).toBe('Ctrl+K')
-    const hasMap =
-      typeof (navigator as { keyboard?: { getLayoutMap?: unknown } }).keyboard?.getLayoutMap === 'function'
+    // Chromium has the Keyboard Map API everywhere, but on Linux without a keyboard layout to read (headless CI) its map
+    // is empty: the store then keeps no map, as where the API is missing (WebKit).
+    const keyboard = (
+      navigator as { keyboard?: { getLayoutMap?: () => Promise<ReadonlyMap<string, string>> } }
+    ).keyboard
+    const browserMap = typeof keyboard?.getLayoutMap === 'function' ? await keyboard.getLayoutMap() : null
     await shortcuts.refreshLayoutMap()
-    if (hasMap) expect(shortcuts.layoutMap?.size ?? 0).toBeGreaterThan(20)
+    if (browserMap !== null && browserMap.size > 0) expect(shortcuts.layoutMap?.size ?? 0).toBeGreaterThan(20)
     else expect(shortcuts.layoutMap).toBeNull()
   })
 })
