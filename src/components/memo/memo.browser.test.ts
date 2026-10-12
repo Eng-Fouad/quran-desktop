@@ -35,12 +35,30 @@ async function until(done: () => boolean, timeout = 5_000, message = 'condition'
 
 /**
  * Playwright's WebKit on Linux paints CSS filters on the CPU (CI's runner has no GPU): a frame of the hidden spread takes
- * about a second there (300 spans under `blur()` on an empty page take 100–450 ms a frame; Chromium on the same runner,
- * 16.7 ms), mostly on the main thread, and every pointer action waits for frames. Hide mode's tests get three times the
- * time there, and the frame budget checks only the reveal's own work (WP9b 14).
+ * about a second there with the blur (300 spans under `blur()` on an empty page take 100–450 ms a frame; Chromium on the
+ * same runner, 16.7 ms), about 50 ms with the blank style, mostly on the main thread, and every pointer action waits for
+ * frames. There the tests hide with the blank style unless they are about the blur, hide mode's tests get three times
+ * the time, and the frame budget checks only the reveal's own work (WP9b 14). The blur's painting would also take the
+ * CPUs from the Chromium run of this file beside it, whose frame budget is measured at the same time.
  */
 const cpuFilters = server.browser === 'webkit' && server.platform === 'linux'
 const hideOptions = cpuFilters ? { timeout: 45_000 } : {}
+const quickHide = cpuFilters ? ({ memoHideStyle: 'blank' } as const) : {}
+
+/**
+ * Waits, 20 s at most, until this page gets 30 animation frames in a row on time (≤ 20 ms apart): while another test
+ * file saturates the runner's CPUs, a timing measures that file, not the code under test.
+ */
+async function framesOnTime(): Promise<void> {
+  const frame = () => new Promise<number>((resolve) => requestAnimationFrame(resolve))
+  const end = performance.now() + 20_000
+  let last = await frame()
+  for (let streak = 0; streak < 30 && performance.now() < end;) {
+    const t = await frame()
+    streak = t - last <= 20 ? streak + 1 : 0
+    last = t
+  }
+}
 
 /** Word spans of the visible pages' interactive renditions. */
 function words(): HTMLElement[] {
@@ -55,7 +73,7 @@ function blurFocus(): void {
 async function bootOn50(settingsPatch: Parameters<typeof bootApp>[0] = {}): Promise<void> {
   await bootApp({
     ...settingsPatch,
-    settings: { mushafStyle: 'hafs', pageMode: 'spread', ...settingsPatch.settings },
+    settings: { mushafStyle: 'hafs', pageMode: 'spread', ...quickHide, ...settingsPatch.settings },
   })
   reader.goToPage(50, { transition: false })
   await until(() => reader.visiblePages.includes(50) && words().length > 0, 5_000, 'page 50')
@@ -79,7 +97,7 @@ afterEach(async () => {
 
 describe('hide mode on the page (§8.16)', hideOptions, () => {
   it('E hides every word of the spread but the ayah markers; W and Shift+W reveal; E shows the text again', async () => {
-    await bootOn50()
+    await bootOn50({ settings: { memoHideStyle: 'blur' } })
     await userEvent.keyboard('e')
     await until(() => $$('.w-hid').length > 0, 2_000, 'hidden')
     const all = words()
@@ -127,7 +145,7 @@ describe('hide mode on the page (§8.16)', hideOptions, () => {
   })
 
   it('reveals a hidden word under the pointer (memoRevealOnHover), only while hiding', async () => {
-    await bootOn50({ settings: { memoRevealOnHover: true } })
+    await bootOn50({ settings: { memoHideStyle: 'blur', memoRevealOnHover: true } })
     await userEvent.keyboard('e')
     await until(() => $$('.w-hid').length > 0)
     const target = $$('.mp-glyphs[data-interactive] .w.w-hid')[10] as HTMLElement
@@ -153,17 +171,19 @@ describe('hide mode on the page (§8.16)', hideOptions, () => {
   })
 
   // Where filters are painted on the CPU, frames time that rasteriser, not the reveal: there the W presses come back to
-  // back, with no frame between them, and only the reveal's own work is held to its budget.
-  // The timings share the runner's CPUs with the other test files: a sample they slow down is taken again, and a reveal
-  // that is really over budget fails every attempt.
+  // back, with no frame between them, and only the reveal's own work is held to its budget (in the blank style there).
+  // The timings share the runner's CPUs with the other test files (this file's WebKit run among them): the frames are
+  // timed once this page gets them on time, a sample that load still slows down is taken again, and a reveal that is
+  // really over budget fails every attempt.
   it(
     'stays within the frame budget while W reveals word after word on a spread (§8.18)',
-    { retry: 2 },
+    { retry: 2, timeout: 60_000 },
     async () => {
       await bootOn50()
       await userEvent.keyboard('e')
       await until(() => $$('.w-hid').length > 0)
       await settle(300)
+      if (!cpuFilters) await framesOnTime()
 
       /** The script, style and layout (ms) of the `n`th W press. */
       const press = (n: number): number => {
@@ -243,8 +263,10 @@ describe('the hide-mode toolbar', hideOptions, () => {
     peek.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, button: 0, pointerId: 1 }))
     await until(() => !memo.peeking, 1_000, 'peek released')
 
+    // The style button switches blur ⇄ blank (the test starts in blank where WebKit paints filters on the CPU).
+    const other = settings.value.memoHideStyle === 'blur' ? 'blank' : 'blur'
     await userEvent.click(bar.querySelector('[data-act="style"]') as HTMLElement)
-    await until(() => settings.value.memoHideStyle === 'blank', 2_000, 'style toggled')
+    await until(() => settings.value.memoHideStyle === other, 2_000, 'style toggled')
     await userEvent.click(bar.querySelector('[data-act="stop"]') as HTMLElement)
     await until(() => memo.active === null && $('[data-qd-memo-toolbar]') === null, 2_000, 'stopped')
   })
@@ -271,6 +293,7 @@ describe('the Memorize panel', () => {
       settings: {
         mushafStyle: 'hafs',
         pageMode: 'spread',
+        ...quickHide,
         sidebar: { open: true, widthPx: 300, tab: 'memorize' },
       },
     })
