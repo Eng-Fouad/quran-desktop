@@ -20,8 +20,9 @@
   - Wheel and touchpad (§8.13): `use:wheel` turns one page per gesture while the page fits, zooms with Mod+wheel or a
     pinch anchored at the pointer, and leaves scrolling alone when the canvas scrolls. Every zoom keeps the anchor
     point (the pointer, else the canvas centre) fixed: `scroll' = (scroll + p) · qfs'/qfs − p` on both axes, measured
-    on the book itself so the stage padding and centring cancel out. A new page on a scrolled canvas starts at its
-    top, on the reading side (right). Cursor moves and jumps scroll their ayah into view (`reader.revealRequest`).
+    on the book itself so the stage padding and centring cancel out; the steps of one pinch keep its first book point,
+    so whole-pixel scroll offsets (WebKit) never drift it. A new page on a scrolled canvas starts at its top, on the
+    reading side (right). Cursor moves and jumps scroll their ayah into view (`reader.revealRequest`).
   - Zoom control (§8.13, `ZoomControl`): + / the level (back to the fit) / − in the canvas's top inline-end corner,
     outside the scroll viewport; it is also the zoom readout, woken for 0.9 s by any zoom. Under it, the "Aa" display
     button (`DisplayControl`) opens the reading-display popover: theme, ink, style, pages, live on the page.
@@ -191,6 +192,15 @@
   /** The book's fractional point under the zoom anchor, captured before `qfs` changes. */
   let zoomAnchor: { fx: number; fy: number; x: number; y: number } | null = null
   let lastQfs = 0
+  /**
+   * The last zoom's anchor and where it left the book. Scroll offsets are whole pixels (WebKit truncates a fractional
+   * one), so the book point measured again at every step of a pinch or a run of `+` would drift by up to a pixel per
+   * step. A zoom at the same point, with the book where the last one left it (not scrolled, resized or moved since),
+   * keeps the last one's book point instead: the rounding never accumulates.
+   */
+  let lastZoom: { fx: number; fy: number; x: number; y: number; book: DOMRect } | null = null
+
+  const near = (a: number, b: number) => Math.abs(a - b) < 0.5
 
   $effect.pre(() => {
     const qfs = reader.qfs
@@ -203,7 +213,18 @@
         const b = book.getBoundingClientRect()
         const x = anchor?.x ?? v.left + v.width / 2
         const y = anchor?.y ?? v.top + v.height / 2
-        if (b.width > 0 && b.height > 0)
+        const kept = lastZoom
+        if (
+          kept &&
+          near(kept.x, x) &&
+          near(kept.y, y) &&
+          near(kept.book.left, b.left) &&
+          near(kept.book.top, b.top) &&
+          near(kept.book.width, b.width) &&
+          near(kept.book.height, b.height)
+        )
+          zoomAnchor = { fx: kept.fx, fy: kept.fy, x, y }
+        else if (b.width > 0 && b.height > 0)
           zoomAnchor = { fx: (x - b.left) / b.width, fy: (y - b.top) / b.height, x, y }
       }
       lastQfs = qfs
@@ -219,8 +240,10 @@
       const book = stage()
       if (!anchor || !vp || !book) return
       const b = book.getBoundingClientRect()
-      vp.scrollLeft += b.left + anchor.fx * b.width - anchor.x
-      vp.scrollTop += b.top + anchor.fy * b.height - anchor.y
+      // Rounded here, to the nearest pixel: WebKit would truncate, a bias of up to a pixel toward the start.
+      vp.scrollLeft = Math.round(vp.scrollLeft + b.left + anchor.fx * b.width - anchor.x)
+      vp.scrollTop = Math.round(vp.scrollTop + b.top + anchor.fy * b.height - anchor.y)
+      lastZoom = { ...anchor, book: book.getBoundingClientRect() }
     })
   })
 
