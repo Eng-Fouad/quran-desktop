@@ -117,8 +117,45 @@ export function verse(ayahId: number): HTMLElement | null {
   return document.getElementById(`tv-a${ayahId}`)
 }
 
+/** The feed's scroll offset and height and the boxes of the rows on screen, to the pixel. */
+function feedLayout(): string {
+  const s = scroller()
+  const box = s.getBoundingClientRect()
+  const rows = [...s.querySelectorAll('article')]
+    .map((el) => el.getBoundingClientRect())
+    .filter((r) => r.bottom > box.top && r.top < box.bottom)
+    .map((r) => `${Math.round(r.top)}+${Math.round(r.height)}`)
+  return `${Math.round(s.scrollTop)}/${s.scrollHeight}:${rows.join(',')}`
+}
+
+/** The feed holds still this long before it counts as at rest: longer than the view's 150 ms position report. */
+const REST_MS = 250
+
+/**
+ * Waits until the feed is at rest: its offset, its height and the rows on screen unchanged for `REST_MS`. The rows a
+ * jump, a scroll or a reflow brings in render at estimated heights and are placed again once measured (virtua), and
+ * the view reports the verse at the top 150 ms after the last scroll. How long that takes is the engine's: Chromium
+ * lays out a screen of new verses in a frame or two, headless WebKitGTK (CI, no GPU) up to half a second a frame.
+ */
+export async function feedAtRest(timeout = 5000): Promise<void> {
+  const deadline = performance.now() + timeout
+  let last = feedLayout()
+  let since = performance.now()
+  for (;;) {
+    await settle(40)
+    const now = feedLayout()
+    if (now !== last) {
+      last = now
+      since = performance.now()
+    } else if (performance.now() - since >= REST_MS) {
+      return
+    }
+    if (performance.now() > deadline) throw new Error(`the feed did not come to rest within ${timeout} ms`)
+  }
+}
+
 /** Scrolls the feed by script (not the user) and waits for the view to catch up. */
 export async function scrollFeedTo(offset: number): Promise<void> {
   scroller().scrollTop = offset
-  await settle(260)
+  await feedAtRest()
 }

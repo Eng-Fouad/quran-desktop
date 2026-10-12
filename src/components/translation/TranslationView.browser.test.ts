@@ -14,7 +14,19 @@ import type { AudioSnapshot, SearchHit } from '$lib/ipc/bindings'
 import { app, packs, player, quran, reader, settings, translations, ui } from '$lib/stores'
 import { hitOpener } from '../search/open'
 import TranslationHarness from './testing/TranslationHarness.svelte'
-import { boot, EN, resetAll, scrollFeedTo, scroller, settle, topOf, UR, until, verse } from './testing/setup'
+import {
+  boot,
+  EN,
+  feedAtRest,
+  resetAll,
+  scrollFeedTo,
+  scroller,
+  settle,
+  topOf,
+  UR,
+  until,
+  verse,
+} from './testing/setup'
 
 /** `Mod` (§7.7): ⌘ when the browser runs on macOS (the mock reports the browser's platform), Ctrl elsewhere. */
 const mod = () => (app.isMac ? 'Meta' : 'Control')
@@ -248,7 +260,7 @@ describe('the position, kept by ayah', () => {
     expect(translations.topAyahId).toBeNull()
     render(TranslationHarness)
     const again = await until(() => verse(id), `verse ${id} after reopening`)
-    await settle(300)
+    await feedAtRest()
     expect(Math.abs(topOf(again) - top)).toBeLessThanOrEqual(2)
   })
 
@@ -263,7 +275,7 @@ describe('the position, kept by ayah', () => {
     if (!row) throw new Error('no anchor row')
     const top = topOf(row)
     settings.value = { ...settings.value, translationFontPct: 140 }
-    await settle(300)
+    await feedAtRest()
     const after = verse(anchor.ayahId)
     if (!after) throw new Error('the anchor verse is gone')
     expect(Math.abs(topOf(after) - top)).toBeLessThanOrEqual(2)
@@ -277,7 +289,7 @@ describe('the position, kept by ayah', () => {
     reader.cursorAyahId = 262 // 2:255
     render(TranslationHarness)
     const target = await until(() => verse(262)?.querySelector('.arabic') && verse(262), 'the cursor verse')
-    await settle(300)
+    await feedAtRest()
     expect(Math.abs(topOf(target) - 12)).toBeLessThanOrEqual(2)
   })
 
@@ -293,7 +305,7 @@ describe('the position, kept by ayah', () => {
         () => (ayah === 1 ? $(`article.card[data-surah="${surah}"]`) : verse(first)),
         `the start of page ${page}`,
       )
-      await settle(300)
+      await feedAtRest()
       expect(Math.abs(topOf(target) - 12)).toBeLessThanOrEqual(2)
     }
     // A page whose verses are already on screen does not move the feed.
@@ -302,7 +314,7 @@ describe('the position, kept by ayah', () => {
     const p = quran.pageOfAyah(reader.layout, Number(onScreen?.dataset.qdAyah))
     if (p !== reader.page) {
       reader.goToPage(p)
-      await settle(300)
+      await feedAtRest()
       expect(Math.abs(scroller().scrollTop - before)).toBeLessThanOrEqual(2)
     }
   })
@@ -315,7 +327,7 @@ describe('the position, kept by ayah', () => {
     expect(quran.pageRange(reader.layout, page).from).toBeLessThan(id)
     reader.goToAyah(id, { select: true, highlightWords: [quran.firstWordOf(id)] })
     const target = await until(() => verse(id), 'the hit verse')
-    await settle(300)
+    await feedAtRest()
     expect(Math.abs(topOf(target) - 12)).toBeLessThanOrEqual(2)
     await until(() => document.activeElement === verse(id), 'focus on the hit')
     // A hit opened from the keyboard in the search field takes focus to its verse (as the Mushaf does to its ayah).
@@ -328,7 +340,7 @@ describe('the position, kept by ayah', () => {
       () => verse(other) !== null && document.activeElement === verse(other),
       'focus on the hit 3:10',
     )
-    await settle(300)
+    await feedAtRest()
     expect(Math.abs(topOf(verse(other) as HTMLElement) - 12)).toBeLessThanOrEqual(2)
     field.remove()
   })
@@ -341,7 +353,7 @@ describe('the position, kept by ayah', () => {
     // At once, before the feed is ready (the prefetch race and three frames).
     reader.goToSurah(2)
     const card = await until(() => $('article.card[data-surah="2"]'), 'the Al-Baqarah card')
-    await settle(400)
+    await feedAtRest()
     expect(Math.abs(topOf(card) - 12)).toBeLessThanOrEqual(2)
     expect(reader.cursorAyahId).toBe(quran.ayahId(2, 1))
     expect(verse(262) === null || topOf(verse(262) as HTMLElement) > scroller().clientHeight).toBe(true)
@@ -352,7 +364,7 @@ describe('the position, kept by ayah', () => {
     await mount()
     reader.flash = { ayahId: 2141, until: performance.now() + 1500 } // 18:1, shown with its surah card
     const card = await until(() => $('article.card[data-surah="18"]'), 'the Al-Kahf card')
-    await settle(300)
+    await feedAtRest()
     expect(Math.abs(topOf(card) - 12)).toBeLessThanOrEqual(2)
     await until(() => document.activeElement === verse(2141), 'focus on 18:1')
     expect(verse(2141)?.classList.contains('flashing')).toBe(true)
@@ -366,7 +378,7 @@ describe('the recitation', () => {
     // Through the store's `audio-state-changed` listener, as the engine reports it.
     await events.audioStateChanged.emit(snapshot(300))
     const playing = await until(() => verse(300), 'the recitation verse')
-    await settle(500)
+    await feedAtRest()
     expect(playing.classList.contains('playing')).toBe(true)
     expect(playing.getAttribute('aria-describedby')).toBe('tv-p300')
     const height = scroller().clientHeight
@@ -382,7 +394,7 @@ describe('the recitation', () => {
     expect(chip.textContent?.trim()).toBe('Return to recitation')
     await userEvent.click(chip)
     const next = await until(() => verse(301), 'verse 301')
-    await settle(500)
+    await feedAtRest()
     expect(Math.abs(topOf(next) / height - 0.3)).toBeLessThan(0.03)
     expect($('.follow')).toBeNull()
   })
