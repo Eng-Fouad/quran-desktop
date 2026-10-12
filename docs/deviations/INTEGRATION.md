@@ -832,6 +832,9 @@ UI renders in IBM Plex Sans Arabic (S24 "ar", S26). The budget stays 8 MiB; §13
   - Suspects: the view-transition snapshot of a full spread, and `readyForInstantRender` calling `fonts.ensure` and
     `pages.ensure` on every turn. The report's `diagnostics` (per-action long tasks, turn times, flip frames) shows
     where.
+  - Linux (CI 2026-10-12, headless WebKitGTK rendering in software): a web process's first view transition blocks the
+    main thread for about 3 s before it animates; later ones take about 0.2 s, and a turn without the transition
+    30 ms. Worth checking the first animated turn of the Linux app on a machine without GPU acceleration.
 - **Memory (frontend).** A spread plus playback holds 388–488 MiB of private working set, against 350 MB. The app
   process is 25–42 MiB; the rest is WebView2's renderer and GPU processes, with 24 QCF FontFaces loaded. Worth
   profiling: the 1.56 MB main chunk, the font registry's eviction, and decoded glyph caches.

@@ -16,6 +16,7 @@ import type { PageData } from '$lib/ipc/bindings'
 import { a11yItemId } from '$lib/mushaf/a11y'
 import { FRAME_BOTTOM, PH } from '$lib/mushaf/geometry'
 import { ACTION_BAR_DELAY_MS, ACTION_BAR_EVENT } from '$lib/mushaf/interactions'
+import { isInstantReady } from '$lib/mushaf/transitions'
 import { UNICODE_FIT, unicodeScale } from '$lib/mushaf/unicodeFit'
 import { glyphKey, renditionFontFamily, shapeWarmer, warmPageOf } from '$lib/mushaf/warmup'
 import { fonts, memo, pages, player, quran, reader, settings, ui } from '$lib/stores'
@@ -79,6 +80,21 @@ async function until(done: () => boolean, timeout = 5_000, message = 'condition'
     await new Promise((resolve) => setTimeout(resolve, 20))
   }
   throw new Error(`${message} not met within ${timeout} ms`)
+}
+
+/** Resolves with `promise`, or fails once `timeout` ms (real time) have passed without it settling. */
+async function within<T>(promise: Promise<T>, timeout: number, message: string): Promise<T> {
+  let timer = 0
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        timer = window.setTimeout(() => reject(new Error(`${message} not met within ${timeout} ms`)), timeout)
+      }),
+    ])
+  } finally {
+    window.clearTimeout(timer)
+  }
 }
 
 /** Waits until the page shows with its words fitted (hafs: no font wait). */
@@ -205,13 +221,29 @@ describe('page turns (§8.11)', () => {
     await bootApp({ settings: { pageMode: 'spread', mushafStyle: 'hafs', motion: 'full' } })
     await shown(1)
     if (typeof document.startViewTransition !== 'function') return
-    const start = vi.spyOn(document, 'startViewTransition')
+    // Only an instantly renderable destination animates (§8.11); page 3 is prefetched while page 1 shows.
+    await until(() => isInstantReady(3), 5_000, 'page 3 instantly renderable')
+    // The turn's state is read as the transition starts and its end is awaited rather than polled for: headless
+    // WebKitGTK renders in software and spends about 3 s (more under load) capturing a web process's first view
+    // transition and about 0.2 s on later ones, so a polling loop may sleep through the whole turn. The clean-up is
+    // under test, not the speed: the 10 s bound only catches a transition that never ends.
+    const startViewTransition = document.startViewTransition.bind(document)
+    let turn: string | undefined
+    let rootName = ''
+    const start = vi.spyOn(document, 'startViewTransition').mockImplementation((update) => {
+      turn = document.documentElement.dataset.turn
+      rootName = getComputedStyle(document.documentElement).viewTransitionName
+      return startViewTransition(update)
+    })
     reader.next()
-    await until(() => document.documentElement.dataset.turn === 'next', 2_000, 'html[data-turn]')
-    expect(getComputedStyle(document.documentElement).viewTransitionName).toBe('none')
+    await until(() => start.mock.results.length > 0, 2_000, 'the view transition')
+    expect(turn).toBe('next')
+    expect(rootName).toBe('none')
+    const transition = start.mock.results[0]?.value as ViewTransition
+    await within(transition.finished, 10_000, 'the end of the view transition')
     await until(
       () => document.documentElement.dataset.turn === undefined && !reader.turning,
-      3_000,
+      1_000,
       'turn end',
     )
     expect(start).toHaveBeenCalledTimes(1)
