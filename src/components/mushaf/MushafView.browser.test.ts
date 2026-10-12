@@ -65,12 +65,17 @@ function drawnScale(page: number): number {
   return Number.parseFloat(layers[layers.length - 1]?.style.getPropertyValue('--glyph-scale') ?? '')
 }
 
-/** Waits (real time) until `done()` holds. */
+/**
+ * Waits (real time) until `done()` holds. It is checked after every wait, the last one included: a long task that keeps
+ * the loop asleep past the deadline (headless WebKitGTK lays out and snapshots a turned spread in software, seconds in
+ * CI) must not fail a condition that holds when it wakes.
+ */
 async function until(done: () => boolean, timeout = 5_000, message = 'condition'): Promise<void> {
   const end = performance.now() + timeout
-  while (performance.now() < end) {
+  for (;;) {
     flushSync()
     if (done()) return
+    if (performance.now() >= end) break
     await new Promise((resolve) => setTimeout(resolve, 20))
   }
   throw new Error(`${message} not met within ${timeout} ms`)

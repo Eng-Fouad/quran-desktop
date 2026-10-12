@@ -22,11 +22,13 @@ const rect = (selector: string) => $(selector)?.getBoundingClientRect() ?? new D
 const RAIL = '[data-qd-page-rail]'
 const HUD = '[data-qd-flip-hud]'
 
+/** Waits (real time) until `done()` holds, checked after every wait (MushafView.browser.test.ts: a long task in WebKitGTK). */
 async function until(done: () => boolean, timeout = 5_000, message = 'condition'): Promise<void> {
   const end = performance.now() + timeout
-  while (performance.now() < end) {
+  for (;;) {
     flushSync()
     if (done()) return
+    if (performance.now() >= end) break
     await new Promise((resolve) => setTimeout(resolve, 20))
   }
   throw new Error(`${message} not met within ${timeout} ms`)
