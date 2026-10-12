@@ -141,6 +141,30 @@ WP-CI owns no i18n dictionary, so it adds no en/ar strings.
     docs-only PR whenever the image updates Edge. The default-icon hash is checked twice: in `pnpm test`
     (`brand.test.ts`) and by the policy check.
 
+11. **The universal macOS app's installed footprint (§13.6, `build (macos-latest)` on pushes to main).** It measured
+    35.52 MiB against 35 MiB: the `.app` (both architecture slices of the binary, each embedding `dist/`
+    Brotli-compressed) plus the real core.db (12,521,472 B, qdc). The release profile was already as small as it goes
+    (`opt-level = "z"`, fat LTO, one codegen unit, `strip`, `panic = "abort"`; rustfft and realfft at opt-level 3 cost
+    8 KB, measured). Reduced instead, measured with link maps of both slices:
+    - **SQLite without unused extensions** (`.cargo/config.toml` `[env] LIBSQLITE3_FLAGS`): FTS3/FTS4, R*Tree, dbstat,
+      soundex() and extension loading, which libsqlite3-sys compiles in and SQLite registers at startup. Every
+      full-text table is FTS5. −278 KB.
+    - **reqwest without `charset`** (`[workspace.dependencies]`; see Requests): −333 KB. Nothing reads a non-UTF-8
+      text body; `Cargo.lock` and `thirdparty.json` lose encoding_rs, core_detect, multiversion_no_op and simdutf8.
+    - **The print-labels font as WOFF2** (`public/fonts/QuranPrintLabels.woff2`, from the generator): −33 KB here,
+      −1.07 MiB of `dist/`.
+
+    Built as CI builds it on main (`--target universal-apple-darwin`, ad-hoc signed, around the placeholder core.db),
+    the footprint went from 35.48 MiB (37,206,459 B; CI measured 35.52) to 34.87 MiB (36,563,147 B), and the dmg
+    from 17.74 to 17.33 MiB. Every platform's binary loses the same code, so NSIS, deb and AppImage only shrink.
+
+    Not applied, for the lead: rustls on ring saves another 1,057,160 B here (measured; reqwest `rustls-no-provider`,
+    `rustls/ring`, a provider installed before every client: `Http::new`, xtask, the quran-audio test client), but
+    LEAD 22 keeps aws-lc-rs for X25519MLKEM768. A newer target CPU for the x86_64 slice (`x86-64-v3`) saves nothing
+    (+12 KB). `--remap-path-prefix` of the cargo registry in the release builds would save about 0.1 MB (760 panic
+    locations per slice carry `$CARGO_HOME/registry/src/index.crates.io-…/`), at the cost of RUSTFLAGS in ci.yml and
+    release.yml.
+
 ## Acceptance
 
 GitHub Actions cannot run here. Local evidence for each item, and what remains CI-only, is in the WP-CI report and
@@ -221,3 +245,9 @@ summarised here:
   - **Optional `package.json` scripts:** `"check:artifacts": "node scripts/check-artifacts.mjs"` and `"check:ci": "node
     .github/actions/policy/policy.mjs"`.
   - **ubuntu-22.04:** §13.3 pins this runner image for its glibc baseline. Watch GitHub's deprecation schedule for it.
+  - **reqwest without `charset` (deviation 11):** a change to `[workspace.dependencies]`, which needs your agreement
+    (DEVELOPING §6). Please record it in LEAD.md, or revert that commit and choose another 0.33 MB: without it the
+    universal macOS app is over its footprint budget again.
+  - **Headroom (deviation 11):** the footprint is now 0.13 MiB under 35 MiB here (about 0.1 MiB on CI, which measured
+    34 KB more before the change), not the 1 MiB aimed for. rustls on ring would add 1.01 MiB; it reverses LEAD 22
+    (X25519MLKEM768), so it is yours to decide.
