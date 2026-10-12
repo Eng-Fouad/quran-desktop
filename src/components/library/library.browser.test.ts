@@ -152,8 +152,11 @@ describe('Bookmarks panel', () => {
     expect(items.some((t) => t.startsWith('Delete'))).toBe(true)
     await userEvent.click($$('[role="menuitem"]').find((m) => plain(m).includes('Edit label')) as HTMLElement)
     await until(() => $('[role="dialog"] input') !== null)
-    const input = $('[role="dialog"] input') as HTMLInputElement
-    await userEvent.type(input, 'Ayat al-Kursi')
+    // The field by its role, found when the keys go in: an element handed to userEvent is sent as a CSS path through
+    // its ancestors' places among their siblings, taken at once, and the item menu's portal leaves <body> when its exit
+    // transition ends, which on a slow runner comes after that. The stale path matched nothing, and typing waited out
+    // the test.
+    await userEvent.type(page.getByRole('dialog').getByRole('textbox'), 'Ayat al-Kursi')
     await userEvent.keyboard('{Enter}')
     await until(() => library.bookmarkOf(262)?.label === 'Ayat al-Kursi')
     await until(() => plain(rows()[0]).includes('Ayat al-Kursi'))
