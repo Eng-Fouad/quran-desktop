@@ -35,10 +35,14 @@ into ARCHITECTURE.md.
    adding the real core.db as each format compresses it: NSIS LZMA (7-Zip or xz), deb gzip -6, dmg zlib -9, AppImage
    gzip -9 (squashfs; approximate). The macOS bundle is universal on pushes to the default branch, as in release.yml,
    and for the runner's architecture otherwise, to keep macOS minutes (10× on private repositories) down.
-4. **Linux tray dependency: no config change needed.** tauri-cli 2.12.1 (`interface/rust.rs`) adds
+4. **Linux tray dependency: one manifest line.** tauri-cli 2.12.1 (`interface/rust.rs`) adds
    `libayatana-appindicator3-1` to the deb's Depends and bundles `libayatana-appindicator3.so.1` into the AppImage
-   whenever the `tray-icon` feature is on, as it is. WP6b's fallback (adding it to `linux.deb.depends`) is unnecessary;
-   `check-bundles.mjs` asserts both on every CI run, and fails if a future tauri stops doing it.
+   when it sees tauri's `tray-icon` feature. *Corrected in the CI fixes:* it did not see it, because it skips the
+   features of a workspace-inherited dependency (`tauri = { workspace = true, … }`, `interface/rust/manifest.rs`), so
+   CI's Linux bundles had neither. `src-tauri/Cargo.toml` now has `[features] default = ["tauri/tray-icon"]`, which
+   the CLI reads; cargo already had the feature. WP6b's fallback (`linux.deb.depends`, plus `appimage.files` for the
+   library) would hard-code `/usr/lib/<triple>/`, which differs between the x64 and arm64 builds, whereas the CLI
+   finds it with pkg-config. `check-bundles.mjs` asserts both on every CI run, and fails if a future tauri stops.
 5. **Runtime rows of §13.6 are measured on the debug build**, the only one with test hooks (D24): an upper bound for the
    release build. Definitions the table lacks:
    - cold start: from just before the process is spawned to the webview's first contentful paint (split into native

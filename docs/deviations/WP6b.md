@@ -227,7 +227,8 @@ of its own, class `QuranDesktopSnapTarget`, above the webview container and exac
     - The one-time notice, outside Do Not Disturb.
   - **macOS:** Dock reopen after hiding to the tray; the template icon in light and dark menu bars.
   - **Linux:** the tray menu on GNOME (AppIndicator extension) and KDE. Also confirm that the deb's `Depends` (`dpkg-deb
-    -I`) and the AppImage carry libayatana-appindicator. If they do not, add `libayatana-appindicator3-1` to
-    `linux.deb.depends` in `tauri.linux.conf.json` (WP6b's file). Without the library the app runs without a tray.
+    -I`) and the AppImage carry libayatana-appindicator. Without the library the app runs without a tray. *Resolved:*
+    tauri-cli adds both through `[features]` in `src-tauri/Cargo.toml`, and CI's `check-bundles.mjs` asserts them
+    (WP13b.md item 4).
 - **Lead:** fold in the Snap Layouts outcome (§9.6), deviations 3–5 (§9.6) and 9 (§5.14 stretch). Also fix the
   multi-filter acceptance syntax in §14.3 (here and in WP6a/WP5e/…): `cargo test -p <crate> --lib -- a b c`.

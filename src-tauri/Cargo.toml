@@ -14,6 +14,13 @@ authors.workspace = true
 [lib]
 name = "quran_desktop_lib"
 
+# For tauri-cli, not cargo. The tray (WP6b) loads libayatana-appindicator at run time on Linux; tauri-cli adds it to the
+# deb's Depends and bundles it into the AppImage (for the build's architecture) only when it sees tauri's `tray-icon`
+# feature. It skips the features of a workspace-inherited dependency like `tauri` below (tauri-cli 2.12.1,
+# interface/rust/manifest.rs) but reads this table. Cargo gains nothing: the workspace's `tauri` enables `tray-icon`.
+[features]
+default = ["tauri/tray-icon"]
+
 [build-dependencies]
 tauri-build = { workspace = true }
 

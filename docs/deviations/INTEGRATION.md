@@ -776,8 +776,10 @@ UI renders in IBM Plex Sans Arabic (S24 "ar", S26). The budget stays 8 MiB; §13
   otherwise. `size-check.mjs` keeps only `aside`/`restore`, since the LZMA measurement moved to `size-budget.mjs`.
   CI's tooling tests now run `scripts/*.test.mjs`, and `.github/actions/tsconfig.json` type-checks the new scripts.
 - **WP6b's request** (does the deb depend on libayatana-appindicator?): tauri-cli 2.12.1 adds it, and the AppImage
-  library, whenever the `tray-icon` feature is on, as it is. `check-bundles` now asserts both on every CI run; no
-  `tauri.linux.conf.json` change is needed.
+  library, when it sees tauri's `tray-icon` feature. `check-bundles` now asserts both on every CI run.
+  *Corrected in the CI fixes:* the CLI skips a workspace-inherited dependency's features, so it needs
+  `[features] default = ["tauri/tray-icon"]` in `src-tauri/Cargo.toml` (WP13b.md item 4); `tauri.linux.conf.json`
+  is unchanged.
 
 ### Metric assertions (§12.6, §8.18) and runtime rows (§13.6)
 
@@ -848,7 +850,7 @@ UI renders in IBM Plex Sans Arabic (S24 "ar", S26). The budget stays 8 MiB; §13
   - §13.4: the tauri-action pin, the QUL archive and environment, `release-upload`, and the dry run.
   - §15.3 item 3: the signing decision.
   - §12.6: `tests/e2e/metrics` and `idle-cpu.mjs`.
-  - WP6b's appindicator request is resolved without a config change.
+  - WP6b's appindicator request is resolved without a `tauri.linux.conf.json` change (a `[features]` line; WP13b 4).
 
 ### Verification
 
