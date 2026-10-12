@@ -16,7 +16,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, onTes
 import { cdp, page as browserPage, server, userEvent } from 'vitest/browser'
 import { render } from 'vitest-browser-svelte'
 import '../../app.css'
-import type { Note, PageData, UserMarks } from '$lib/ipc/bindings'
+import type { MushafStyle, Note, PageData, UserMarks } from '$lib/ipc/bindings'
 import { fixtures } from '$lib/ipc/mock/fixtures'
 import {
   FOOTER_DEPTH,
@@ -28,7 +28,7 @@ import {
 } from '$lib/mushaf/ornaments'
 import { PRINT_EM, PRINT_HEAD_BASELINE, PRINT_METRICS, printMarginKind } from '$lib/mushaf/printLabels'
 import { parseColor, type Rgba } from '../../styles/token-harness'
-import { fonts, library, player, quran, reader, settings } from '$lib/stores'
+import { fonts, library, pages, player, quran, reader, settings } from '$lib/stores'
 import MushafPage from './MushafPage.svelte'
 import { resetPaintedHeaders } from './HeaderLine.svelte'
 import SurahInfoPopover, { surahInfo } from './SurahInfoPopover.svelte'
@@ -55,6 +55,11 @@ vi.mock('$lib/ipc', async (importOriginal) => {
       return { status: 'ok' as const, data: structuredClone(user.marks ?? empty) }
     },
     noteList: async () => ({ status: 'ok' as const, data: structuredClone(user.notes) }),
+    // The pages cache, as the reader fills it (one test needs it), from the same fixtures.
+    mushafGetPages: async (style: MushafStyle, pages: number[]) => {
+      const { fixtures: f } = await import('$lib/ipc/mock/fixtures')
+      return { status: 'ok' as const, data: await Promise.all(pages.map((n) => f.page(style, n))) }
+    },
   }
   const api = new Proxy(actual.api, {
     get: (target, key) => (key in fake ? fake[key as keyof typeof fake] : Reflect.get(target, key)),
@@ -601,10 +606,17 @@ describe('HeaderLine, SurahCartouche and SurahInfoPopover (§8.8)', () => {
 
   it('opens the surah info from a click and tints ayah 1 on hover, leaving the selection alone', async () => {
     reader.selection = { fromAyahId: 1805, toAyahId: 1805, anchorAyahId: 1805 }
+    // The page is in the pages cache, as in the reader: the word layer's hover reads there which surah a header opens.
+    await pages.ensure('hafs', [262])
+    onTestFinished(() => pages.reset())
     const { section } = await show(262)
     const sh = section.querySelector<HTMLElement>('.sh-line')
     if (!sh) throw new Error('no header')
-    sh.dispatchEvent(new PointerEvent('pointerover', { bubbles: true, pointerType: 'mouse' }))
+    // The pointer comes from a word, as a hand does (and as the browser reports a pointer resting where the page is
+    // drawn): the word layer hands the hover over to the header's ayah 1.
+    const over = { bubbles: true, pointerType: 'mouse' } as const
+    section.querySelector('.mp-glyphs .w')?.dispatchEvent(new PointerEvent('pointerover', over))
+    sh.dispatchEvent(new PointerEvent('pointerover', over))
     expect(reader.hover?.ayahId).toBe(quran.surah(15)?.firstAyahId)
     sh.click()
     flushSync()
