@@ -111,6 +111,18 @@ async function hoverAt(x: number, y: number): Promise<void> {
 
 const centreX = (r: DOMRect) => r.left + r.width / 2
 
+/**
+ * The revealed rail at rest: its fly-in over (Svelte cancels an intro's animation when it ends) and no lift transition
+ * running. A fixed wait is not enough: headless WebKitGTK's software-rendered frames can leave an animation sampled
+ * part-way long after its duration.
+ */
+async function railAtRest(): Promise<HTMLElement> {
+  await until(() => $(RAIL) !== null, 2_000, 'the rail')
+  const rail = $(RAIL) as HTMLElement
+  await until(() => rail.getAnimations().length === 0, 2_000, 'the rail at rest')
+  return rail
+}
+
 afterEach(async () => {
   // The mouse is shared by the tests: parked on the title bar, it leaves no rail open in the next app (the reveal zone
   // reaches up to the page number) and no tooltip behind.
@@ -281,11 +293,14 @@ describe('the pointer (§8.11, §10.2)', () => {
     const r = view.getBoundingClientRect()
     await userEvent.hover(view, { position: { x: 90, y: r.height - 6 } })
     await until(() => $(RAIL) !== null, 2_000, 'the rail')
-    await settle(250)
+    const appeared = rect(RAIL)
+    await railAtRest()
     const rail = rect(RAIL)
     const dock = rect('[data-qd-dock-pill]')
     expect(rail.height).toBe(28)
     expect(rail.bottom).toBeLessThanOrEqual(dock.top - 4)
+    // It appears where it floats: only its 6 px fly-in moves it, never a rise from the canvas edge through the dock.
+    expect(Math.abs(appeared.bottom - rail.bottom)).toBeLessThanOrEqual(6.5)
     expect(rail.left).toBeGreaterThanOrEqual(r.left)
     expect(rail.right).toBeLessThanOrEqual(r.right)
     // Hovering never takes focus.
@@ -320,8 +335,7 @@ describe('the pointer (§8.11, §10.2)', () => {
     expect($(RAIL)).toBeNull()
     // Just under it: the rail, above the dock, without taking focus.
     await hoverAt(x, edge + 4)
-    await until(() => $(RAIL) !== null, 2_000, 'the rail')
-    await settle(250)
+    await railAtRest()
     const rail = rect(RAIL)
     expect(rail.bottom).toBeLessThanOrEqual(rect('[data-qd-dock-pill]').top - 4)
     expect(document.activeElement?.matches(RAIL)).toBe(false)
@@ -457,8 +471,7 @@ describe('the pointer (§8.11, §10.2)', () => {
     expect($(RAIL)).toBeNull()
     const medallion = rect('section.mp[data-side="right"] .mp-foot-medallion')
     await hoverAt(centreX(medallion), medallion.top + medallion.height / 2)
-    await until(() => $(RAIL) !== null, 2_000, 'the rail')
-    await settle(250)
+    await railAtRest()
     expect(rect(RAIL).bottom).toBeLessThanOrEqual(toolbar.getBoundingClientRect().top - 4)
   })
 
@@ -474,8 +487,7 @@ describe('the pointer (§8.11, §10.2)', () => {
       // Above the zen dock's reveal zone (the window's bottom 80 px).
       expect(y).toBeLessThan(window.innerHeight - 80)
       await hoverAt(centreX(right), y)
-      await until(() => $(RAIL) !== null, 2_000, 'the rail')
-      await settle(250)
+      await railAtRest()
       expect(ui.zenDock).toBe(false)
       expect(Math.abs(rect(RAIL).bottom - (view.bottom - 8))).toBeLessThan(1.5)
     } finally {

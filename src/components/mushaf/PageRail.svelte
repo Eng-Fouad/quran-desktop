@@ -721,11 +721,15 @@
   })
 </script>
 
-<div class="rail-layer" bind:this={layer} style:--rail-lift={`${lift}px`}>
+<div class="rail-layer" bind:this={layer}>
   {#if shown}
+    <!-- The lift is the strip's own, so a new strip starts at the height `open()` measured. Set on the layer, it reached
+      the strip only after the strip's first style resolution, so a reveal at a new height (the first one: 8 px to
+      above the dock) rose from the previous lift through the dock in the 200 ms `inset-block-end` transition. -->
     <div
       bind:this={strip}
       class="strip"
+      style:--rail-lift={`${lift}px`}
       class:labels={labelsOn}
       class:dragging
       role="slider"
