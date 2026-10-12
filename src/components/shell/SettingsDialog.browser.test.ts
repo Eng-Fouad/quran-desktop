@@ -50,6 +50,14 @@ async function openFromRail(): Promise<HTMLElement> {
   return button
 }
 
+/**
+ * Waits until the dialog has closed and left the page: bits-ui unmounts it once its exit transition has run, which
+ * takes as many frames as the runner gives it (WebKit under load can take longer than a fixed wait).
+ */
+async function closed(): Promise<void> {
+  await expect.poll(settingsDialog, { timeout: 3_000 }).toBeNull()
+}
+
 async function section(id: string): Promise<void> {
   await userEvent.click($(`[role="dialog"] nav button[data-section="${id}"]`) as HTMLElement)
   await settle()
@@ -117,29 +125,26 @@ describe('Settings dialog (§7.4)', () => {
     const rail = await openFromRail()
     expect(isSearchField(document.activeElement)).toBe(true)
     await userEvent.keyboard(`{${mod()}>},{/${mod()}}`)
-    await settle(300)
+    await closed()
     expect(ui.view).toBe('reader')
-    expect(settingsDialog()).toBeNull()
     expect(document.activeElement).toBe(rail)
 
     await openFromRail()
     await userEvent.click($('[data-action="close-dialog"]') as HTMLElement)
-    await settle(300)
-    expect(settingsDialog()).toBeNull()
+    await closed()
     expect(document.activeElement).toBe(rail)
 
     await openFromRail()
     await userEvent.keyboard('{Escape}')
-    await settle(300)
+    await closed()
     expect(ui.view).toBe('reader')
     expect(document.activeElement).toBe(rail)
 
     await openFromRail()
     // Beside the dialog, over the reader: the scrim.
     await userEvent.click(document.body, { position: { x: 200, y: 500 } })
-    await settle(300)
+    await closed()
     expect(ui.view).toBe('reader')
-    expect(settingsDialog()).toBeNull()
 
     // Ctrl+, opens it too, and the rail button closes it again.
     ;(document.activeElement as HTMLElement | null)?.blur()
@@ -244,9 +249,8 @@ describe('Settings dialog (§7.4)', () => {
     const rail = await openFromRail()
     await section('storage')
     await userEvent.click($('[data-action="open-downloads"]') as HTMLElement)
-    await settle(400)
+    await closed()
     expect(ui.view).toBe('downloads')
-    expect(settingsDialog()).toBeNull()
     expect(document.activeElement).not.toBe(rail)
     expect($('main#qd-main')?.contains(document.activeElement)).toBe(true)
     // The manager's heading has it (owner request 2026-10-11, the manager's focus).
@@ -467,9 +471,8 @@ describe('Settings dialog (§7.4)', () => {
     await expect.poll(() => document.activeElement?.getAttribute('data-action')).toBe('copy-diagnostics')
     expect(railButton().getAttribute('aria-expanded')).toBe('true')
     await userEvent.keyboard('{Escape}')
-    await settle(300)
+    await closed()
     expect(ui.view).toBe('reader')
-    expect(settingsDialog()).toBeNull()
   })
 
   it('mirrors in the Arabic UI: the close button at the top left, the navigation on the right', async () => {
