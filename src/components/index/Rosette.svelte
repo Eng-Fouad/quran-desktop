@@ -61,7 +61,9 @@
   }
 
   /* Size-aware digits: 0.42 of the edge in lists (10 px at 24), growing slower at larger sizes (11.7 px at 28, 13 px
-     at 36) so they stay inside the star's inner octagon. */
+     at 36) so they stay inside the star's inner octagon. The fit below is worked out from the faces' advances, so the
+     digits keep them exactly: Chromium on Linux otherwise hints each advance to a whole pixel (a 4.6 px Inter digit
+     takes 5 px, and 114 at 22 px grows from 13.3 to 14.6 px, wider than the star's 14.3). */
   .num {
     position: relative;
     font-size: min(calc(var(--_size) * 0.42), calc(var(--_size) / 6 + 7px));
@@ -69,6 +71,7 @@
     font-variant-numeric: tabular-nums;
     line-height: 1;
     letter-spacing: 0;
+    text-rendering: geometricPrecision;
   }
 
   /* Three Western Arabic digits: 0.32 of the edge, so 114 (and ayah 286) stay inside the star at every size (6.4 px at
