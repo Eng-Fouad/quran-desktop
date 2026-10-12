@@ -12,7 +12,8 @@
 #   1. builds core.db from the QUL exports in the private store (never qdc) and asserts it: > 1 MiB, the core tables,
 #      meta.source = 'qul', verify-core (./.github/actions/core with source: qul);
 #   2. builds with tauri-action (pinned; build only, it uploads nothing itself) under QD_REQUIRE_CORE=1, signing what
-#      is configured (below; otherwise unsigned, and ad hoc on macOS);
+#      is configured (below; otherwise unsigned, and ad hoc on macOS); on Linux, recompresses the deb's payload with xz
+#      (scripts/deb-xz.mjs: tauri writes gzip, which cannot meet the 9 MB deb budget);
 #   3. packs the portable build (scripts/make-portable.mjs);
 #   4. unpacks and checks every installer and portable build (scripts/check-bundles.mjs --core qul --arch: identity,
 #      resources, the qul core.db, every binary's architecture, deb Depends and desktop entry, the signatures, …;
@@ -333,6 +334,10 @@ jobs:
 
       - name: The bundled core.db is still the qul build
         run: node .github/actions/core/assert-core.mjs --db src-tauri/resources/core.db --source qul
+
+      - name: The deb's payload recompressed with xz (scripts/deb-xz.mjs; tauri writes gzip)
+        if: runner.os == 'Linux'
+        run: node scripts/deb-xz.mjs
 
       - name: Portable build (scripts/make-portable.mjs; on Linux the AppImage is the portable build)
         if: runner.os != 'Linux'

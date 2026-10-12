@@ -3,6 +3,8 @@
 #
 # A qdc core.db is QF-derived and never enters a bundle: the in-job core.db is moved aside, build.rs recreates the
 # 0-byte placeholder, and `pnpm tauri build` makes this OS's installers (NSIS; app + dmg; deb + AppImage). Then
+#   - scripts/deb-xz.mjs recompresses the deb's payload with xz, as release.yml ships it (tauri writes gzip, which
+#     cannot meet the 9 MB deb budget);
 #   - scripts/check-bundles.mjs --core placeholder unpacks them and checks what they contain (identity, resources,
 #     deb Depends and desktop entry, macOS signature with the hardened runtime, …);
 #   - scripts/size-budget.mjs --placeholder-core adds the real core.db as each format compresses it and enforces §13.6.
@@ -49,6 +51,11 @@ runs:
         if [ -z "$APPLE_SIGNING_IDENTITY" ]; then unset APPLE_SIGNING_IDENTITY; fi
         # shellcheck disable=SC2086 # QD_BUILD_ARGS is a list of arguments
         pnpm tauri build $QD_BUILD_ARGS
+
+    - name: The deb's payload recompressed with xz, as release.yml ships it (scripts/deb-xz.mjs)
+      if: runner.os == 'Linux'
+      shell: bash
+      run: node scripts/deb-xz.mjs
 
     - name: Installer contents (scripts/check-bundles.mjs --core placeholder)
       shell: bash

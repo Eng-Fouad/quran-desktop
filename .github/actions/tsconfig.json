@@ -24,6 +24,8 @@
     "../../scripts/check-bundles.test.mjs",
     "../../scripts/check-version.mjs",
     "../../scripts/check-version.test.mjs",
+    "../../scripts/deb-xz.mjs",
+    "../../scripts/deb-xz.test.mjs",
     "../../scripts/size-budget.mjs",
     "../../scripts/size-budget.test.mjs",
     "../../src-tauri/scripts/check-release-core.mjs",

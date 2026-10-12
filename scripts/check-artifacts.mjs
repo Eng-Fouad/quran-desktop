@@ -8,8 +8,9 @@
 // A qdc-built core.db, its fixtures, raw QF API responses and any bundle containing them are QF-derived (BRIEF §4,
 // FACT §2.1). Nothing of that kind may leave CI while the repository is public. Every argument is a file, a directory
 // (walked recursively; hidden files and symlink targets included) or a glob, like actions/upload-artifact's `path`.
-// zip, tar, tar.gz/tgz, gz and ar (.deb) archives are opened, and their entries are checked the same way, nested
-// archives included. The guard fails closed: whatever it cannot inspect is refused.
+// zip, tar, tar.gz/tgz, gz, xz (with the `xz` tool) and ar (.deb) archives are opened, and their entries are checked the
+// same way, nested archives included. The guard fails closed: whatever it cannot inspect is refused (an xz stream too,
+// where `xz` is not installed).
 //
 // Rules (a finding names its rule):
 //   sqlite         any SQLite database, whatever its name. meta.source is read to name a QF-derived (qdc) core.db
@@ -33,7 +34,7 @@
 // --release applies the release rules of §13.4 (release.yml, before the installers go to the draft release): installers
 // and executables are what is published, so `bundle` and `executable` are allowed; an SQLite database is allowed only
 // when it is a core.db whose `meta.source` is 'qul' (a .db name only together with such content); every other rule
-// still refuses. A deb is opened (ar → data.tar.gz). An installer the guard cannot open (NSIS, dmg, AppImage) is
+// still refuses. A deb is opened (ar → data.tar.gz or data.tar.xz). An installer the guard cannot open (NSIS, dmg, AppImage) is
 // refused unless --verified names a `qd-bundle-check/1` manifest from `scripts/check-bundles.mjs --core qul` that
 // lists it by size and SHA-256 as verified: check-bundles unpacks it with the platform tool and runs these same rules
 // on what is inside.
@@ -43,6 +44,7 @@
 //
 // Exit codes: 0 nothing forbidden, 1 something forbidden (or --private refused), 2 bad usage.
 import { Buffer } from 'node:buffer'
+import { spawnSync } from 'node:child_process'
 import console from 'node:console'
 import { createHash } from 'node:crypto'
 import fs from 'node:fs'
@@ -58,7 +60,7 @@ const GIB = 1024 * MIB
 
 /** Archives nested deeper than this are refused. */
 export const MAX_ARCHIVE_DEPTH = 4
-/** Largest single archive entry (or gzip stream) that is decompressed for inspection. */
+/** Largest single archive entry (or gzip or xz stream) that is decompressed for inspection. */
 export const MAX_ENTRY_BYTES = 512 * MIB
 /** Total bytes decompressed for one invocation; beyond it, archives are refused. */
 export const MAX_TOTAL_DECOMPRESSED = 2 * GIB
@@ -433,7 +435,7 @@ function describeSqlite(src) {
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
-// Archives: zip (incl. ZIP64), tar (ustar, GNU long names, pax paths) and gzip.
+// Archives: zip (incl. ZIP64), tar (ustar, GNU long names, pax paths), gzip and xz.
 
 /**
  * @typedef {{ name: string, isDir: boolean, method: number, encrypted: boolean, compressedSize: number,
@@ -441,6 +443,27 @@ function describeSqlite(src) {
  */
 
 class ArchiveFormatError extends Error {}
+
+/** The xz stream magic. */
+export const XZ_MAGIC = /** @type {const} */ ([0xfd, 0x37, 0x7a, 0x58, 0x5a, 0x00])
+
+/**
+ * Decompresses an xz stream with the `xz` tool (Node has no xz decoder): a deb's data.tar.xz (scripts/deb-xz.mjs).
+ * @param {Buffer} input @param {number} [limit] the most bytes it may decompress to
+ * @returns {Buffer}
+ * @throws {Error} when xz is not installed, the stream is corrupt, or it decompresses beyond `limit`
+ */
+export function unxz(input, limit = MAX_ENTRY_BYTES) {
+  const run = spawnSync('xz', ['--decompress', '--stdout'], { input, maxBuffer: Math.max(1, limit) })
+  const code = /** @type {NodeJS.ErrnoException | undefined} */ (run.error)?.code
+  if (code === 'ENOENT') throw new ArchiveFormatError('cannot be decompressed: xz is not installed')
+  if (code === 'ENOBUFS') throw new ArchiveFormatError('decompresses beyond the inspection limit')
+  if (run.error || run.status !== 0)
+    throw new ArchiveFormatError(
+      `cannot be decompressed (${run.error ? message(run.error) : String(run.stderr).trim() || `xz exit ${run.status}`})`,
+    )
+  return run.stdout
+}
 
 /**
  * Lists the central directory of a zip archive.
@@ -711,14 +734,13 @@ export function listAr(src) {
 const OTHER_ARCHIVES = /** @type {const} */ ([
   ['7-Zip', [0x37, 0x7a, 0xbc, 0xaf, 0x27, 0x1c]],
   ['RAR', [0x52, 0x61, 0x72, 0x21, 0x1a, 0x07]],
-  ['xz', [0xfd, 0x37, 0x7a, 0x58, 0x5a, 0x00]],
   ['bzip2', [0x42, 0x5a, 0x68]], // "BZh" + a block-size digit (checked below)
   ['zstd', [0x28, 0xb5, 0x2f, 0xfd]],
   ['lz4', [0x04, 0x22, 0x4d, 0x18]],
   ['lzip', [0x4c, 0x5a, 0x49, 0x50]],
   ['cabinet', [0x4d, 0x53, 0x43, 0x46]],
 ])
-const OTHER_ARCHIVE_EXT = /\.(7z|rar|xz|txz|bz2|tbz2?|zst|tzst|lz|lz4|lzma|tlz|cab|z|iso|wim)$/
+const OTHER_ARCHIVE_EXT = /\.(7z|rar|bz2|tbz2?|zst|tzst|lz|lz4|lzma|tlz|cab|z|iso|wim)$/
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Name and content rules.
@@ -1033,7 +1055,8 @@ class Inspector {
     const gzip = startsWith(head, [0x1f, 0x8b])
     const tar = isTarHeader(head)
     const ar = head.subarray(0, AR_MAGIC.length).equals(AR_MAGIC)
-    if (zip || gzip || tar || ar) {
+    const xz = startsWith(head, XZ_MAGIC)
+    if (zip || gzip || tar || ar || xz) {
       if (depth >= MAX_ARCHIVE_DEPTH) {
         this.add(where, 'uninspectable', `archives nested deeper than ${MAX_ARCHIVE_DEPTH} levels`)
         return false
@@ -1042,9 +1065,9 @@ class Inspector {
         if (zip) this.inspectZip(where, src, depth)
         else if (tar) this.inspectTar(where, src, depth)
         else if (ar) this.inspectAr(where, src, depth)
-        else this.inspectGzip(where, lowerName, src, depth)
+        else this.inspectStream(where, lowerName, src, depth, xz ? 'xz' : 'gzip')
       } catch (error) {
-        const kind = zip ? 'zip' : tar ? 'tar' : ar ? 'ar' : 'gzip'
+        const kind = zip ? 'zip' : tar ? 'tar' : ar ? 'ar' : xz ? 'xz' : 'gzip'
         this.add(where, 'uninspectable', `${kind} archive ${message(error)}`)
         return false
       }
@@ -1141,15 +1164,24 @@ class Inspector {
     }
   }
 
-  /** @param {string} where @param {string} lowerName @param {ByteSource} src @param {number} depth */
-  inspectGzip(where, lowerName, src, depth) {
+  /**
+   * A gzip or xz stream: a tar inside is walked, anything else is inspected as one file.
+   * @param {string} where @param {string} lowerName @param {ByteSource} src @param {number} depth
+   * @param {'gzip' | 'xz'} format
+   */
+  inspectStream(where, lowerName, src, depth, format) {
     if (src.size > MAX_ENTRY_BYTES)
       throw new ArchiveFormatError(`of ${formatBytes(src.size)} is too large to inspect`)
-    const out = inflate(() => zlib.gunzipSync(readAll(src), inflateOptions(this.budget)))
+    const limit = inflateOptions(this.budget)
+    const out =
+      format === 'xz'
+        ? unxz(readAll(src), limit.maxOutputLength)
+        : inflate(() => zlib.gunzipSync(readAll(src), limit))
     this.budget(out.length)
     const inner = bufferSource(out)
     if (isTarHeader(out.subarray(0, 512))) return this.inspectTar(where, inner, depth + 1)
-    const innerName = lowerName.endsWith('.gz') ? lowerName.slice(0, -3) : `${lowerName}.content`
+    const ext = format === 'xz' ? '.xz' : '.gz'
+    const innerName = lowerName.endsWith(ext) ? lowerName.slice(0, -ext.length) : `${lowerName}.content`
     const innerWhere = `${where}!/${innerName}`
     this.inspectedFiles++
     this.pathRules(innerWhere, [innerName], 'file')
@@ -1268,7 +1300,7 @@ const USAGE = `Usage: node scripts/check-artifacts.mjs [--private | --release [-
 
 Refuses QF-derived and distributable content before a CI upload (ARCHITECTURE §13.3): SQLite databases and *.db files,
 fixtures/ trees and fixture-shaped JSON, raw QDC responses, data/cache, data/dev-packs, installers and app bundles,
-executables, fonts, and any archive it cannot fully inspect. Archives (zip, tar, tar.gz, gz, ar/.deb) are opened
+executables, fonts, and any archive it cannot fully inspect. Archives (zip, tar, tar.gz, gz, xz, ar/.deb) are opened
 recursively.
 
   --private        private-repository rules: databases and fixtures are allowed (only when the GitHub event payload

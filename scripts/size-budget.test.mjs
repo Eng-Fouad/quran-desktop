@@ -2,6 +2,7 @@
 // node --test scripts/size-budget.test.mjs
 import assert from 'node:assert/strict'
 import { Buffer } from 'node:buffer'
+import { spawnSync } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
 import fs from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -12,6 +13,7 @@ import {
   BUDGETS,
   compressedCore,
   debInstalledSize,
+  debPayload,
   defaultBundleDirs,
   evaluate,
   findInstallers,
@@ -25,7 +27,9 @@ import {
   parseRequire,
   readMetricsReport,
   windowsInstalled,
+  xzSize,
 } from './size-budget.mjs'
+import { recompressDeb } from './deb-xz.mjs'
 
 const work = fs.mkdtempSync(path.join(tmpdir(), 'qd-size-budget-'))
 after(() => fs.rmSync(work, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }))
@@ -83,6 +87,8 @@ function deb(control) {
     member('data.tar.gz', zlib.gzipSync(tar({}))),
   ])
 }
+
+const needsXz = spawnSync('xz', ['--version']).status === 0 ? {} : { skip: 'xz is not installed' }
 
 const haveLzma = (() => {
   try {
@@ -217,6 +223,34 @@ describe('measurement', () => {
     assert.match(byId.deb?.notes?.[0] ?? '', /\+ core\.db [\d,]+ B by gzip -6/)
     assert.equal(byId.installed?.value, 100 * 1024 + core.length, 'Installed-Size + the uncompressed core.db')
     assert.equal(byId.appimage?.value, 5000 + compressedCore('appimage', core, coreFile).bytes)
+  })
+
+  it('adds core.db to an xz deb (scripts/deb-xz.mjs) as xz -6', needsXz, () => {
+    const dir = fresh()
+    const coreFile = put(
+      path.join(dir, 'core.db'),
+      Buffer.concat([Buffer.alloc(256 * 1024, 7), randomBytes(16 * 1024)]),
+    )
+    const core = fs.readFileSync(coreFile)
+    const bundle = path.join(dir, 'target', 'release', 'bundle')
+    const gz = put(path.join(bundle, 'deb', 'Quran_0.1.0_amd64.deb'), deb('Installed-Size: 100\n'))
+    assert.equal(debPayload(gz), 'gzip')
+    assert.equal(compressedCore('deb', core, coreFile, gz).how, 'gzip -6 (data.tar.gz)')
+    fs.writeFileSync(gz, recompressDeb(fs.readFileSync(gz)) ?? Buffer.alloc(0))
+    assert.equal(debPayload(gz), 'xz')
+    assert.equal(debInstalledSize(gz), 100 * 1024, 'control.tar.gz is untouched')
+    const extra = compressedCore('deb', core, coreFile, gz)
+    assert.deepEqual(extra, { bytes: xzSize(core), how: 'xz -6 (data.tar.xz)' })
+    assert.ok(extra.bytes < zlib.gzipSync(core, { level: 6 }).length)
+    const { measurements } = measure({
+      bundleDirs: [bundle],
+      dist: null,
+      metrics: null,
+      placeholderCore: coreFile,
+    })
+    const row = measurements.find((m) => m.id === 'deb')
+    assert.equal(row?.value, fs.statSync(gz).size + extra.bytes)
+    assert.match(row?.notes?.[0] ?? '', /\+ core\.db [\d,]+ B by xz -6 \(data\.tar\.xz\)/)
   })
 
   it('measures the NSIS core.db with LZMA', (t) => {

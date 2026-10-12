@@ -22,7 +22,8 @@
 //
 // --placeholder-core <core.db>: the bundles were built around build.rs's 0-byte core.db placeholder (CI, §13.3: a qdc
 // core.db must never enter a bundle). Each installer then counts the real core.db compressed as that format
-// compresses it: NSIS LZMA (solid, 8 MiB dictionary; 7-Zip or xz), deb gzip level 6 (data.tar.gz), dmg zlib level 9
+// compresses it: NSIS LZMA (solid, 8 MiB dictionary; 7-Zip or xz), deb as its payload is (xz -6 for data.tar.xz, the
+// deb scripts/deb-xz.mjs makes and release.yml ships; gzip level 6 for tauri's own data.tar.gz), dmg zlib level 9
 // (UDZO), AppImage gzip level 9 (squashfs; an approximation). The installed footprint counts it uncompressed.
 //
 // --require <rows>: ids, or the groups `installers`, `runtime` and `all`, that must be measured; a required row that
@@ -157,18 +158,48 @@ export function lzmaSize(file, scratch) {
 }
 
 /**
+ * The size of `core` compressed as scripts/deb-xz.mjs compresses a deb's payload (xz -6, one thread).
+ * @param {Buffer} core @returns {number}
+ * @throws {Error} when xz is not installed
+ */
+export function xzSize(core) {
+  const xz = spawnSync('xz', ['-6', '--threads=1', '--compress', '--stdout'], {
+    input: core,
+    maxBuffer: 2 * core.length + MIB,
+  })
+  if (xz.status === 0 && xz.stdout) return xz.stdout.length
+  throw new Error(
+    /** @type {NodeJS.ErrnoException | undefined} */ (xz.error)?.code === 'ENOENT'
+      ? 'xz is not installed, so the size of core.db in an xz deb cannot be measured'
+      : `xz could not compress core.db (${String(xz.stderr ?? '').trim() || xz.error?.message || `exit ${xz.status}`})`,
+  )
+}
+
+/**
+ * How a deb's payload is compressed: `xz` (data.tar.xz), `gzip` (data.tar.gz), or null when it has no such member.
+ * @param {string} deb @returns {'xz' | 'gzip' | null}
+ */
+export function debPayload(deb) {
+  const names = listAr(bufferSource(fs.readFileSync(deb))).map((e) => e.name)
+  return names.includes('data.tar.xz') ? 'xz' : names.includes('data.tar.gz') ? 'gzip' : null
+}
+
+/**
  * How many bytes `core` adds to an installer of `kind` (compressed as that format does).
  * @param {'nsis' | 'dmg' | 'deb' | 'appimage'} kind @param {Buffer} core @param {string} file the same bytes on disk
+ * @param {string} [installer] the placeholder installer (a deb is measured as its payload is compressed)
  * @returns {{ bytes: number, how: string }}
  */
-export function compressedCore(kind, core, file) {
+export function compressedCore(kind, core, file, installer) {
   switch (kind) {
     case 'nsis': {
       const { bytes, tool } = lzmaSize(file, tmpdir())
       return { bytes, how: tool }
     }
     case 'deb':
-      return { bytes: zlib.gzipSync(core, { level: 6 }).length, how: 'gzip -6 (data.tar.gz)' }
+      return installer && debPayload(installer) === 'xz'
+        ? { bytes: xzSize(core), how: 'xz -6 (data.tar.xz)' }
+        : { bytes: zlib.gzipSync(core, { level: 6 }).length, how: 'gzip -6 (data.tar.gz)' }
     case 'dmg':
       return { bytes: zlib.deflateSync(core, { level: 9 }).length, how: 'zlib -9 (UDZO)' }
     case 'appimage':
@@ -435,7 +466,7 @@ export function measure({ bundleDirs, dist, metrics, placeholderCore }) {
       continue
     }
     try {
-      const extra = compressedCore(kind, core, placeholderCore)
+      const extra = compressedCore(kind, core, placeholderCore, file)
       measurements.push({
         id: kind,
         value: bytes + extra.bytes,

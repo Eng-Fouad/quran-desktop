@@ -3,8 +3,8 @@
 //
 // Builds every kind of artifact the licensing guard must refuse (or allow) in a temporary directory: SQLite databases
 // written by node:sqlite (rowid and WITHOUT ROWID meta tables, overflow pages, multi-level b-trees, UTF-16, 512 B and
-// 64 KiB pages), fixtures trees, data/cache, bundles, executables, fonts, and zip / ZIP64 / tar / tar.gz / gz archives
-// nested inside each other.
+// 64 KiB pages), fixtures trees, data/cache, bundles, executables, fonts, and zip / ZIP64 / tar / tar.gz / gz / xz
+// archives nested inside each other (xz needs the xz tool; those cases are skipped without it).
 import assert from 'node:assert/strict'
 import { Buffer } from 'node:buffer'
 import { spawnSync } from 'node:child_process'
@@ -41,6 +41,11 @@ try {
   sqlite = null // Node < 22.13 without --experimental-sqlite: the database cases are skipped
 }
 const needsSqlite = sqlite ? {} : { skip: 'node:sqlite is not available in this Node version' }
+const haveXz = spawnSync('xz', ['--version']).status === 0
+const needsXz = haveXz ? {} : { skip: 'xz is not installed' }
+const needsSqliteAndXz = sqlite && haveXz ? {} : { skip: 'needs node:sqlite and the xz tool' }
+/** xz -6 of `data` (the xz tool). @param {Buffer | string} data */
+const xz = (data) => spawnSync('xz', ['-6', '--stdout'], { input: Buffer.from(data) }).stdout
 
 const work = fs.mkdtempSync(path.join(tmpdir(), 'qd-check-artifacts-'))
 after(() => fs.rmSync(work, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }))
@@ -264,14 +269,20 @@ function makeAr(members, names = 'gnu') {
   return Buffer.concat(parts)
 }
 
-/** A .deb whose data tree holds `files` (path → content). @param {Record<string, Buffer | string>} files */
-function makeDeb(files) {
+/**
+ * A .deb whose data tree holds `files` (path → content); its payload is data.tar.gz, or data.tar.xz as
+ * scripts/deb-xz.mjs makes it.
+ * @param {Record<string, Buffer | string>} files @param {'gz' | 'xz'} [payload]
+ */
+function makeDeb(files, payload = 'gz') {
   const control = makeTar([{ name: './control', data: 'Package: quran\nVersion: 0.1.0\n' }])
   const data = makeTar(Object.entries(files).map(([name, content]) => ({ name, data: content })))
   return makeAr([
     { name: 'debian-binary', data: '2.0\n' },
     { name: 'control.tar.gz', data: zlib.gzipSync(control) },
-    { name: 'data.tar.gz', data: zlib.gzipSync(data) },
+    payload === 'xz'
+      ? { name: 'data.tar.xz', data: xz(data) }
+      : { name: 'data.tar.gz', data: zlib.gzipSync(data) },
   ])
 }
 
@@ -775,6 +786,45 @@ describe('ar archives (.deb)', () => {
     assert.deepEqual(rulesAt(report, 'data.tar.gz!/./usr/lib/Quran/data/core.db'), ['db-file', 'sqlite'])
     assert.deepEqual(rulesAt(report, 'Quran_0.1.0_amd64.deb'), ['bundle'])
   })
+
+  it('opens a deb whose payload is data.tar.xz (scripts/deb-xz.mjs)', needsSqliteAndXz, () => {
+    const dir = freshDir()
+    const db = makeDb(path.join(dir, 'qdc.db'), {
+      meta: { source: 'qdc' },
+      tables: ['mushaf', 'ayah', 'word'],
+    })
+    put(
+      path.join(dir, 'Quran_0.1.0_amd64.deb'),
+      makeDeb({ './usr/lib/Quran/data/core.db': fs.readFileSync(db) }, 'xz'),
+    )
+    const report = inspect(['Quran_0.1.0_amd64.deb'], { cwd: dir })
+    assert.equal(report.ok, false)
+    assert.deepEqual(rulesAt(report, 'data.tar.xz!/./usr/lib/Quran/data/core.db'), ['db-file', 'sqlite'])
+    assert.equal(rulesAt(report, 'data.tar.xz').length, 0, 'the xz member itself is opened, not refused')
+  })
+
+  it('opens a plain .xz file, and refuses a corrupt one', needsXz, () => {
+    const dir = freshDir()
+    put(path.join(dir, 'notes.json.xz'), xz('{"verse_key":"1:1","code_v2":"x"}'))
+    put(path.join(dir, 'cut.xz'), xz('hello world, hello world').subarray(0, 20))
+    const report = inspect(['.'], { cwd: dir })
+    assert.deepEqual(rulesAt(report, 'notes.json.xz!/notes.json'), ['qdc-response'])
+    assert.deepEqual(rulesAt(report, 'cut.xz'), ['uninspectable'])
+  })
+
+  it('refuses an xz stream when the xz tool is missing (fails closed)', needsXz, () => {
+    const dir = freshDir()
+    put(path.join(dir, 'a.txt.xz'), xz('plain text'))
+    const saved = process.env.PATH
+    process.env.PATH = freshDir()
+    try {
+      const report = inspect(['.'], { cwd: dir })
+      assert.deepEqual(rulesAt(report, 'a.txt.xz'), ['uninspectable'])
+      assert.match(JSON.stringify(report.forbidden), /xz is not installed/)
+    } finally {
+      process.env.PATH = saved
+    }
+  })
 })
 
 describe('release rules', () => {
@@ -805,6 +855,15 @@ describe('release rules', () => {
     assert.deepEqual(rulesAt(ok, 'data.tar.gz!/./usr/bin/quran-desktop'), ['executable'])
     // The same deb is refused under the public rules.
     assert.equal(inspect(['deb'], { cwd: dir }).ok, false)
+    if (haveXz) {
+      put(
+        path.join(dir, 'debxz', 'Quran_0.1.0_amd64.deb'),
+        makeDeb({ './usr/lib/Quran/data/core.db': qul, './usr/bin/quran-desktop': fakeElf() }, 'xz'),
+      )
+      const xzOk = inspect(['debxz'], { cwd: dir, release: true })
+      assert.equal(xzOk.ok, true, JSON.stringify(xzOk.forbidden))
+      assert.deepEqual(rulesAt(xzOk, 'data.tar.xz!/./usr/bin/quran-desktop'), ['executable'])
+    }
 
     put(path.join(dir, 'placeholder', 'core.db'), '')
     put(path.join(dir, 'fx', 'fixtures', 'p1.json'), '{}')

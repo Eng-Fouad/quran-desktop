@@ -32,8 +32,8 @@ into ARCHITECTURE.md.
    release.yml now build and enforce them.
 3. **CI builds every installer, enforced** (`enforce: 'true'`). The `build` job makes this OS's installers around
    build.rs's 0-byte core.db (a qdc core.db never enters a bundle), checks their contents and enforces the size rows,
-   adding the real core.db as each format compresses it: NSIS LZMA (7-Zip or xz), deb gzip -6, dmg zlib -9, AppImage
-   gzip -9 (squashfs; approximate). The macOS bundle is universal on pushes to the default branch, as in release.yml,
+   adding the real core.db as each format compresses it: NSIS LZMA (7-Zip or xz), deb xz -6 (item 9), dmg zlib -9,
+   AppImage gzip -9 (squashfs; approximate). The macOS bundle is universal on pushes to the default branch, as in release.yml,
    and for the runner's architecture otherwise, to keep macOS minutes (10× on private repositories) down.
 4. **Linux tray dependency: one manifest line.** tauri-cli 2.12.1 (`interface/rust.rs`) adds
    `libayatana-appindicator3-1` to the deb's Depends and bundles `libayatana-appindicator3.so.1` into the AppImage
@@ -76,6 +76,16 @@ into ARCHITECTURE.md.
    (`QUL_SOURCES_URL`, bearer `QUL_SOURCES_TOKEN`, environment `release`). The committed manifest is never replaced
    by the archive's, so the build checks every file against the SHA-256 recorded in the repository. The manifest's
    hashes are still empty: recording them is a checklist step.
+9. **The deb's payload is xz, not tauri's gzip: the 9 MB budget is kept, not raised.** CI's first Linux bundles came to
+   11.37 MiB (arm64, Ubuntu 22.04 container, 2026-10-12): tauri-bundler 2.10 writes data.tar.gz at gzip -6, with no
+   option to change it, and the release binary (13.9 MB) and the qdc core.db (12.5 MB) do not fit 9 MiB that way.
+   `scripts/deb-xz.mjs` runs right after `tauri build` in CI's size check and in release.yml. It replaces data.tar.gz
+   with data.tar.xz (xz -6, one thread; dpkg-deb's own default, which every dpkg since 1.15.6 unpacks) holding the
+   same tar, checked by decompressing it again. Measured: deb **7.97 MiB** (6,081,086 B + core.db 2,272,604 B by xz),
+   AppImage 84.11 MiB, installed 25.58 MiB. The deb installs with `apt install ./…deb` on a clean Ubuntu 22.04, which
+   pulls in libayatana-appindicator3-1. x64 is about 3 % larger (CI's gzip deb: 7.95 MiB against arm64's 7.71 MiB), so
+   about 8.2 MiB. To read the payload, check-bundles, size-budget and the check-artifacts guard call the xz tool, which
+   every Linux runner has. Without it the guard refuses an xz archive, as it refuses anything it cannot open.
 
 ## Signing (§15.3 item 3, risk R13)
 

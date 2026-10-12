@@ -5,6 +5,7 @@
 // NSIS, dmg and AppImage paths need 7-Zip, hdiutil or Linux; CI runs them on the real installers.
 import assert from 'node:assert/strict'
 import { Buffer } from 'node:buffer'
+import { spawnSync } from 'node:child_process'
 import fs from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
@@ -24,6 +25,7 @@ import {
   findPortable,
   pngSize,
 } from './check-bundles.mjs'
+import { recompressDeb } from './deb-xz.mjs'
 
 /** @type {typeof import('node:sqlite') | null} */
 let sqlite = null
@@ -33,6 +35,7 @@ try {
   sqlite = null
 }
 const needsSqlite = sqlite ? {} : { skip: 'node:sqlite is not available in this Node version' }
+const needsXz = spawnSync('xz', ['--version']).status === 0 ? {} : { skip: 'xz is not installed' }
 
 const work = fs.mkdtempSync(path.join(tmpdir(), 'qd-check-bundles-'))
 after(() => fs.rmSync(work, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }))
@@ -338,6 +341,28 @@ describe('a deb end to end', () => {
     assert.match(text, /missing usr\/lib\/Quran\/data\/catalog\.json/)
     assert.match(text, /desktop entry Icon="quran", expected quran-desktop/)
     assert.match(text, /fixtures/)
+  })
+
+  it('reads a deb whose payload scripts/deb-xz.mjs recompressed with xz', needsXz, () => {
+    const bundle = path.join(fresh(), 'bundle')
+    const file = path.join(bundle, 'deb', `Quran_${expect.version}_amd64.deb`)
+    fs.mkdirSync(path.dirname(file), { recursive: true })
+    /** @param {Record<string, string | Buffer>} tree */
+    const xzDeb = (tree) => recompressDeb(deb(CONTROL, tree)) ?? Buffer.alloc(0)
+    fs.writeFileSync(file, xzDeb(debTree(Buffer.alloc(0))))
+    const opts = /** @type {const} */ ({ core: 'placeholder', universal: false, expect, arch: 'x64' })
+    const [ok] = checkBundles({ bundleDirs: [bundle], ...opts })
+    assert.deepEqual(ok?.problems, [])
+    assert.ok(
+      ok?.checks.some((c) => c.startsWith('data.tar.xz: ')),
+      ok?.checks.join('\n'),
+    )
+    // check-artifacts opens the xz payload too: a fixture inside is still found.
+    const tree = debTree(Buffer.alloc(0))
+    tree['usr/lib/Quran/fixtures/p1.json'] = '{"ayahId":1,"glyph":"x","isEnd":false}'
+    fs.writeFileSync(file, xzDeb(tree))
+    const [bad] = checkBundles({ bundleDirs: [bundle], ...opts })
+    assert.match(bad?.problems.join('\n') ?? '', /data\.tar\.xz!\/usr\/lib\/Quran\/fixtures.*fixtures/)
   })
 
   it('a release deb needs the qul core.db', needsSqlite, () => {

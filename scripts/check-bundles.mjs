@@ -14,7 +14,7 @@
 //   dmg       hdiutil (macOS): Quran.app with the identifier, executable, minimum macOS 13.3, the resources, a
 //             universal binary (--universal), a valid code signature with the hardened runtime (ad-hoc or Developer
 //             ID), and the /Applications link
-//   deb       read here (ar + tar.gz): Package/Version/Architecture, Depends (libayatana-appindicator3-1 or
+//   deb       read here (ar + tar.gz, or tar.xz with the xz tool): Package/Version/Architecture, Depends (libayatana-appindicator3-1 or
 //             libappindicator3-1, libwebkit2gtk-4.1-0, libgtk-3-0, ALSA), /usr/bin/quran-desktop, the resources,
 //             /usr/share/applications/Quran.desktop (the MPRIS DesktopEntry WP6d pinned) and one hicolor icon per
 //             configured PNG
@@ -50,6 +50,7 @@ import {
   listAr,
   listTar,
   readSqliteInfo,
+  unxz,
 } from './check-artifacts.mjs'
 import { defaultBundleDirs, findInstallers, MIB } from './size-budget.mjs'
 
@@ -433,10 +434,10 @@ function checkDeb(file, { core, expect, arch }, r) {
   const members = listAr(src)
   const member = (/** @type {RegExp} */ re) => members.find((m) => re.test(m.name))
   const control = member(/^control\.tar\.gz$/)
-  const data = member(/^data\.tar\.gz$/)
+  const data = member(/^data\.tar\.(gz|xz)$/)
   if (!control || !data) {
     r.problems.push(
-      `members ${members.map((m) => m.name).join(', ')}: expected control.tar.gz and data.tar.gz`,
+      `members ${members.map((m) => m.name).join(', ')}: expected control.tar.gz and data.tar.gz or data.tar.xz`,
     )
     return
   }
@@ -445,7 +446,8 @@ function checkDeb(file, { core, expect, arch }, r) {
   const text = controlFile ? controlTar.read(controlFile.dataStart, controlFile.size).toString('utf8') : ''
   r.problems.push(...checkDebControl(text, expect, arch))
   r.checks.push(`control: ${text.match(/^Depends:.*$/m)?.[0] ?? 'no Depends'}`)
-  const dataTar = bufferSource(zlib.gunzipSync(src.read(data.dataStart, data.size)))
+  const payload = src.read(data.dataStart, data.size)
+  const dataTar = bufferSource(data.name.endsWith('.xz') ? unxz(payload) : zlib.gunzipSync(payload))
   const entries = listTar(dataTar).filter((e) => e.type === 'file')
   const names = new Map(entries.map((e) => [e.name.replace(/^\.\//, ''), e]))
   r.problems.push(...checkLinuxTree(new Set(names.keys()), expect))
@@ -462,9 +464,9 @@ function checkDeb(file, { core, expect, arch }, r) {
   const coreEntry = names.get(`usr/lib/${expect.productName}/data/core.db`)
   if (coreEntry) r.problems.push(...checkCore(dataTar.read(coreEntry.dataStart, coreEntry.size), core))
   r.checks.push(
-    `data: ${entries.length} files, ${expect.productName}.desktop, ${expect.linuxIcons.length} hicolor icons, ${arch}`,
+    `${data.name}: ${entries.length} files, ${expect.productName}.desktop, ${expect.linuxIcons.length} hicolor icons, ${arch}`,
   )
-  // The deb itself goes through check-artifacts (it opens ar and tar.gz).
+  // The deb itself goes through check-artifacts (it opens ar, tar.gz and, with the xz tool, tar.xz).
   const report = inspect([path.basename(file)], { cwd: path.dirname(file), release: true })
   for (const f of report.forbidden) {
     const placeholder =

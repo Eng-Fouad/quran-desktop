@@ -39,8 +39,9 @@ WP-CI owns no i18n dictionary, so it adds no en/ar strings.
      - font binaries, by extension or magic: QCF fonts may not be redistributed as an asset package, and the KFGQPC TTF
        is not mirrored (D23).
    - **Archives** are opened recursively, up to 4 levels: zip including ZIP64, tar (ustar, GNU long names, pax),
-     tar.gz/tgz and gz. Anything it cannot inspect is refused:
-     - 7z, rar, xz, zstd and similar formats;
+     tar.gz/tgz, gz and (with the xz tool, for the deb's data.tar.xz: WP13b.md item 9) xz. Anything it cannot inspect
+     is refused:
+     - 7z, rar, zstd and similar formats, and xz where the xz tool is missing;
      - encrypted or unsupported-method zip entries;
      - corrupt archives;
      - an entry that inflates to a size other than the one declared;
