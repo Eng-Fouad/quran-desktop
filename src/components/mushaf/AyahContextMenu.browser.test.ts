@@ -173,7 +173,11 @@ describe('AyahContextMenu (§10.3)', () => {
     await until(() => item('New collection…') !== undefined)
     await userEvent.click(item('New collection…') as HTMLElement)
     await until(() => $('[role="dialog"] input') !== null)
-    await userEvent.type($('[role="dialog"] input') as HTMLElement, 'Duas')
+    // The field by its role, found when the keys go in (as library.browser.test.ts does): an element handed to
+    // userEvent goes to Playwright as a CSS path through its ancestors' places among their siblings, and the context
+    // menu's portal leaves <body> when its exit transition ends, which on a loaded runner comes after that path is
+    // taken. The stale path matches nothing, and typing waits out the test.
+    await userEvent.type(page.getByRole('dialog').getByRole('textbox'), 'Duas')
     await userEvent.keyboard('{Enter}')
     await until(() => library.collections.length === 1 && library.bookmarkOf(262) !== undefined)
     expect(library.collections[0]?.name).toBe('Duas')
