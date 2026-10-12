@@ -273,7 +273,7 @@ always uses a fresh temporary `QD_DATA_DIR`, so it never touches either.
 
 ## 7. Visual QA
 
-Two drivers run the same scenario modules (`tests/e2e/scenarios/S01–S38`, `smoke`, `ic2`; each declares `meta.mode`:
+Two drivers run the same scenario modules (`tests/e2e/scenarios/S01–S39`, `smoke`, `ic2`; each declares `meta.mode`:
 `web`, `app` or `both`). PNGs, a JSON result per scenario and an `index.html` report go to `artifacts/shots/{web,app}/`.
 
 ```sh
@@ -283,10 +283,13 @@ pnpm tauri build --debug --no-bundle
 pnpm shots:app --only smoke,S26                  # the real app (Windows, WebView2 over CDP)
 ```
 
-- **Browser mock** (`scripts/qa/web-shot.mjs`): opens the installed Edge (`--channel chrome` for Chrome, `bundled` for
-  Playwright's chromium). `--serve <port>` starts its own Vite server; the last `--serve` wins, so
-  `pnpm shots:web --serve 1648` overrides the script's 1520. `--url` uses a running `pnpm dev:web` instead. `--jobs <n>`
-  runs scenarios in parallel; `--name <shot>` without a scenario takes one screenshot.
+- **Browser mock** (`scripts/qa/web-shot.mjs`): opens the installed Edge on Windows outside CI, else Playwright's
+  chromium (`--channel` or `QD_BROWSER_CHANNEL`: `chrome`, `msedge`, or `bundled` for Playwright's chromium).
+  `--serve <port>` starts its own Vite server; the last `--serve` wins, so `pnpm shots:web --serve 1648` overrides the
+  script's 1520. `--url` uses a running `pnpm dev:web` instead. `--jobs <n>` runs scenarios in parallel; `--name <shot>`
+  without a scenario takes one screenshot. Without `data/dev-packs` (as on CI) the QCF scenarios check the Hafs
+  fallback and skip what needs a real QCF or decor font (such as S04's decor headers, S20's sura-names close-up and
+  S30's Retry).
 - **Real app** (`scripts/qa/app-driver.mjs`): each scenario gets a fresh app process with `QD_TEST=1`, a fresh temporary
   `QD_DATA_DIR` (`--data-dir` shares one, `--keep-data` keeps them) and `QD_AUDIO_SINK=null`, attaches over CDP on 9333
   or the next free port (`--port` asks for one), replays the console from the start of the boot, and fails on a page or

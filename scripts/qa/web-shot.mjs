@@ -1,7 +1,7 @@
 // @ts-check
 // Browser-mock QA (ARCHITECTURE §12.6; WP13a): runs e2e scenarios against the Svelte UI on the IPC mock
-// (`vite --mode mock`, in this process) in the locally installed Microsoft Edge (or Chrome) through playwright-core.
-// No browser is ever downloaded.
+// (`vite --mode mock`, in this process) through playwright-core: in the installed Microsoft Edge on Windows outside CI,
+// else in Playwright's chromium (`pnpm exec playwright install chromium`; `--channel` picks another, see browserChannel).
 //
 //   pnpm shots:web --serve 1648 --only S19,S20      registry scenarios → artifacts/shots/web/S19.png, S20.png, …
 //   pnpm shots:web --serve 1648                     every web scenario of tests/e2e/scenarios
