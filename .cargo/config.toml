@@ -4,3 +4,11 @@
 xtask = "run --package xtask --"
 lint = "clippy --workspace --all-targets -- -D warnings"
 bindings = "test -p quran-desktop --lib export_bindings"
+
+# The bundled SQLite (libsqlite3-sys `bundled`) without the extensions that nothing here uses: FTS3/FTS4 (every
+# full-text table is FTS5), R*Tree, the dbstat table, soundex() and run-time extension loading. libsqlite3-sys compiles
+# them in and SQLite registers them at startup, so the linker cannot drop them: 278 KB of the universal macOS app
+# (both architectures; §13.6 installed footprint). FTS5, JSON, STAT4 and the other libsqlite3-sys defaults stay.
+# Applies to every cargo build in the repository: the app, tests, xtask and release.yml.
+[env]
+LIBSQLITE3_FLAGS = "-USQLITE_ENABLE_FTS3 -USQLITE_ENABLE_FTS3_PARENTHESIS -USQLITE_ENABLE_RTREE -USQLITE_ENABLE_DBSTAT_VTAB -USQLITE_SOUNDEX -USQLITE_ENABLE_LOAD_EXTENSION -DSQLITE_OMIT_LOAD_EXTENSION"
