@@ -231,6 +231,8 @@
   let strip: HTMLDivElement | undefined = $state()
   let track: HTMLDivElement | undefined = $state()
   let trackWidth = $state(0)
+  let bubble: HTMLDivElement | undefined = $state()
+  /** The live label's border-box width (its 1 px border included, so it centres on the thumb). */
   let bubbleWidth = $state(0)
 
   /** Reasons to be open. */
@@ -268,6 +270,13 @@
   const bubbleAt = $derived.by(() => {
     const centre = railFraction(labelPage, last) * trackWidth
     return Math.round(Math.min(Math.max(0, centre - bubbleWidth / 2), Math.max(0, trackWidth - bubbleWidth)))
+  })
+
+  // A new label is measured as soon as it renders, so the label is centred in the same frame as the step that changed
+  // it; the resize observer of `bind:offsetWidth` only reports a frame later (it still catches a web font arriving).
+  $effect(() => {
+    void label
+    if (bubble) bubbleWidth = bubble.offsetWidth
   })
 
   // --- open and close --------------------------------------------------------------------------------------------------
@@ -776,7 +785,8 @@
           <!-- The box keeps the track's direction (its offset counts from the right end); the text takes the UI's. -->
           <div
             class="bubble"
-            bind:clientWidth={bubbleWidth}
+            bind:this={bubble}
+            bind:offsetWidth={bubbleWidth}
             style:inset-inline-start={`${bubbleAt}px`}
             aria-hidden="true"
           >
