@@ -251,7 +251,7 @@ rubato            = "=5.0.1"
 crossbeam-channel = "=0.5.17"
 stream-download   = { version = "=0.24.4", default-features = false, features = ["reqwest-rustls"] }
 
-reqwest      = { version = "=0.13.5", default-features = false, features = ["rustls", "http2", "json", "stream", "gzip", "charset", "system-proxy"] }
+reqwest      = { version = "=0.13.5", default-features = false, features = ["rustls", "http2", "json", "stream", "gzip", "system-proxy"] }  # no "charset": WP-CI deviation 11
 tokio        = { version = "1.53.2", features = ["rt", "rt-multi-thread", "sync", "time", "fs", "io-util", "macros"] }
 futures-util = "0.3.34"
 serde        = { version = "1.0.229", features = ["derive"] }
