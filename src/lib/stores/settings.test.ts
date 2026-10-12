@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { defaultSettings } from '$lib/contracts/settings'
 import { api, call, events, initIpc } from '$lib/ipc'
-import type { Bootstrap, Settings } from '$lib/ipc/bindings'
+import type { Bootstrap, Platform, Settings } from '$lib/ipc/bindings'
 import { mockCommands } from '$lib/ipc/mock'
 import { err, ok } from '$lib/ipc/mock/result'
 import { state } from '$lib/ipc/mock/state'
@@ -39,13 +39,18 @@ function flipMedia(query: string, matches: boolean): void {
 
 const DARK = '(prefers-color-scheme: dark)'
 
-async function boot(stored?: Partial<Settings>): Promise<Bootstrap> {
+/**
+ * Boots on an explicit platform. The browser mock reads the platform from the user agent, and jsdom's names the host OS
+ * (`(darwin)` and `(win32)` read as Windows, `(linux)` as Linux, where §9.6 never asks for a backdrop).
+ */
+async function boot(stored?: Partial<Settings>, platform: Platform = 'windows'): Promise<Bootstrap> {
   localStorage.clear()
   await initIpc()
   state.resetAll()
   state.loadAll()
   if (stored) state.settings.set({ ...defaultSettings(), ...stored })
-  const b = await call(api.appBootstrap())
+  const fetched = await call(api.appBootstrap())
+  const b = { ...fetched, app: { ...fetched.app, platform } }
   app.init(b)
   settings.init(b)
   return b
@@ -141,7 +146,7 @@ describe('settings store: init and effects', () => {
   })
 
   it('keeps the chrome opaque for the session when the window has no backdrop', async () => {
-    // The browser mock answers like Windows 10 or Linux: `unsupported` for a translucent effect.
+    // The browser mock answers like Windows 10: `unsupported` for a translucent effect.
     const chrome = vi.spyOn(mockCommands, 'windowSetChrome')
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     await boot()
@@ -164,15 +169,18 @@ describe('settings store: init and effects', () => {
   })
 
   it('never uses translucent chrome on Linux or with reduced transparency', async () => {
-    const b = await boot()
-    app.init({ ...b, app: { ...b.app, platform: 'linux' } })
-    settings.applyEffects()
+    // Not even with a window that would take the backdrop: Rust is only ever asked for opaque chrome.
+    const chrome = vi.spyOn(mockCommands, 'windowSetChrome').mockImplementation(async () => ok(null))
+    const b = await boot(undefined, 'linux')
     expect(settings.vibrantChrome).toBe(false)
+    await settings.update({ theme: 'night' })
+    expect(chrome.mock.calls).toEqual([[{ dark: false, effect: 'off' }], [{ dark: true, effect: 'off' }]])
     expect(html().dataset.chrome).toBeUndefined()
-    app.init(b)
+    app.init({ ...b, app: { ...b.app, platform: 'windows' } })
     stubMatchMedia({ '(prefers-reduced-transparency: reduce)': true })
     settings.init(b)
     expect(settings.vibrantChrome).toBe(false)
+    expect(chrome).toHaveBeenLastCalledWith({ dark: false, effect: 'off' })
   })
 
   it('freezes the value in development, so a mutation cannot silently skip persistence', async () => {
