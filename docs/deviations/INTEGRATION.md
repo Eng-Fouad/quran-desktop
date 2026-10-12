@@ -886,7 +886,9 @@ scenarios and shots are in `C:\qdt\int-fix1-ui` (`scen\V1.mjs`, `V2.mjs`, `A1.mj
   - `fit()` measures the options against the group's content box and switches to the roomiest look that fits:
     normal; then `data-fit="tight"` (6 px, `text-xs`, labels still whole); then `data-fit="clip"` (equal shares,
     ellipsis, the full label as `title`, the accessible name untouched).
-  - It runs on every resize, label, direction or size change, and on web-font `loadingdone`.
+  - It runs on every resize, label, direction or size change, and on web-font `loadingdone`. WebKit fires no
+    FontFaceSet event for a load that CSS starts, so a load pending after a measurement is also awaited through
+    `document.fonts.ready` (CI 2026-10-12: the Arabic pill sat 4.6 px off its option in WebKit).
   - The sum is taken from the options themselves: `scrollWidth` would count the absolutely placed pill at its old
     offset. A full-width group is `min-inline-size: 0`, so it can shrink as a flex item.
   - At the 300 px sidebar the Memorize picker now fits in the normal look, in English and Arabic. The Search scope's

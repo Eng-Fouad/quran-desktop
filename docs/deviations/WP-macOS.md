@@ -76,8 +76,9 @@ copy, recitation, settings, themes, zen, the close-to-tray question, the Dock's 
 - **WebKit's remaining browser-test failures** are WebKit's macOS focus model, which WKWebView shares: Tab moves only
   between text fields unless System Settings › Keyboard › Keyboard navigation is on (links also need
   `tabFocusesLinks`), and a click does not focus a button. So the skip link, the dialog and sheet Tab traps, the
-  popover and stepper focus checks, `:focus-visible` after Tab and the Enter-on-a-button flows fail there; plus two
-  sub-pixel tolerances (the Ctrl+wheel anchor, 1.012 against 1) and the frame-budget test under load. None showed in
+  popover and stepper focus checks, `:focus-visible` after Tab and the Enter-on-a-button flows fail there; plus the
+  frame-budget test under load. (The Ctrl+wheel anchor, 1.012 against 1, was a real drift: WebKit truncates fractional
+  scroll offsets; fixed in `MushafView` in the CI pass of 2026-10-12.) None showed in
   the app. Whether the app should turn on `tabFocusesLinks` for keyboard users is a product decision.
 - **`MushafPage.swap` fails from a checkout whose path has a space** (as this pass's did): vitest's browser mode does not
   apply its relative `vi.mock`. It passes from a path without one.
@@ -107,7 +108,7 @@ onboarding with its Mushaf preview, and the print's running heads and hizb label
 | `pnpm bindings:check`, `pnpm check:tooling`, `pnpm check:ci`, the `node --test` tooling suites | ok |
 | `pnpm build`, `pnpm check:dist` | ok, 4.31 MiB of 6 |
 | `QD_BROWSERS=chromium pnpm test:browser` | 646 passed; `MushafPage.swap` fails from a path with a space (above) |
-| `QD_BROWSERS=webkit pnpm test:browser` | 630 passed, 16 failed, all known: the focus model and tolerances above, plus three that fail the same way before these changes (the note editor's tag picker, the Arabic `Segmented` fit at 4.58 px, the rail's right-to-left check in the Arabic UI) |
+| `QD_BROWSERS=webkit pnpm test:browser` | 630 passed, 16 failed, all known: the focus model and tolerances above, plus three that fail the same way before these changes (the note editor's tag picker, the Arabic `Segmented` fit at 4.58 px, the rail's right-to-left check in the Arabic UI; the last two fixed in the app in the CI pass of 2026-10-12) |
 
 - A Vite cache that has not seen a new import yet (here `@lucide/svelte/icons/ban`, the onboarding preview's) reloads
   the browser test page mid-run, and every file still loading fails to import. Run again; the cache keeps it.
