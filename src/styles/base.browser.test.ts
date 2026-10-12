@@ -115,12 +115,14 @@ describe('base.css in the browser', () => {
   })
 
   it('uses the UI type tokens on the body and the focus ring on :focus-visible', () => {
+    // The family list without quotes: Chromium serialises `"IBM Plex Sans Arabic"`, WebKit `IBM Plex Sans Arabic`.
+    const families = () => getComputedStyle(document.body).fontFamily.replace(/["']/gu, '')
     const body = getComputedStyle(document.body)
     expect(body.fontSize).toBe('14px')
-    expect(body.fontFamily).toContain('Inter Variable')
+    expect(families()).toMatch(/^Inter Variable,/u)
     html.lang = 'ar'
     expect(getComputedStyle(document.body).fontSize).toBe('16px')
-    expect(getComputedStyle(document.body).fontFamily.startsWith('"IBM Plex Sans Arabic"')).toBe(true)
+    expect(families()).toMatch(/^IBM Plex Sans Arabic,/u)
     html.lang = 'en'
     mount(`<button id="b">Undo</button>`)
     const button = host.querySelector('button')
