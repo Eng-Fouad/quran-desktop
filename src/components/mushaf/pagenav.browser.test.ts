@@ -383,6 +383,10 @@ describe('HintChip (§8.11)', () => {
    * Boots on page 262 itself (a restored position, §7.8) rather than turning there: the hint comes 1.2 s after the
    * reader settles and a turn while it shows marks it seen, so on a runner that takes longer than that to boot, a turn
    * from page 1 dismissed it for good before the test looked for it.
+   *
+   * Then the pointer goes to the title bar. The previous test leaves it where it clicked "Got it", under the pages: a
+   * pointer resting there reveals the page rail (WebKit sends the new page a move as it lays out), and the hint steps
+   * aside for as long as the rail is open.
    */
   async function bootOn262(): Promise<void> {
     await boot({
@@ -396,6 +400,8 @@ describe('HintChip (§8.11)', () => {
     })
     expect(quran.ayahRef(1_803)).toEqual({ surah: 15, ayah: 1 })
     expect(reader.visiblePages).toContain(262)
+    await userEvent.hover(document.querySelector('.titlebar, header') ?? document.body)
+    await until(() => !railState.open, 2_000, 'the rail closed')
   }
 
   it('shows once after the welcome flow, with the arrow keycaps, until "Got it"', async () => {
