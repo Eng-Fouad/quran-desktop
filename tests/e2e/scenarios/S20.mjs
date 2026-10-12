@@ -6,6 +6,7 @@
 // sura-names calligraphy once the decor fonts are installed (qcf_v2, when `data/dev-packs` has them), and the Arabic UI
 // in the night theme with an Arabic surah name.
 import { check, equal, waitUntil } from '../lib/index.mjs'
+import { waitDecor } from './_furniture.mjs'
 
 /** @type {import('../lib/types').ScenarioMeta} */
 export const meta = {
@@ -78,12 +79,9 @@ export default async function s20(ctx) {
   await ctx.page.locator(INPUT).waitFor({ state: 'detached' })
   await qd.setSettings({ mushafStyle: 'qcf_v2' })
   await qd.waitIdle()
-  const decor = await waitUntil(() => ctx.page.evaluate(() => document.fonts.check('26px qd-sura-names')), {
-    timeout: 6000,
-  }).then(
-    () => true,
-    () => false,
-  )
+  // A loaded qd-sura-names face, not `document.fonts.check()`: that is true when no such face is registered at all (no
+  // dev packs, as on CI), since nothing would need loading.
+  const decor = await waitDecor(ctx, 'qd-sura-names', 6000)
   if (decor) {
     await qd.openOverlay('palette', { query: 'al' })
     await ctx.page.locator(INPUT).waitFor({ state: 'visible' })

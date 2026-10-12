@@ -2,10 +2,11 @@
 // S30 (§12.6; WP8b): network not allowed ("Work offline"), QCF V2 selected, page 300, whose page font is not on disk:
 // mushaf_ensure_page_fonts answers `unavailable`, so the page shows the Hafs fallback rendition with no error toast,
 // and the subtle font-status dot in the footer band says "Offline — showing the Hafs font" (§8.5, §9.8), also in the
-// Arabic UI. In the browser mock it then makes one download fail (`?mockFontFail`) and recovers it through the dot's
-// Retry (the `failed` state of §9.8).
+// Arabic UI. In the browser mock, when `data/dev-packs` has page 262's font (CI has no dev packs), it then makes one
+// download fail (`?mockFontFail`) and recovers it through the dot's Retry (the `failed` state of §9.8; the
+// RenditionStack browser test covers that state everywhere).
 import { check, equal, mushaf, waitUntil } from '../lib/index.mjs'
-import { assertPage, clipAround, inspectPage } from './_fonts.mjs'
+import { assertPage, clipAround, devPackHasPage, inspectPage } from './_fonts.mjs'
 
 /** @type {import('../lib/types').ScenarioMeta} */
 export const meta = {
@@ -73,6 +74,11 @@ export default async function s30(ctx) {
 
   // Browser mock only: a download that fails (?mockFontFail) shows the warning dot, whose Retry recovers the page.
   if (ctx.mode !== 'web') return
+  // Without the page's dev-pack font the mock answers `unavailable` before it looks at `?mockFontFail`: nothing to fail.
+  if (!(await devPackHasPage(ctx, 'v2', FAILING))) {
+    ctx.log(`page ${FAILING}'s qcf_v2 font is not in data/dev-packs: no failed download and Retry`)
+    return
+  }
   await qd.setSettings({ networkAllowed: true })
   // A fresh page-font download anywhere in the style reports `packs-changed`, which makes the reader retry its failed
   // pages at once (as the app does: the network works again). Download the neighbours first, so nothing but the failing

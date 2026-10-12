@@ -132,6 +132,31 @@ export async function expectedRenditions(ctx, style, pages) {
 }
 
 /**
+ * Browser mock only: whether the dev packs (`data/dev-packs/`, listed by `vite/dev-packs.ts` at `/__packs/index.json`)
+ * hold the page font of `page` in `variant`. CI never has dev packs (they are not fetched, cached or uploaded there), so
+ * a step that needs a real page font checks this first; no side effects, unlike asking `mushafEnsurePageFonts`.
+ * @param {ScenarioContext} ctx
+ * @param {'v1' | 'v2' | 'v4'} variant
+ * @param {number} page
+ * @returns {Promise<boolean>}
+ */
+export function devPackHasPage(ctx, variant, page) {
+  return ctx.page.evaluate(
+    async ({ variant, page }) => {
+      try {
+        const res = await fetch('/__packs/index.json', { cache: 'no-store' })
+        if (!res.ok) return false
+        const index = await res.json()
+        return typeof index?.mushaf?.[variant]?.[String(page)]?.bytes === 'number'
+      } catch {
+        return false
+      }
+    },
+    { variant, page },
+  )
+}
+
+/**
  * Asserts one settled page: exactly one rendition, of the expected kind, family and metrics; the §8.4 line-fit gate;
  * and the font-status dot when the page font is unavailable or failed.
  * @param {ScenarioContext} ctx
