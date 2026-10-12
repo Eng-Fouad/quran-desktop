@@ -10,7 +10,7 @@
  * mirror.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { page, userEvent } from 'vitest/browser'
+import { page, server, userEvent } from 'vitest/browser'
 import '../../app.css'
 import { app, settings, ui } from '$lib/stores'
 import { bootApp, resetApp, settle } from './testing/boot'
@@ -69,7 +69,14 @@ afterEach(async () => {
   await page.viewport(1280, 800)
 })
 
-describe('Settings dialog (§7.4)', () => {
+/**
+ * WebKit on the Linux runner paints in software (no GPU), and every opening and closing of the dialog over the reader
+ * waits on its frames: the tests that open it several times took 9–13 s there in CI and up to 16 s in a CI-like
+ * container, against vitest's 15 s. They get 30 s there.
+ */
+const softwarePaint = server.browser === 'webkit' && server.platform === 'linux'
+
+describe('Settings dialog (§7.4)', softwarePaint ? { timeout: 30_000 } : {}, () => {
   it('opens over the reader, which stays mounted, centred between the title bar and the dock on a faint scrim', async () => {
     await bootApp()
     const reader = $('[data-qd-view="mushaf"]')
