@@ -328,7 +328,9 @@ describe('the hide-mode toolbar', hideOptions, () => {
   })
 })
 
-describe('the Memorize panel', () => {
+// The panel's tests click through the panel, its menus and hide mode, each click waiting on frames: 11.2 s in CI and
+// up to 13.3 s in a CI-like container for the first one, against vitest's 15 s. They get hide mode's time.
+describe('the Memorize panel', hideOptions, () => {
   it('scopes the range, takes a typed one, hides and marks it, and draws the Mushaf map', async () => {
     await bootApp({
       settings: {

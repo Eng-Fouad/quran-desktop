@@ -157,8 +157,8 @@ Tests:
       reveals cost 1–2 ms of script, style and layout in both. WebKitGTK with a GPU is still unmeasured.
     - So the browser test's frame-rate half (§8.18) does not run there: on WebKit under Linux the W presses come back
       to back and only their work is checked (`memo.browser.test.ts`); there the memo tests hide with `blank` unless
-      they are about the blur, and hide mode's tests get 45 s (pointer actions wait for frames). The self-test's
-      browser test hides with `blank`.
+      they are about the blur, and hide mode's tests and the Memorize panel's get 45 s (pointer actions wait for
+      frames). The self-test's browser test hides with `blank`.
     - The other test files (this file's WebKit run among them) share the runner's CPUs, and time the OS gives to other
       processes only adds to a timing. So the 90 presses run three times, and each press counts with its least time
       of the three. The frames are judged beside the page at rest under the same load (CI pass, round 2: heartbeats

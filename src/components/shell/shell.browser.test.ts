@@ -6,7 +6,7 @@
  */
 import { flushSync } from 'svelte'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { page, userEvent } from 'vitest/browser'
+import { page, server, userEvent } from 'vitest/browser'
 import { render } from 'vitest-browser-svelte'
 import '../../app.css'
 import App from '../../App.svelte'
@@ -24,6 +24,9 @@ vi.mock('@tauri-apps/plugin-dialog', () => ({
   open: vi.fn(async () => dialog.picked),
   save: vi.fn(async () => null),
 }))
+
+/** WebKit on the Linux runner paints in software (no GPU): tests that open many dialogs get 30 s there. */
+const softwarePaint = server.browser === 'webkit' && server.platform === 'linux' ? { timeout: 30_000 } : {}
 
 const $ = <T extends Element = HTMLElement>(selector: string) => document.querySelector<T>(selector)
 const $$ = (selector: string) => [...document.querySelectorAll<HTMLElement>(selector)]
@@ -293,7 +296,10 @@ describe('overlays', () => {
     expect(dialogNamed('Clear cache?')).toBeUndefined()
   })
 
-  it('renders every overlay kind as its own dialog, never a placeholder', async () => {
+  // Seven dialogs open and close over the reader, each waiting on frames that WebKit on the Linux runner paints on the
+  // CPU: 11.6 s in CI and up to 12.1 s in a CI-like container, against vitest's 15 s. It gets 30 s there, as the
+  // Settings dialog's tests do.
+  it('renders every overlay kind as its own dialog, never a placeholder', softwarePaint, async () => {
     await bootApp()
     const kinds = [
       ['goto', {}],
