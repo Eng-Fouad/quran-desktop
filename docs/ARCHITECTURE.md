@@ -5118,7 +5118,8 @@ evidence.
      `openOverlay(kind)`, `waitIdle()` (no pending IPC, `document.fonts` ready, no running transitions), `metrics()` →
      `{ cls, longTasks, pageRenderMs[], glideFps, cspViolations }`.
   5. Write screenshots to `artifacts/shots/app/{id}.png` plus `metrics.json`. Compare to local, gitignored baselines with
-     pixelmatch (threshold 0.1, ≤ 0.5 % differing pixels). Write an HTML report. Mushaf images are never committed to git.
+     pixelmatch (threshold 0.1, ≤ 0.5 % differing pixels). Write an HTML report. Mushaf images are never committed to git,
+     with one owner-approved exception: the README's `docs/screenshot.png` (pages 261–262, LEAD 28).
 - **Package acceptance vs review:** a package's acceptance is "the PNG exists for each owned scenario and there are no page or
   console errors". Lead visual review is a separate merge gate.
 - **UI scale in the mock:** webview zoom (D27) exists only in the real app. Under `__MOCK_IPC__` the settings store applies CSS

@@ -36,7 +36,7 @@ data/sources/tanzil/*
 public/fonts/*.ttf
 fixtures-out/
 
-# Test and QA output (Mushaf images are never committed, §12.6)
+# Test and QA output (Mushaf images are never committed, §12.6; the one exception is docs/screenshot.png, LEAD 28)
 artifacts/
 tests/e2e/baselines/
 # vitest's default attachment directory (failure screenshots of older runs; vitest.config.ts now writes to artifacts/)

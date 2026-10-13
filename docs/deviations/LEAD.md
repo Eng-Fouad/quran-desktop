@@ -148,3 +148,10 @@ summarises them); item 17's data rulings are also corrected in place in ARCHITEC
 27. **reqwest without its `charset` feature** (lead, 2026-10-12; a `[workspace.dependencies]` change, DEVELOPING §6):
     every body is read as JSON or bytes; only stream-download reads one as text, an HTTP error's, for its message, which
     is now decoded as lossy UTF-8. It drops encoding_rs, 333 KB of the universal macOS app (WP-CI.md deviation 11).
+28. **The README shows the app** (owner decision, 2026-10-13; an exception to §12.6's "Mushaf images are never
+    committed"): `docs/screenshot.png`, the browser mock at 1600 × 1000 (`web-shot`, English UI, paper, the index open)
+    with the 261–262 spread in the default Madani style (QCF V2 page fonts, the decorated header of Al-Hijr and the juz
+    14 / hizb 27 medallion), and the app icon (`src-tauri/icons/128x128@2x.png`) above the title. The owner chose this
+    over a Hafs-only page or waiting for the release (QUL) data, knowing the page's layout and fonts come from the
+    development data and the downloaded page fonts. It is the only Mushaf image in git; every QA screenshot stays under
+    the gitignored `artifacts/`.

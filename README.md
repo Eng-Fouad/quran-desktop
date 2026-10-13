@@ -1,3 +1,5 @@
+<p align="center"><img src="src-tauri/icons/128x128@2x.png" width="128" height="128" alt="The Quran app icon"></p>
+
 # Quran for Desktop
 
 <p dir="rtl" lang="ar"><b>قرآن لسطح المكتب</b></p>
@@ -7,6 +9,8 @@ word-by-word highlighting, translations, tafsir, search and memorisation.
 
 > **Status:** in development, not yet released. The app carries the identity of the [Quran.com](https://quran.com)
 > project, pending the approval of its maintainers.
+
+![The Quran app: the surah index beside the 261–262 spread, where Al-Hijr opens juz 14](docs/screenshot.png)
 
 ## Build
 
