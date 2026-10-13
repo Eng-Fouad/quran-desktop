@@ -3,9 +3,11 @@
   Arabic with Eastern Arabic numbers:
 
     right: the surah of info.headSurah
-    left:  the juz; when the margin labels are not drawn (glyph-only below qfs 28, or markers off), the quarter of the
-           first rub starting on the page follows after a small gold khatam (not a middle dot, which reads as the digit
-           zero ٠ beside Eastern Arabic numbers), on one line: الجزء ١٤ [khatam] ثلاثة أرباع الحزب ٢٧
+    left:  the juz; when the margin does not name the quarter (markers off, or, without the print-labels face, its
+           Hafs labels hidden below qfs 28; the print's own labels, in their ornaments or under a ۞, are drawn at
+           every size), the quarter of the first rub starting on the page follows after a small gold khatam (not a
+           middle dot, which reads as the digit zero ٠ beside Eastern Arabic numbers), on one line:
+           الجزء ١٤ [khatam] ثلاثة أرباع الحزب ٢٧
 
   From qfs 20, with the bundled print-labels face loaded (`fonts.printLabelsReady`, LEAD 25), the heads are the 1441H
   print's own calligraphy in `qd-print-labels` at the print's proportion (`PRINT_EM`·qfs, baseline
@@ -56,7 +58,13 @@
   /** The heads in words: the text fallback, and the `data-text` of the print's glyphs. */
   const surahText = $derived(nameAr ? `سورة ${nameAr}` : '')
   const juzText = $derived(`الجزء ${arabicNum(juz)}`)
-  const labelsDrawn = $derived(settings.value.showMarginMarkers && marginLabelsVisible(qfs))
+  /**
+   * The margin names the page's quarter (`markerLabelShown`): the print's label at every size, the Hafs words from
+   * qfs 28.
+   */
+  const labelsDrawn = $derived(
+    settings.value.showMarginMarkers && (fonts.printLabelsReady || marginLabelsVisible(qfs)),
+  )
   const quarter = $derived(labelsDrawn ? null : firstRubStart(data))
   /** The print's calligraphy: the face is loaded, the page is not compact, and both heads have their glyph. */
   const print = $derived.by(() => {

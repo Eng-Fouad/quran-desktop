@@ -28,7 +28,7 @@ import {
   TB_W,
   isOpeningPage,
 } from './geometry'
-import { printLabelInk } from './printLabels'
+import { marginLabelBox, printLabelInk } from './printLabels'
 
 /** An SVG path `d` attribute. */
 export type PathData = string
@@ -643,7 +643,11 @@ export function sajdaLabel(kind: SajdaKind): string {
 export const RUB_SIGN = String.fromCodePoint(0x06de)
 /** ۩ U+06E9 ARABIC PLACE OF SAJDAH. */
 export const SAJDA_SIGN = String.fromCodePoint(0x06e9)
-/** quran-common (decor) margin ornaments: `marker-full` for a hizb start, `marker-half` for the other quarters. */
+/**
+ * quran-common (decor) margin ornaments, as the print hangs them beside a division (owner request 2026-10-13): the
+ * medallion (crest, frame, crest; `marker-full`) at a hizb or juz start, the lamp (a crest over an arched box;
+ * `marker-half`) at a quarter, a half and three quarters.
+ */
 export const DECOR_HIZB = String.fromCodePoint(0xfc23)
 export const DECOR_QUARTER = String.fromCodePoint(0xfc22)
 /** quran-common basmala calligraphy (§8.8). */
@@ -665,43 +669,52 @@ export interface GlyphInk {
   ascent: number
   descent: number
   /**
-   * The empty frame of a quran-common ornament (in print it frames the division's text): its centre `cy` above the
-   * baseline and its inner width `w`, in em, measured at 1000 px (canvas, 2026-10-10) a little off the centre line,
-   * where the frame's top and bottom edges are straight (both frames have a small notch on the centre line).
+   * The free box of a quran-common ornament, where the print sets the division's label (`markerLabelTop`): its centre
+   * `cy` above the baseline, its width `w` and height `h`, in em (UPM 1024, rasterised, 2026-10-13).
    */
-  hollow?: { cy: number; w: number }
+  hollow?: { cy: number; w: number; h: number }
+  /** The ink's width in em, centred in a wider advance (the ornaments' advance, 1 em, is wider than the margin). */
+  width?: number
   /** The drawn ink height in qfs, when not `MARKER_INK` (the ornaments). */
   size?: number
 }
 
 /** qd-hafs (KFGQPC Hafs V30): ascent 1.17, descent 0.59 em. */
 const HAFS_METRICS = { family: 'qd-hafs', ascent: 1.17, descent: 0.59 } as const
-/** quran-common: ascent 0.8, descent 0.2 em. */
+/** quran-common: ascent 0.8, descent 0.2 em. Both ornaments: ink 0.1875 em below to 0.8125 em above the baseline. */
 const COMMON_METRICS = { family: 'qd-quran-common', ascent: 0.8, descent: 0.2 } as const
+const ORNAMENT_INK = { top: 0.8125, bottom: 0.1875, ...COMMON_METRICS } as const
+
+/**
+ * The ornaments' font sizes in qfs (their ink is 1 em tall), each sized so the print label of its kind
+ * (`MARGIN_LABEL_EM`·qfs) fills its box as in print: 88 % of the lamp's height, 92 % of the medallion's width.
+ */
+export const DECOR_LAMP = 3.56
+export const DECOR_MEDALLION = 3.72
+export const DECOR_MEDALLION_JUZ = 4.48
+
+/** The medallion: crest, a rounded frame 0.203 × 0.234 em 0.3125 em above the baseline (the ink's middle), crest. */
+const MEDALLION = {
+  char: DECOR_HIZB,
+  ...ORNAMENT_INK,
+  width: 0.244,
+  hollow: { cy: 0.3125, w: 0.203, h: 0.234 },
+} as const
 
 export const INK = {
   rub: { char: RUB_SIGN, top: 0.4, bottom: 0.05, ...HAFS_METRICS },
   sajda: { char: SAJDA_SIGN, top: 0.63, bottom: 0, ...HAFS_METRICS },
-  /**
-   * A slender upright: crest, a rounded frame 0.207 × 0.235 em centred on the ink, crest. Drawn a line tall
-   * (`DECOR_HIZB_INK`), so its narrow frame holds a two-digit hizb number at about 0.3·qfs.
-   */
-  decorHizb: {
-    char: DECOR_HIZB,
-    top: 0.82,
-    bottom: 0.19,
-    ...COMMON_METRICS,
-    hollow: { cy: 0.313, w: 0.207 },
-    size: 1.75,
-  },
-  /** A crest over an arched frame 0.387 × 0.266 em at the foot. */
+  /** A hizb start: the medallion with «الحِزۡبُ h» in its frame. */
+  decorHizb: { ...MEDALLION, size: DECOR_MEDALLION },
+  /** A juz start: the medallion, larger, with the juz label's two lines «الجُزۡءُ j» / «الحِزۡبُ h» in its frame. */
+  decorJuz: { ...MEDALLION, size: DECOR_MEDALLION_JUZ },
+  /** A quarter: the lamp, a crest over an arched box 0.387 × 0.255 em centred 0.025 em below the baseline. */
   decorQuarter: {
     char: DECOR_QUARTER,
-    top: 0.82,
-    bottom: 0.19,
-    ...COMMON_METRICS,
-    hollow: { cy: -0.018, w: 0.387 },
-    size: 1.45,
+    ...ORNAMENT_INK,
+    width: 0.457,
+    hollow: { cy: -0.025, w: 0.387, h: 0.255 },
+    size: DECOR_LAMP,
   },
 } as const satisfies Record<string, GlyphInk>
 
@@ -738,8 +751,8 @@ export interface MarginMarker {
   /** Sajdas: recommended or obligatory. */
   sajda: SajdaKind | null
   /**
-   * A rub start whose ayah's first word carries the ۞ inline (LEAD 17: kept verbatim, as the printed Mushaf does): the
-   * margin shows the label alone, never a second ۞ beside it.
+   * A rub start whose ayah's first word carries the ۞ inline (LEAD 17: kept verbatim, as the printed Mushaf does). The
+   * margin draws the same either way, as the print does (owner request 2026-10-13).
    */
   inline: boolean
 }
@@ -749,7 +762,10 @@ export interface MarginMarker {
  * ayah starts on the page, and a sajda where its ayah ends on the page (the ۩ follows the sajda word, so it belongs
  * to the line where the ayah's text actually finishes; that is the first line when the ayah has one). The opening
  * pages carry none: their 8 lines sit inside the illuminated medallion, with no margin furniture, as in print. A rub
- * start whose first word begins with ۞ (about 198 of the 240) is `inline`.
+ * start whose first word begins with ۞ (about 198 of the 240) is `inline`. On a line it shares with a sajda (the
+ * sajda ayah ends where the division starts: pages 272, 309, 334 and 379) the rub start comes first: an ornament's
+ * crest rises above its box, so the ۩ goes under it (with the sajda first, the lamp's box fell a line below its line).
+ * Even so the ۩ cannot stay on the line beside a 3.56–4.48·qfs ornament: it sits beside the next line (`placeMarkers`).
  */
 export function pageMarkers(data: Pick<PageData, 'page' | 'ayahs' | 'lines'>): MarginMarker[] {
   if (isOpeningPage(data.page)) return []
@@ -786,7 +802,9 @@ export function pageMarkers(data: Pick<PageData, 'page' | 'ayahs' | 'lines'>): M
       })
     }
   }
-  return out.sort((x, y) => x.line - y.line || x.ayahId - y.ayahId || (x.kind === 'rub' ? -1 : 1))
+  return out.sort(
+    (x, y) => x.line - y.line || (x.kind === y.kind ? x.ayahId - y.ayahId : x.kind === 'rub' ? -1 : 1),
+  )
 }
 
 /**
@@ -811,29 +829,26 @@ function lastLineOf(lines: PageData['lines'], wordId: number, fallback: number):
   return fallback
 }
 
-/** The first rub start of a page (the running head appends its quarter when labels are glyph-only, §8.9). */
+/** The first rub start of a page (the running head appends its quarter while the margin does not name it, §8.9). */
 export function firstRubStart(data: Pick<PageData, 'page' | 'ayahs'>): PageAyah | null {
   if (isOpeningPage(data.page)) return null
   return data.ayahs.find((a) => (a.flags & FLAG_RUB_START) !== 0 && a.startsOnPage) ?? null
 }
 
-/** Marker label size (qfs) and the legibility rule: labels only when `0.36·qfs ≥ 10 px` (qfs ≥ 27.8, §8.9). */
+/**
+ * Marker label size (qfs) and the legibility rule of the Hafs words: only when `0.36·qfs ≥ 10 px` (qfs ≥ 27.8, §8.9).
+ * A rub start's print label is drawn at every size, at `MARGIN_LABEL_EM`·qfs (`markerLabelShown`).
+ */
 export const MARKER_LABEL = 0.36
 export const MARKER_LABEL_MIN_PX = 11
 export const MARKER_LABEL_SHOW_PX = 10
 /**
  * The drawn (ink) height of ۞ and ۩ in qfs, with a px floor. §8.9 gives the glyph `max(0.95·qfs, 14px)` as a font
  * size, but the KFGQPC Hafs ۞ has an ink only 0.45 em tall (a 0.43·qfs mark); sizing by ink keeps the printed
- * proportion of about half a line.
+ * proportion of about half a line. The ornaments have their own sizes (`DECOR_LAMP`, `INK.*.size`).
  */
 export const MARKER_INK = 0.75
 export const MARKER_INK_MIN_PX = 13
-/**
- * The quran-common ornaments are tall, slender frames: their ink is drawn taller, 1.45·qfs (U+FC22), and a line tall
- * for the narrower U+FC23 (`INK.*.size`).
- */
-export const DECOR_MARKER_INK = INK.decorQuarter.size
-export const DECOR_HIZB_INK = INK.decorHizb.size
 /** The gap between stacked margin items (qfs). */
 export const STACK_GAP = 0.2
 /** Label line height (em) and the gap between a glyph and its label (qfs). */
@@ -843,7 +858,11 @@ export const LABEL_GAP = 0.08
 export const MARK_BOOKMARK = 0.55
 export const MARK_NOTE = 0.5
 
-/** Whether margin labels are drawn at this size (§8.9: `0.36·qfs ≥ 10`). */
+/**
+ * Whether the Hafs-text margin labels (a sajda's, and a rub start's without the print face) are drawn at this size
+ * (§8.9: `0.36·qfs ≥ 10`). The print's own rub labels, and the ornaments that hold them, do not wait for it
+ * (`markerLabelShown`, `markerInk`).
+ */
 export function marginLabelsVisible(qfs: number): boolean {
   return MARKER_LABEL * qfs >= MARKER_LABEL_SHOW_PX - 1e-9
 }
@@ -854,17 +873,20 @@ export function labelSize(qfs: number): number {
 }
 
 /**
- * The glyph a marker draws: ۞ or the decor ornament for a rub start, ۩ for a sajda. The quran-common ornaments are
- * drawn only with their labels (`labels`): their hairline frames need the size, and the frame carries the division's
- * number (`markerInset`), which is legible only from there on; smaller pages draw the solid ۞, which reads at any size.
+ * The glyph a marker draws (owner request 2026-10-13: one family, at every size, inline ۞ or not). A rub start draws
+ * the ornament of its kind while decor is on (`decor`: the page's ornaments and the quran-common face) and the print's
+ * label is there to hold (`print`): the lamp for a quarter, a half and three quarters, the medallion for a hizb start,
+ * larger for a juz start, the label inside it (`markerLabelTop`). Otherwise the solid ۞, its label under it. ۩ for a
+ * sajda.
  */
-export function markerInk(m: Pick<MarginMarker, 'kind' | 'rub'>, decor: boolean, labels = true): GlyphInk {
+export function markerInk(m: Pick<MarginMarker, 'kind' | 'rub'>, decor: boolean, print: boolean): GlyphInk {
   if (m.kind === 'sajda') return INK.sajda
-  if (!decor || !labels) return INK.rub
-  return m.rub?.kind === 'quarter' ? INK.decorQuarter : INK.decorHizb
+  if (!decor || !print) return INK.rub
+  const kind = m.rub?.kind
+  return kind === 'quarter' ? INK.decorQuarter : kind === 'juz' ? INK.decorJuz : INK.decorHizb
 }
 
-/** Whether a glyph is a quran-common ornament (thickened hairlines, a filled frame). */
+/** Whether a glyph is a quran-common ornament (thickened hairlines, its label inside). */
 export function isDecorInk(ink: GlyphInk): boolean {
   return ink.family === COMMON_METRICS.family
 }
@@ -895,8 +917,8 @@ export function markerPrintLabel(m: Pick<MarginMarker, 'kind' | 'rub'>, print: b
 }
 
 /**
- * The height in px of a marker's label: the print label's box (the ink extent of its kind of label at `PRINT_EM`·qfs,
- * `markerGlyphBox`), else its Hafs lines.
+ * The height in px of a marker's label: the print label's box (the ink extent of its kind of label at
+ * `MARGIN_LABEL_EM`·qfs, `marginLabelBox`), else its Hafs lines.
  */
 export function labelBoxHeight(
   m: Pick<MarginMarker, 'kind' | 'rub' | 'lines'>,
@@ -904,95 +926,92 @@ export function labelBoxHeight(
   print = false,
 ): number {
   const ink = markerPrintLabel(m, print)
-  return ink ? markerGlyphBox(qfs, ink).height : labelSize(qfs) * LABEL_LEADING * m.lines.length
+  return ink ? marginLabelBox(qfs, ink).height : labelSize(qfs) * LABEL_LEADING * m.lines.length
 }
 
 /**
- * Whether a marker is drawn at this size: an `inline` rub start shows its label alone, so only while labels are
- * visible; below that the ۞ in the text marks the place and the running head names the quarter (§8.9).
+ * Whether a marker's label is drawn: a rub start's print label (the bundled face is loaded, `print`) at every size,
+ * inside its ornament or under its ۞, as the print sets it beside its line at any page size (owner request 2026-10-13;
+ * at `MARGIN_LABEL_EM`·qfs, so it scales with the page); the Hafs words (a sajda's, or any label without the face) only
+ * while `labels` (qfs ≥ 28, `marginLabelsVisible`).
  */
-export function markerDrawn(m: Pick<MarginMarker, 'inline'>, labels: boolean): boolean {
-  return !m.inline || labels
+export function markerLabelShown(
+  m: Pick<MarginMarker, 'kind' | 'rub'>,
+  labels: boolean,
+  print = false,
+): boolean {
+  return labels || markerPrintLabel(m, print) !== null
 }
 
 /**
- * The height in px of a drawn marker: the label of an `inline` rub start, else glyph plus label; the label is the
- * print's (`print`, `labelBoxHeight`) or the Hafs lines.
+ * The height in px of a marker: an ornament's ink (its label is inside it), else the glyph and, when it is shown
+ * (`markerLabelShown`), the gap and the label under it: the print's (`print`, `labelBoxHeight`) or the Hafs lines.
  */
 export function markerBoxHeight(
-  m: Pick<MarginMarker, 'kind' | 'rub' | 'inline' | 'lines'>,
+  m: Pick<MarginMarker, 'kind' | 'rub' | 'lines'>,
   qfs: number,
   labels: boolean,
   decor = false,
   print = false,
 ): number {
-  if (m.inline) return labelBoxHeight(m, qfs, print)
-  const glyph = markerGlyphBox(qfs, markerInk(m, decor, labels)).height
-  return glyph + (labels ? LABEL_GAP * qfs + labelBoxHeight(m, qfs, print) : 0)
+  const ink = markerInk(m, decor, print)
+  const glyph = markerGlyphBox(qfs, ink).height
+  if (isDecorInk(ink)) return glyph
+  return glyph + (markerLabelShown(m, labels, print) ? LABEL_GAP * qfs + labelBoxHeight(m, qfs, print) : 0)
+}
+
+/** The centre of an ornament's box in px below its top (the ink's top, `markerGlyphBox`); null for ۞ and ۩. */
+function hollowCenter(qfs: number, ink: GlyphInk): number | null {
+  return ink.hollow ? (ink.top - ink.hollow.cy) * markerGlyphBox(qfs, ink).fontSize : null
 }
 
 /**
- * The hairline thickening of a quran-common ornament (px, for its font size): `-webkit-text-stroke` of
- * `max(0.5px, 0.018em)` under the fill. At 1.45·qfs the ornament's strokes are only ≈0.01 em, which antialias to
- * 2.4–2.9:1; thickened they reach the 3:1 non-text minimum in every theme (§9.2).
+ * Where a marker meets its line, in px below its top: the ink centre of a rub start's print label, in an ornament's box
+ * (the print hangs the lamp's box and the medallion's frame on the division's line, the lamp's crest rising above it)
+ * or under the ۞ without decor, which then stands above the line as a crest does (so decor arriving late moves no
+ * label); else the marker's middle (۩, and the ۞ over its Hafs words).
  */
-export const DECOR_STROKE_EM = 0.018
-export const DECOR_STROKE_MIN_PX = 0.5
+export function markerAnchor(
+  m: Pick<MarginMarker, 'kind' | 'rub' | 'lines'>,
+  qfs: number,
+  labels: boolean,
+  decor = false,
+  print = false,
+): number {
+  const ink = markerInk(m, decor, print)
+  const box = hollowCenter(qfs, ink)
+  if (box !== null) return box
+  const label = markerPrintLabel(m, print)
+  if (label) return markerGlyphBox(qfs, ink).height + LABEL_GAP * qfs + marginLabelBox(qfs, label).height / 2
+  return markerBoxHeight(m, qfs, labels, decor, print) / 2
+}
+
+/**
+ * The top in px, below the marker's top, of a print label set inside its ornament: its box (the ink of its kind of
+ * label, `marginLabelBox`) centred on the ornament's box. Null when the label goes under the glyph.
+ */
+export function markerLabelTop(
+  m: Pick<MarginMarker, 'kind' | 'rub'>,
+  qfs: number,
+  decor: boolean,
+  print: boolean,
+): number | null {
+  const center = hollowCenter(qfs, markerInk(m, decor, print))
+  const label = markerPrintLabel(m, print)
+  return center === null || !label ? null : center - marginLabelBox(qfs, label).height / 2
+}
+
+/**
+ * The hairline thickening of a quran-common ornament (px, for its font size): `-webkit-text-stroke` under the fill,
+ * just what brings its ≈0.01 em hairlines to a pixel. Under a pixel they antialias to a faint tint (the lamp's at qfs
+ * 18: 0.64 px, thickened by 0.36 px; §9.2); from about qfs 28 they are a pixel or more and get nothing, so the
+ * filigree stays open and the box's double rule stays two rules, as in print (a fixed half pixel filled them in).
+ */
+export const DECOR_HAIRLINE_EM = 0.01
+export const DECOR_HAIRLINE_MIN_PX = 1
 
 export function decorStroke(fontSize: number): number {
-  return Math.max(DECOR_STROKE_MIN_PX, DECOR_STROKE_EM * fontSize)
-}
-
-/** The text in an ornament's frame (qfs): `0.34·qfs`, smaller when the frame is narrower than the text. */
-export const INSET_TEXT = 0.34
-/** The share of the frame's inner width (less the thickening) the text may take. */
-export const INSET_FILL = 0.8
-
-/**
- * What an ornament's frame holds (in print it frames the division's text): the number, in Eastern Arabic numbers, of
- * the hizb the marker opens (U+FC23, a hizb or juz start) or divides (U+FC22, a quarter). A quarter's words
- * (`ثلاثة أرباع`) cannot fit its frame, and its label under the ornament names the quarter of that same hizb, so every
- * frame reads as the hizb and the words under it say which part. `null` for ۞, ۩ and a label-only marker. The full
- * label stays under the ornament and in the tooltip.
- */
-export function markerInset(m: Pick<MarginMarker, 'rub'>, ink: GlyphInk): string | null {
-  if (!ink.hollow || !m.rub) return null
-  return arabicNum(m.rub.hizb)
-}
-
-/**
- * The frame text in qd-hafs (measured with canvas `measureText`, 2026-10-10): the advance of each Eastern Arabic digit
- * ٠…٩ (no kerning between them); their ink, 0.52 em above the baseline; the baseline 0.79 em below the top of a
- * `line-height: 1` box (ascent 1.17, descent 0.59).
- */
-const INSET_DIGIT_EM = [0.256, 0.287, 0.341, 0.466, 0.385, 0.351, 0.424, 0.453, 0.479, 0.4] as const
-const INSET_DIGIT_INK = { top: 0.52, bottom: 0 } as const
-const INSET_BASELINE_EM = 0.79
-
-/** The advance of a frame text in qd-hafs (em); 0.48 em, the widest digit's, for anything else. */
-function insetWidthEm(text: string): number {
-  let em = 0
-  for (const ch of text) {
-    const digit = (ch.codePointAt(0) ?? 0) - 0x0660
-    em += digit >= 0 && digit <= 9 ? (INSET_DIGIT_EM[digit] ?? 0.48) : 0.48
-  }
-  return em
-}
-
-/**
- * Where an ornament's frame text goes and how large it is, in px from the glyph box's top (the ornament's ink fills
- * the box, its top at the box's top): `top` of the text's `line-height: 1` box, placed so that the text's ink is
- * centred on the frame, and `fontSize`, `0.34·qfs` or less so the text fits the frame's inner width.
- */
-export function insetBox(qfs: number, ink: GlyphInk, text: string): { top: number; fontSize: number } | null {
-  if (!ink.hollow) return null
-  const { fontSize: glyph } = markerGlyphBox(qfs, ink)
-  const room = Math.max(0, ink.hollow.w * glyph - decorStroke(glyph)) * INSET_FILL
-  const textEm = insetWidthEm(text)
-  const fontSize = Math.min(INSET_TEXT * qfs, textEm > 0 ? room / textEm : INSET_TEXT * qfs)
-  const inkMid = INSET_BASELINE_EM - (INSET_DIGIT_INK.top - INSET_DIGIT_INK.bottom) / 2
-  const cy = (ink.top - ink.hollow.cy) * glyph
-  return { top: cy - inkMid * fontSize, fontSize }
+  return Math.max(0, DECOR_HAIRLINE_MIN_PX - DECOR_HAIRLINE_EM * fontSize)
 }
 
 /** The vertical centre of a line, in px from the page top (§8.9: block top + (line − 1)·LH + LH/2). */
@@ -1025,11 +1044,23 @@ export interface Placed<T> {
   height: number
 }
 
+/** The extent of a line's markers in px from the page top: the top of its stack and its bottom. */
+export interface Span {
+  top: number
+  bottom: number
+}
+
 /**
- * Places the markers of a page (§8.9): those on the same line stack with 0.2·qfs between them, the stack centred on
- * the line. Returns the placed markers and, per line, the bottom edge of its stack (where the marks continue). An
- * `inline` rub start is a label line, and is left out while labels are hidden (`markerDrawn`). `print`: the rub labels
- * are the print's (`qd-print-labels` loaded), sized by their own ink.
+ * Places the markers of a page (§8.9), every one of them (an inline ۞ in the text changes nothing): a marker alone on
+ * its line meets it at its anchor (`markerAnchor`: the ink centre of a rub start's print label, else its middle).
+ * Markers sharing a line (a rub start and the sajda that ends there: pages 272, 309, 334 and 379) stack with 0.2·qfs
+ * between them, the stack centred on the line, but never so low that the rub start's anchor falls below the line: the
+ * lamp's anchor is near its foot, so a centred stack would hang its box (and label) 0.45–0.72·qfs below the line and
+ * push the ۩ under it to the next line; anchored, the box stays on the line and the ۩ hangs right under it. A
+ * medallion's anchor is its middle, so it stays centred with the ۩ (its frame 0.48–0.75·qfs above the line, the ۩
+ * about a line below). Returns the placed markers and, per line, the extent of its stack (`stacks`: the marks keep
+ * clear of it and continue after it). `print`: the rub labels are the print's (`qd-print-labels` loaded), sized by
+ * their own ink, drawn at every size, inside the ornaments while `decor`.
  */
 export function placeMarkers(
   markers: readonly MarginMarker[],
@@ -1038,17 +1069,26 @@ export function placeMarkers(
   decor = false,
   opening = false,
   print = false,
-): { placed: Placed<MarginMarker>[]; bottoms: Map<number, number> } {
+): { placed: Placed<MarginMarker>[]; stacks: Map<number, Span> } {
   const placed: Placed<MarginMarker>[] = []
-  const bottoms = new Map<number, number>()
-  for (const [line, items] of groupByLine(markers.filter((m) => markerDrawn(m, labels)))) {
+  const stacks = new Map<number, Span>()
+  const gap = STACK_GAP * qfs
+  for (const [line, items] of groupByLine(markers)) {
     const heights = items.map((m) => markerBoxHeight(m, qfs, labels, decor, print))
-    const tops = stackCentered(lineCenterY(qfs, line, opening), heights, STACK_GAP * qfs)
+    const center = lineCenterY(qfs, line, opening)
+    const [first] = items
+    if (!first) continue
+    const centred = stackCentered(center, heights, gap)[0] ?? center
+    const tops = stackFrom(
+      Math.min(centred, center - markerAnchor(first, qfs, labels, decor, print)),
+      heights,
+      gap,
+    )
     items.forEach((item, i) => placed.push({ item, top: tops[i] ?? 0, height: heights[i] ?? 0 }))
     const last = tops.length - 1
-    if (last >= 0) bottoms.set(line, (tops[last] ?? 0) + (heights[last] ?? 0))
+    stacks.set(line, { top: tops[0] ?? 0, bottom: (tops[last] ?? 0) + (heights[last] ?? 0) })
   }
-  return { placed, bottoms }
+  return { placed, stacks }
 }
 
 /** One margin mark beside an ayah (§8.9). */
@@ -1066,33 +1106,99 @@ export function markHeight(kind: MarginMark['kind'], qfs: number): number {
   return (kind === 'bookmark' ? MARK_BOOKMARK : MARK_NOTE) * qfs
 }
 
+/** Rounding slack (px) for the margin's comparisons. */
+const EPS = 1e-6
+
 /**
- * Places the marks (§8.9): stacked after the markers on the ayah's first line with a 0.2·qfs gap, or, on a line with
- * no marker, as a stack centred on the line, pushed down to 0.2·qfs below the line above's markers when that stack
- * reaches into it (a juz start's ornament over the print's two-line label is about 3·qfs tall).
+ * Places the marks (§8.9), one stack per line in line order, 0.2·qfs apart: after the markers of the ayah's first line,
+ * or centred on a line without markers. No mark covers a marker or another mark: the ornaments reach well beyond their
+ * line (the lamp's crest rises 2.98·qfs above it, a juz start's medallion hangs 2.24·qfs below it), so a stack that
+ * would meet a marker stack (`stacks`, from `placeMarkers`) moves to the nearest place 0.2·qfs clear of it, above or
+ * below (on a tie, below), and one that would meet the marks of an earlier line goes on after them, unless lifting
+ * those (as far as their own place allows) lets it stand nearer its line. Never above the dog-ear's corner
+ * (`DOG_EAR`).
  */
 export function placeMarks(
   marks: readonly MarginMark[],
   qfs: number,
-  markerBottoms: ReadonlyMap<number, number>,
+  stacks: ReadonlyMap<number, Span>,
   opening = false,
 ): Placed<MarginMark>[] {
-  const placed: Placed<MarginMark>[] = []
   const gap = STACK_GAP * qfs
+  const ceiling = DOG_EAR * qfs
+  const markers = [...stacks.values()].sort((a, b) => a.top - b.top)
+  /** Whether a stack of marks `h` tall may start at `t`: under the ceiling, 0.2·qfs clear of every marker stack. */
+  const free = (t: number, h: number) =>
+    t >= ceiling - EPS && markers.every((s) => t + h + gap <= s.top + EPS || t >= s.bottom + gap - EPS)
+  /** The first place at or below `t` where it is free (the column below the last marker always is). */
+  const below = (t: number, h: number) => {
+    let y = Math.max(t, ceiling)
+    for (let moved = true; moved;) {
+      moved = false
+      for (const s of markers)
+        if (y + h + gap > s.top + EPS && y < s.bottom + gap - EPS) {
+          y = s.bottom + gap
+          moved = true
+        }
+    }
+    return y
+  }
+  const groups: { items: MarginMark[]; heights: number[]; h: number; top: number }[] = []
   for (const [line, items] of groupByLine(marks)) {
     const heights = items.map((m) => markHeight(m.kind, qfs))
-    const after = markerBottoms.get(line)
-    let tops: number[]
-    if (after === undefined) {
-      tops = stackCentered(lineCenterY(qfs, line, opening), heights, gap)
-      const above = markerBottoms.get(line - 1)
-      if (above !== undefined && (tops[0] ?? 0) < above + gap) tops = stackFrom(above + gap, heights, gap)
-    } else {
-      tops = stackFrom(after + gap, heights, gap)
+    const h = heights.reduce((sum, x) => sum + x, 0) + gap * Math.max(0, heights.length - 1)
+    const own = stacks.get(line)
+    const want = own ? own.bottom + gap : lineCenterY(qfs, line, opening) - h / 2
+    const prev = groups.at(-1)
+    const floor = prev ? prev.top + prev.h + gap : -Infinity
+    const candidates = [want, floor, ...markers.flatMap((s) => [s.bottom + gap, s.top - gap - h])]
+      .filter((t) => Number.isFinite(t) && free(t, h))
+      .sort((a, b) => Math.abs(a - want) - Math.abs(b - want) || b - a)
+    let top: number | null = null
+    for (const t of candidates) {
+      if (t >= floor - EPS) {
+        top = t
+        break
+      }
+      const lifted = lift(groups, t - gap, gap, free)
+      if (lifted) {
+        lifted.forEach((y, j) => {
+          const g = groups[j]
+          if (g) g.top = y
+        })
+        top = t
+        break
+      }
     }
-    items.forEach((item, i) => placed.push({ item, top: tops[i] ?? 0, height: heights[i] ?? 0 }))
+    groups.push({ items, heights, h, top: top ?? below(Math.max(floor, want), h) })
   }
-  return placed
+  return groups.flatMap((g) => {
+    const tops = stackFrom(g.top, g.heights, gap)
+    return g.items.map((item, i) => ({ item, top: tops[i] ?? 0, height: g.heights[i] ?? 0 }))
+  })
+}
+
+/**
+ * The tops the placed stacks of marks take when the last of them must end by `end`: each moved up just enough, the one
+ * before it `gap` higher still, as long as every one stays `free`; null when one cannot.
+ */
+function lift(
+  groups: readonly { h: number; top: number }[],
+  end: number,
+  gap: number,
+  free: (t: number, h: number) => boolean,
+): number[] | null {
+  const tops = groups.map((g) => g.top)
+  let limit = end
+  for (let j = groups.length - 1; j >= 0; j--) {
+    const g = groups[j]
+    if (!g || g.top + g.h <= limit + EPS) break
+    const t = limit - g.h
+    if (!free(t, g.h)) return null
+    tops[j] = t
+    limit = t - gap
+  }
+  return tops
 }
 
 function groupByLine<T extends { line: number }>(items: readonly T[]): Map<number, T[]> {

@@ -46,7 +46,7 @@ Measured in Edge with canvas `measureText` (2026-10-10, dev-pack decor fonts):
 |---|---|---|---|
 | QCF surah header (`qd-surah-header`, any surah) | 3.302 em | 0.40 em, centred on the baseline | `--sh-scale: 4.4` → 14.5 × 1.76 qfs |
 | basmala U+FDFD (`qd-quran-common`) | 6.41 em | 0.86 em | `--basmala-scale: 1.4` → 9.0 qfs wide |
-| hizb ornaments U+FC23 / U+FC22 | 1 em | 1.01 em, slender frames | drawn 1.45 qfs tall |
+| hizb ornaments U+FC23 / U+FC22 | 1 em | 1.01 em, slender frames | drawn 1.45 qfs tall (since 9: 3.56–4.48 qfs) |
 | juz calligraphy U+E001… | 3.83 em | 1.17 em | 0.8 qfs tall in the head |
 | ۞ U+06DE (`qd-hafs`) | 0.57 em | **0.45 em** | drawn 0.75 qfs tall |
 | ۩ U+06E9 (`qd-hafs`) | 0.49 em | 0.63 em | drawn 0.75 qfs tall |
@@ -57,8 +57,9 @@ Measured in Edge with canvas `measureText` (2026-10-10, dev-pack decor fonts):
   (§8.8 suggests ≈ 1.25: 8 qfs wide, visibly small next to the header).
 - **Markers are sized by ink, not em.** §8.9 gives ۞ `max(0.95·qfs, 14px)` as a font size, but the KFGQPC Hafs ۞ has
   only 0.45 em of ink: a 0.43·qfs mark. Markers are drawn with a fixed ink height (0.75·qfs, ≥ 13 px; the decor
-  ornaments 1.45·qfs) and each glyph's ink is centred in its box from its measured metrics (`INK`, `inkShift` in
-  `ornaments.ts`). Labels keep §8.9's `max(0.36·qfs, 11px)` and the `0.36·qfs ≥ 10` rule.
+  ornaments 1.45·qfs, since 9: 3.56–4.48·qfs) and each glyph's ink is centred in its box from its measured metrics
+  (`INK`, `inkShift` in `ornaments.ts`). Labels keep §8.9's `max(0.36·qfs, 11px)` and the `0.36·qfs ≥ 10` rule (since
+  9, the Hafs words only: the print's rub labels are drawn at every size).
 - **Juz calligraphy: U+E001 + (juz − 1), not U+E900 + (juz − 1).** quran-common has two series (its ligature file:
   `juz001`… → U+E001…, `j001`… → U+E900…; FACT §4.2 lists both under U+E900, which is not what the font maps).
   Rendered: U+E00E reads "الجزء الرابع عشر", U+E90D reads "رُبَمَا" (the juz named by its opening words, an Indo-Pak
@@ -86,7 +87,8 @@ Measured in Edge with canvas `measureText` (2026-10-10, dev-pack decor fonts):
   start, and the three quarters that share a line with a sajda are label-only (pages 309, 334, 379). The tooltip
   label stays on one line. The U+FC22 ornament's frame, which held ¼ ½ ¾, now holds the hizb number like U+FC23's: the
   words do not fit a frame, and an empty frame reads as unfinished; with the number, every frame names the hizb and
-  the words under it say which part of it. The column carries `dir="rtl" lang="ar"` itself, as the running head does.
+  the words under it say which part of it. (Superseded by 9: the print's label goes inside a larger ornament.) The
+  column carries `dir="rtl" lang="ar"` itself, as the running head does.
   `furniture.browser.test.ts` checks the label, its two centred lines and the frame in both UI languages and both
   decor states, and that both lines stay inside the margin column on odd and even pages from qfs 28 to 160.
 
@@ -94,7 +96,8 @@ Measured in Edge with canvas `measureText` (2026-10-10, dev-pack decor fonts):
 
 - **The quarter separator is a small gold khatam, not "·"** (§8.9 example `الجزء ١٤ · ثلاثة أرباع الحزب ٢٧`): a middle
   dot next to Eastern Arabic numbers reads as the digit zero ٠ ("١٤ ٠ الحزب"). The quarter is appended whenever the
-  margin labels are not drawn: below qfs 28, and also when `showMarginMarkers` is off.
+  margin labels are not drawn: below qfs 28, and also when `showMarginMarkers` is off. (Since 9 the print's label is
+  drawn at every size, so with that face the head appends the quarter only while the markers are off.)
 - A juz or hizb start appends `الحزب N` (a juz start is also a hizb start); quarters append their words on the same
   line, `ربع`/`نصف`/`ثلاثة أرباع الحزب N` (§2). A browser test puts the widest of them beside the widest `سورة …` head
   from qfs 18 up, with and without the decor calligraphy: one line, inside the band, never touching the surah name.
@@ -217,6 +220,131 @@ drawn on the page (heads, labels, numbers, سورة / الجزء / الحزب / 
 - `pnpm shots:app` must keep its default CDP port here: `--port 1723` made WebView2's CDP endpoint never come up
   (30 s timeout), and the driver then failed to remove its temp data dir (`EPERM`). Not a WP8c problem; noted for
   WP13a.
+
+### 9. One family of margin markers (owner request 2026-10-13)
+
+The owner, with a photo of a printed Mushaf page and then four more: "I want to always show it" (the margin label, which
+vanished below qfs 28, a size a Mac window reaches); pages 531, 534 and 536 "looked random" (531, a hizb start at a
+surah start, drew U+FC23 with ٥٤ in its frame; 534, a quarter at a surah start, drew U+FC22; 536, a half whose first
+word carries the inline ۞, drew the label alone) and "it should be consistent"; U+FC22 for every quarter, U+FC23 for a
+hizb start, a symbol for a juz start too, and the label inside the symbol as in the photo. The lead matched the printed
+pages with mockups drawn from the real fonts and set the build spec; delivered as follows.
+
+- **Every rub start draws its ornament at every page size, inline ۞ or not** (`markerInk(m, decor, print)`): the lamp
+  (U+FC22) at a quarter, a half and three quarters, the medallion (U+FC23) at a hizb start and, larger, at a juz start,
+  each with the print's stacked label (U+F800 + rub, LEAD 25) inside its box. The inline ۞ stays in the text: it no
+  longer changes what the margin draws, so the label-only marker of LEAD 17 is gone (`markerDrawn` too: every marker is
+  drawn; `MarginMarker.inline` stays as data, `data-inline` on the marker).
+- **Sizes, measured in the real faces** (quran-common, UPM 1024, fontTools bounds checked: U+FC22 278…746 × −192…832,
+  U+FC23 387…637 × −192…832, both centred on x = 512; the free boxes rasterised): both ornaments' ink is one em,
+  0.1875 em below to 0.8125 em above the baseline. The lamp is drawn at 3.56·qfs (0.457 em ≈ 1.63·qfs wide), its box
+  0.387 × 0.255 em centred 0.025 em below the baseline; the medallion at 3.72·qfs (0.244 em ≈ 0.91·qfs), 4.48·qfs at a
+  juz start, its frame 0.203 × 0.234 em centred 0.3125 em above the baseline. One label size for the whole margin,
+  `MARGIN_LABEL_EM` = 0.88·qfs (`printLabels.ts`; the running heads keep `PRINT_EM`): a quarter's label fills 80 % of
+  the lamp's box height, the hizb and juz labels 84 % of the frame's width (first 0.96·qfs, 88 % and 92 %, which left
+  no air at the rules once drawn; see the lead's tuning below). Each label's box is the ink of its kind of
+  label (`marginLabelBox`, no px floor, so the size is the same at qfs 18).
+- **Placement**: a marker alone on its line meets it at its anchor (`markerAnchor`): the ornament's box, where the
+  label's ink centre is, on the line's centre (lamp top = line − 0.8375·G, medallion top = line − 0.5·G), the lamp's
+  crest rising above it. Every ornament stays inside the paper at lines 1 and 15 (the lamp beside line 1 starts
+  0.74·qfs below the top edge). The ornament's advance (1 em) is wider than the 1.9·qfs margin, so the marker's box is
+  the ink's width and the glyph is centred on it (`.mk-glyph[data-ornament]`: a flex row, no pointer events beyond the
+  marker). Its ink is drawn over the page bookmark's dog-ear (z 2 over z 1): the lamp beside line 1 starts 0.74·qfs
+  below the paper's top, inside the 1.2·qfs corner, and the flap hid its finial and the top of its crest (23 quarter
+  starts sit on line 1: pages 17, 27, 49, …). On its axis the finial falls on the flap's side of the fold, never the
+  cut-away corner that shows the canvas; the dog-ear keeps the pointer there.
+- **Fallbacks**: without decor (not installed, or the page's ornaments off) every rub start draws the solid ۞ with the
+  print label under it at the same size, at every size; the label's box sits on the line and the ۞ stands above it, as
+  the crest does (`markerAnchor`), so decor arriving after the first paint swaps the ۞ for the ornament without moving
+  the label (it moved 0.4·qfs before). Without the print face no ornament: ۞ with the Hafs words (`rubLabelLines`) from
+  qfs 28, the ۞ alone below, as before, the two centred on the line; the sajda keeps ۩ with «سجدة» from qfs 28. The
+  running head keeps the first step's rule: no quarter while the margin names it. The ۞'s label sits `LABEL_GAP`
+  (0.08·qfs) under it, the gap `.mk` now uses too (it had 0.06·qfs, 0.02·qfs off the model).
+- **Deviations from the build spec**, from the visual check against the mockup and the review that followed:
+  - The hairline thickening keeps `decorStroke` and its 0.5 px floor, but its em share drops from 0.018 to 0.0025: at
+    the new sizes 0.018 em (1.9 px for the lamp at qfs 30) filled the crest's filigree solid and merged the box's double
+    rule, unlike the mockup and the print. Half a pixel draws the ≈0.01 em hairlines in the ink at qfs 18 and leaves the
+    filigree open; the em share only matters from qfs 45 (a juz's medallion) and 57 (the lamp). Measured as
+    INTEGRATION.md did (the darkest pixel of the crest on 1× shots, paper): the ink itself, 5.9:1, for the lamp and both
+    medallions at qfs 18.
+  - A rub start and a sajda on one line stack 0.2·qfs apart, the rub start first (`pageMarkers`), centred on the line
+    as the spec says, but never with the rub start's anchor below the line (`placeMarkers`). The real data has four
+    such lines (pages 272, 309, 334, 379: a sajda ayah ends where the next division starts; no rub start and sajda sit
+    on adjacent lines). With the sajda first, the lamp's crest pushed its box a full line below its line on page 309 and
+    the sajda a line above. Rub first but centred, the lamp's anchor (near its foot) hung its box 0.72·qfs below the
+    line at qfs 18 (0.45 at qfs 30) and the ۩ 1.9·qfs below it, beside the next line: the spec's "keep today's
+    stacking" did not foresee a 3.56·qfs ornament, and its first rule, the box on the line, wins. So on 309, 334 and 379
+    the lamp keeps its box on the line and the ۩ hangs right under it, its glyph 1.15·qfs below the line, beside the
+    top half of the next line. The medallion's anchor is its middle, so on 272 the stack stays centred: its frame
+    0.48·qfs (qfs 18) to 0.75·qfs (qfs 30, «سجدة» under the ۩) above the line, the ۩ 1.96 to 1.69·qfs below it,
+    beside the next line; anchoring the medallion would push the ۩ 2.4·qfs down. The print hangs a lamp with «سجدة»
+    inside at a sajda, a look the owner kept out of this request (sajda unchanged); the lead may want it for these four
+    lines. `ornaments.test.ts` pins both cases.
+  - **The marks keep clear of the ornaments** (`placeMarks`; the spec kept the marks' rule, which knew only the line
+    above's bottom). The ornaments now reach lines beyond their own: on a line under a hizb or juz medallion
+    (29 of the 59 hizb starts have an ayah starting on the next line) its marks and the medallion line's own landed on
+    the same spot, one hiding the other; on the line above a lamp or medallion (63 of the 240 rub starts) a mark sat in
+    the crest, its accent reading as filigree. Now each line's marks are one stack, after its own markers or centred on
+    it, and a stack that would meet a marker stack (`placeMarkers` returns each line's extent, `stacks`) moves to the
+    nearest place 0.2·qfs clear of it, above or below (a tie goes below); a stack that would meet an earlier line's
+    marks goes on after them unless lifting those (each only as far as its own place allows) lets it stand nearer its
+    line; none goes above the dog-ear's corner. The marks are drawn over the markers (`.mp-marks`, z 2). The cost is
+    distance: with every ayah within two lines of a marker bookmarked (all 604 pages, decor on), a mark's centre lies a
+    median 0.6 line from its line's centre, a third of them more than a line (the ornaments take the margin beside up to
+    three lines); none overlaps (0 of 957).
+  - **The print label gets a hairline too**: 0.4 px of the ink under its fill (halved at 2 dppx, like the ornament's).
+    On 1× screens at qfs 18 its stacked lines are 5 px tall and antialiased to a tint, the faintest thing in the
+    ornament while the crest filled in: 11 % of its inked pixels reached 3:1 on paper (night 18 %), 36 % (night 52 %)
+    with the hairline (page 534, Edge). The ornament keeps its 0.5 px floor: 0.35 px left the crest as solid at 1× (86 %
+    of its pixels over half covered either way) and only made it fainter.
+  - **Not changed: the label still meets the box's rule at 1× on the smallest pages.** The spec's sizes fill 88 % of
+    the lamp's box height and 92 % of the medallion's frame width, as the print does. Rasterised from the faces, the
+    worst label of each kind keeps 0.059·qfs from the lamp's rules and 0.040·qfs (juz 0.048) from the medallion's sides
+    before the thickening: 1.1 and 0.7 px at qfs 18, so at 1× the two share or touch a pixel up to qfs 20 (lamp) and 24
+    (medallion); from qfs 24 the lamp shows 2 clear pixels, and at 2 dppx or qfs 30 both do. Raising the lamp's label
+    into the arch does not help: its first quarter word meets the arch (0.052·qfs at a 0.036·qfs raise, 0.038 at 0.053;
+    the best, 0.018·qfs, gains 0.007·qfs). A paper halo under the label cut the medallion's thin side rule and fringed
+    it with the label's subpixel colours. Only a smaller label or larger ornaments would part them, which the spec
+    fixed; for the lead.
+- **The lead's tuning after the review** (comparison renders at qfs 30): the label down to 0.88·qfs, so the print's air
+  shows between the text and the rules at every size; the ornament's thickening only up to a pixel
+  (`decorStroke` = max(0, 1 px − 0.01 em): 0.36 px for the lamp at qfs 18, none from about qfs 28), since the fixed
+  0.5 px filled the crests and merged the box's double rule at qfs 30 at 1×; the label's hairline fading from 0.4 px to
+  none at a 32 px label (`marginLabelStroke`). The notes above on the 0.5 px floor and the 0.4 px hairline describe the
+  state before this tuning.
+- **This overrides LEAD 17's "no second ۞ beside an inline one"** for the no-decor fallback, as the spec decided: the
+  margin's ۞ (with its label) now stands beside a line whose text starts with ۞. With decor the margin draws the
+  ornament, as the print does.
+- Removed: `markerInset`, `insetBox` and the frame-number constants, `markerDrawn`, `DECOR_MARKER_INK` /
+  `DECOR_HIZB_INK` (now `DECOR_LAMP`, `DECOR_MEDALLION`, `DECOR_MEDALLION_JUZ`), and `.mk-inset`.
+- Tests: `ornaments.test.ts` (the ornament per kind at every size, inline or not; sizes that fit the label of each kind
+  in its box less the thickening; every ornament's box on its line and inside the paper for every kind at qfs 18–160
+  and lines 1, 8, 15; the ۞ fallback's label on the line; the line-1 lamp in the dog-ear; the shared lines of pages
+  309 and 272, pinned; the marks after a medallion and the next line's, above a crest, lifted to make room, and, for
+  every ornament alone or over a sajda on every line at qfs 18, 30 and 60 with every mix of marks on the five lines
+  around it, never over a marker, another mark or the dog-ear), `printLabels.test.ts` (`MARGIN_LABEL_EM`,
+  `marginLabelBox`), `layout.contrast.test.ts` (no `.mk-inset`), and `furniture.browser.test.ts`: the lamp or
+  medallion, its font size, its box's width, its free box on the line and the label's ink inside it, on pages 262, 42,
+  51, 534, 529 and 415 at qfs 18, 24, 30 and 60; the label at one size in both UIs, decor on and off; the ۞ with the
+  print label on the line while the ornaments are off; the label inside its box from qfs 18 to 160, and the marks after
+  the marker; the label's hairline at qfs 18 in paper and night; the marks around page 262's medallion and above page
+  529's lamp; a line-1 lamp over the dog-ear. These need no decor face (the ornament's size is set inline, the label's
+  ink is measured in the bundled face), so CI, which has none, runs them; only `measures the real ornaments…` reads the
+  dev packs' quran-common (`pnpm dev-packs`) and skips without it: it rasterises U+FC22 and U+FC23 and checks the ink
+  extents, widths and free boxes `INK` holds (each box empty, its rules within 0.02 em). The two running-head tests of
+  the print's calligraphy that the first step broke (they expected
+  the quarter in the head at qfs 20–27) now turn the markers off. The two sub-pixel failures the spec mentions
+  (`labels the margin…`, `stacks exactly…`) did not occur on this machine (Edge on Windows), neither with only the
+  first step in the tree nor after this change; both tests are rewritten for the new geometry. S06, S08 and
+  S13 assert the new look (`expectRubMarker` in `_furniture.mjs`, which now reports a marker's ornament, whether its
+  label is inside, and the label box's middle, on the line either way, and checks the ornament's height: 3.56, 3.72 or
+  4.48·qfs by kind); S06 broke too, its head no longer carrying the hizb.
+- Visual QA (browser mock, real fonts, temporary test, PNGs in `artifacts/margin-check/`, not committed): pages 531,
+  534, 536, 542, 262, the sajda page 176 and the shared lines of 309 and 272, at qfs 18, 24, 30 and 60 in the en and
+  ar UIs, plus 262, 534 and 536 with decor off and with the print face off. The margin is pixel-identical in en and ar.
+  After the review: page 17 (a quarter on line 1) with its dog-ear, the marks on 531, 262, 529 and 536 around their
+  ornaments, the shared lines of 309 and 272, and the label's hairline at qfs 18 and 24 in paper and night
+  (`artifacts/margin-fix/`).
 
 ## Requests
 

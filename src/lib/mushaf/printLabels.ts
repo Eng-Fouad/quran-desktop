@@ -65,9 +65,26 @@ export const PRINT_METRICS = {
  * The face's size for the print's proportion, in qfs: 1.7. Every glyph keeps the print's scale (40 font units per unit
  * of the source page, whose 15-line block is 243.2 units wide); that line is the app's `TB_W` (16.5·qfs), so 1 qfs is
  * 14.74 units and 1 em (25 units) is 1.696·qfs. A head glyph is then about a line of text tall with its marks
- * (0.9–1.3·qfs), and a margin label as wide as the print sets it beside its line.
+ * (0.9–1.3·qfs). The margin labels have their own size (`MARGIN_LABEL_EM`), set by the ornaments that hold them.
  */
 export const PRINT_EM = 1.7
+
+/**
+ * The size of every margin label in qfs (owner request 2026-10-13): one size for the whole margin, inside an ornament
+ * or under a ۞. At 0.88·qfs the quarters' labels (0.829 em of ink) take 80 % of the lamp's box height and the hizb and
+ * juz labels (0.723 and 0.872 em wide) 84 % of the medallion frame's width, which leaves the air the print keeps
+ * between its text and the rules (0.96 touched them once the hairlines were drawn); the running heads keep `PRINT_EM`.
+ */
+export const MARGIN_LABEL_EM = 0.88
+
+/**
+ * The hairline under a margin label's fill (px, for its font size): 0.4 px on the smallest labels, where the stacked
+ * calligraphy's strokes antialias to a tint (qfs 18: 11 % of its inked pixels reach 3:1, 36 % with the hairline),
+ * fading to none at 32 px, where the strokes carry their own weight and a hairline would only thicken the letters.
+ */
+export function marginLabelStroke(fontSize: number): number {
+  return Math.min(0.4, Math.max(0, (0.4 * (32 - fontSize)) / 16))
+}
 
 /** The face's size in px for a page of `qfs`. */
 export function printFontSize(qfs: number): number {
@@ -128,25 +145,35 @@ const FACE = {
 } as const
 
 /**
- * A rub's margin label as a glyph the margin sizes by its ink (`markerGlyphBox`): the extent of its kind of label
- * (so labels of a kind stack the same), drawn at `PRINT_EM`·qfs. Null for a rub outside 1–240.
+ * A rub's margin label as a glyph the margin sizes by its ink (`marginLabelBox`): the extent of its kind of label (so
+ * labels of a kind stack the same). Null for a rub outside 1–240.
  */
 export function printLabelInk(rub: number): GlyphInk | null {
   const char = printRubLabel(rub)
   if (char === null) return null
   const { yMin, yMax } = PRINT_METRICS[printMarginKind(rub)]
-  const top = yMax / PRINT_METRICS.unitsPerEm
-  const bottom = -yMin / PRINT_METRICS.unitsPerEm
-  return { char, ...FACE, top, bottom, size: PRINT_EM * (top + bottom) }
+  return { char, ...FACE, top: yMax / PRINT_METRICS.unitsPerEm, bottom: -yMin / PRINT_METRICS.unitsPerEm }
 }
 
 /**
- * The vertical shift (em) that puts a margin label's ink top on its box's top. The label's box (`markerGlyphBox`: as tall
- * as the ink of its kind) has `line-height: normal`, so its line starts at the box's top and puts the baseline the
+ * The vertical shift (em) that puts a margin label's ink top on its box's top. The label's box (`marginLabelBox`: as
+ * tall as the ink of its kind) has `line-height: normal`, so its line starts at the box's top and puts the baseline the
  * face's ascent below it; the ink top is `top` em above the baseline. Negative moves up.
  */
 export function printLabelShift(ink: Pick<GlyphInk, 'top' | 'ascent'>): number {
   return ink.top - ink.ascent
+}
+
+/**
+ * A margin label's box in px: its font size, `MARGIN_LABEL_EM`·qfs with no px floor (one size for the whole margin),
+ * a height of the ink of its kind of label, so the box's centre is the ink's, and the shift onto it.
+ */
+export function marginLabelBox(
+  qfs: number,
+  ink: Pick<GlyphInk, 'top' | 'bottom' | 'ascent'>,
+): { fontSize: number; height: number; shift: number } {
+  const fontSize = MARGIN_LABEL_EM * qfs
+  return { fontSize, height: (ink.top + ink.bottom) * fontSize, shift: printLabelShift(ink) }
 }
 
 /** The fraction words of a quarter (1–3), in the face. */

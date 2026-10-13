@@ -468,6 +468,9 @@ What the map does:
 
 ### Double ۞ on quarter starts (LEAD 17)
 
+(Superseded by WP8c deviation 9, owner request 2026-10-13: every rub start draws the print's lamp or medallion with
+its label, or the ۞ with the label under it without decor, inline ۞ or not, at every size. The text keeps its ۞.)
+
 - `pageMarkers` marks a rub start `inline` when its ayah's first word (`firstWordId`, position 1) begins with ۞. About
   198 of the 240 quarter starts are inline. The ones without an inline ۞ are the surah starts.
 - An inline marker is the **label alone**, centred on its line, with the existing tooltip and click target. It never
@@ -487,6 +490,11 @@ What the map does:
     margin at 24, where the running head names "الحزب ٥".
 
 ### Faint, empty decor ornaments
+
+(Superseded by WP8c deviation 9, owner request 2026-10-13: the ornaments are drawn at every size, 3.56–4.48·qfs, with
+the print's label inside and no frame text (`markerInset`, `insetBox` and `.mk-inset` are gone); the thickening is
+just enough to bring the ≈0.01 em hairlines to a pixel (none from about qfs 28), re-measured there at qfs 18: 5.9:1
+on paper.)
 
 - **Ornaments only with their labels** (qfs ≥ 28): below that the margin draws the solid ۞ even with decor loaded
   (`markerInk(m, decor, labels)`). At that size the hairlines are sub-pixel and the frame's text could not be read.
@@ -548,7 +556,8 @@ the tooltip.
   not intersect. `MushafView.browser.test.ts` asserts it today.
 - **Docs.** Fold-ins for the docs pass:
   - §7.5: the slot order (persistent bars at the foot) and the clearance;
-  - §8.9: inline label-only markers, ornaments only with labels, the thickening, the frame text, U+FC23 at 1.75·qfs;
+  - §8.9: inline label-only markers, ornaments only with labels, the thickening, the frame text, U+FC23 at 1.75·qfs
+    (all superseded by WP8c deviation 9);
   - §8.5: a left style's faces are unloaded once nothing draws them.
   - §8.6 / D14 (deviation for the lead to accept), forced by the Chromium crash:
     - no `override-colors`;

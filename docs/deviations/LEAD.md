@@ -56,7 +56,9 @@ summarises them); item 17's data rulings are also corrected in place in ARCHITEC
       source geometry; the gates (G8) and the renderer support both shapes. Fold into FACT/§4.4 at docs time.
     - Inline ۞ in the text (≈198 words whose glyph code / text begins with "۞ "): keep **verbatim** — the printed Madani
       Mushaf shows ۞ inline at the start of the quarter's first ayah. The margin marker shows the *label* (e.g. ربع الحزب)
-      and must not render a second ۞ glyph next to an inline one on the same line.
+      and must not render a second ۞ glyph next to an inline one on the same line. (Superseded in the margin by the
+      owner request of 2026-10-13, WP8c deviation 9: every rub start draws the print's lamp or medallion with its label,
+      inline ۞ or not, and the ۞ fallback without decor; the text keeps its ۞.)
     - WP3a deviation 1 (Imla'i source fields / C13) is accepted as implemented.
     - Multi-filter `cargo test` acceptance lines: the `cargo test -p X --lib -- f1 f2` form is the valid equivalent.
 18. **Integration owns the identity sweep** (LEAD 16): names, identifier/AUMID, licence fields + LICENSE, copyright, UA
@@ -133,7 +135,9 @@ summarises them); item 17's data rulings are also corrected in place in ARCHITEC
       quran-common juz calligraphy (U+E001 + juz − 1) there; the Hafs word lines under a rub marker (qfs ≥ 28). The
       quarter in the running head (when the margin labels are hidden) is composed of the face's words and digits as an
       RTL flex row. The ۞ / quran-common ornament above a label, its hizb number in the frame, the sajda labels and the
-      tooltips (Hafs words) are unchanged. It is print furniture, not decor: drawn whatever `ornateHeaders` says; the
+      tooltips (Hafs words) are unchanged. (Since the owner request of 2026-10-13, WP8c deviation 9, the margin label
+      is drawn at every size at 0.88·qfs, inside the lamp or the medallion, or under the ۞ without decor; no number in
+      a frame.) It is print furniture, not decor: drawn whatever `ornateHeaders` says; the
       surah-header cartouche, the basmala calligraphy and the margin ornaments stay gated by it. Without the face (a
       failed load) the furniture keeps its Hafs text.
 26. **A universal macOS app has its own installed-footprint budget, 40 MB** (owner decision, 2026-10-12; §13.6): it

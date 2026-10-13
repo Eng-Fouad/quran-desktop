@@ -5,8 +5,8 @@
 
   - Each `li` (`lang="ar" dir="rtl"`, id `a11y-{page}-{ayahId}`) speaks `toSpeech` of the ayah's words on this page
     followed by its Arabic-Indic number, ` (٢٥٥)`, then a span in the UI language with the reference, whether the ayah
-    continues across the page edge, and the margin markers that start there (juz, hizb, quarter, sajda), which are
-    otherwise glyph-only and `aria-hidden` (§8.9).
+    continues across the page edge, and the margin markers that start there (juz, hizb, quarter, sajda): the margin
+    draws them for the eye only, `aria-hidden` (§8.9).
   - The items are the reading cursor's roving targets: exactly one item in the view is a tab stop, the cursor's
     segment on the first visible page that holds it, else the first ayah of the first visible page. "Skip to Quran
     text" focuses it (`li[tabindex="0"]`, App.svelte). Arrow keys, Enter, Space and the study keys reach the reader

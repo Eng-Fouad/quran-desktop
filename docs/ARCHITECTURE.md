@@ -2047,8 +2047,8 @@ Mapping rules:
 - **(v1.2) Source facts kept verbatim** (LEAD 17; WP3a deviation 3): QDC labels 2:181's end marker a word, and derive
   relabels it by a narrow rule. The first word of 199 of the 240 quarter starts (every one except ayah 1 of a surah)
   begins with the printed `۞ ` in `text_qpc_hafs` and `text_imlaei`; 195 of its `code_v1`/`code_v2` values are
-  `<۞ glyph> U+0020 <word glyph>` and 4 have no separator. The inline ۞ is kept as printed (the margin then draws the
-  quarter's label, never a second ۞, §8.9 and IMPLEMENTATION_NOTES §10.4).
+  `<۞ glyph> U+0020 <word glyph>` and 4 have no separator. The inline ۞ is kept as printed (the margin draws the
+  division's marker as for any rub start, owner request 2026-10-13, §8.9 and IMPLEMENTATION_NOTES §10.4).
 - Divisions (D6): per-ayah `rub` = `rub_el_hizb_number` (mushaf source); `juz`, `hizb` and `manzil` from Tanzil and hard-checked
   against `juz_number`/`hizb_number`/`manzil_number`; `ruku` and sajda from Tanzil only.
 - Centring:
@@ -3929,8 +3929,9 @@ export function wordPill(box: WordBox, qfs: number, lh: number): Rect;
 - **Running head** (`HEAD` band, `--font-naskh`, `--text-muted`), font-size `max(0.5·qfs, 12px)`:
   - right: `سورة {name_ar of info.headSurah}`
   - left: juz: `الجزء {mushafNum(juz)}`. (v1.2: no decor glyph here any more; see below.)
-  - At `qfs < 20` the heads drop the `سورة` / `الجزء` prefixes. When margin labels are glyph-only (below), the quarter of a
-    rub starting on the page is appended on the same line (e.g. `الجزء ١٤ · ثلاثة أرباع الحزب ٢٧`, v1.2).
+  - At `qfs < 20` the heads drop the `سورة` / `الجزء` prefixes. When the margin does not name the quarter (markers off,
+    or, without the print-labels face, its Hafs words hidden below qfs 28: see below), the quarter of a rub starting on
+    the page is appended on the same line (e.g. `الجزء ١٤ · ثلاثة أرباع الحزب ٢٧`, v1.2).
   - **(v1.2, LEAD 25)** From `qfs` 20, with the bundled `qd-print-labels` face loaded, both heads are the print's own
     calligraphy at the print's proportion (1.7·qfs, baseline 0.5·qfs above the frame): U+F600 + `headSurah`
     («سُورَةُ name») and U+F700 + juz («الجُزۡءُ …», the ordinal in words); the quarter is the face's fraction word,
@@ -3942,27 +3943,49 @@ export function wordPill(box: WordBox, qfs: number, lh: number): Rect;
   outline path itself, no separate disc), `max(0.55·qfs, 12px)` `--font-naskh`.
 - **Margin markers** (`MarginMarkers.svelte`, outer margin `M_OUT`), for each `PageAyah`, colour **`--marker-ink`** (§9.2;
   `--frame-green` is decorative only and fails text contrast in dark themes):
-  - rub start (`flags & 1`, mushaf-source rub, D6): ۞ U+06DE in `qd-hafs` at `max(0.95·qfs, 14px)`, or `qd-quran-common`
-    U+FC23 (hizb start) / U+FC22 (other quarters) when decor is installed.
-  - **(v1.2, LEAD 17)** A quarter whose first word carries the printed inline ۞ (§4.2; 199 of 240, every one except ayah 1
-    of a surah) draws its **label alone**, centred on the line, and nothing below qfs 28: never a second ۞ beside the
-    inline one. Ornaments are drawn only with their labels, with the hizb number inside the frame (v1.2: a quarter's
-    too); markers are sized by ink height (0.75·qfs) and sajda markers sit on the line where the ayah ends
-    (IMPLEMENTATION_NOTES §10.4).
-  - Label underneath, `font-size: max(0.36·qfs, 11px)`, **only when `0.36·qfs ≥ 10` (qfs ≥ 28)**: juz start → `الجزء N`;
-    hizb start → `الحزب N`; else **(v1.2)** the quarter in words on two lines, `ربع`/`نصف`/`ثلاثة أرباع` over `الحزب N`
-    (on one line it is wider than the margin; the tooltip keeps one line). Below that size the glyph is drawn alone; the
-    label goes into its tooltip, the a11y text and the running head. **(v1.2, LEAD 25)** With the bundled
-    `qd-print-labels` face loaded, a rub start's label is the print's own stacked glyph U+F800 + rub («رُبُع» / «الحِزۡبُ»
-    / «٢٧»; «الجُزۡءُ ١٤» / «الحِزۡبُ ٢٧» at a juz start) at 1.7·qfs, in a box as tall as the ink of its kind of label;
-    the Hafs words remain its fallback and its tooltip.
-  - sajda: ۩ U+06E9 plus `سجدة`, plus ` واجبة` for obligatory ones (same size rules).
-  - Vertical centre = block top + (line − 1)·LH + LH/2. Markers on the same line stack with 0.2·qfs spacing.
+  - **(v1.2, owner request 2026-10-13) Rub starts: one family at every page size**, as the printed Mushaf hangs them
+    beside the division's line, whether or not its first word carries the printed inline ۞ (§4.2, LEAD 17: the text keeps
+    it; 199 of 240, every one except ayah 1 of a surah). With decor installed (and the page's ornaments on) and the
+    bundled `qd-print-labels` face loaded:
+    - quarter, half, three quarters: the **lamp**, `qd-quran-common` U+FC22 at 3.56·qfs (a crest over an arched box),
+      with the print's label «رُبُع» | «نِصۡف» | «ثَلَاثَةُ أَرۡبَاعِ» / «الحِزۡبُ» / h inside its box;
+    - hizb start: the **medallion**, U+FC23 at 3.72·qfs (crest, frame, crest), with «الحِزۡبُ» / h in its frame;
+    - juz start (always a hizb start too): the same medallion at 4.48·qfs with «الجُزۡءُ j» / «الحِزۡبُ h».
+
+    The box (the label's ink centre) sits on the line's centre: the lamp's crest rises above it, the medallion's crests
+    above and below, and every marker stays inside the paper at lines 1 and 15. The label is the print's own stacked
+    glyph U+F800 + rub (LEAD 25) at one size for the whole margin, 0.88·qfs (80 % of the lamp's box height, 84 % of the
+    medallion frame's width: the print's air between text and rules), in a box as tall as the ink of its kind of
+    label; no number in any frame. The ornaments' ≈0.01 em hairlines are thickened under the fill to a pixel
+    (`decorStroke`: 0.36 px for the lamp at qfs 18, none from about qfs 28, so the filigree stays open), the label's by
+    0.4 px fading to none at a 32 px label (`marginLabelStroke`); both halved at 2 dppx. Glyphs are sized by their ink
+    (IMPLEMENTATION_NOTES §10.4). The
+    ornament's ink is drawn over the page bookmark's dog-ear (the lamp beside line 1 starts 0.74·qfs below the paper's
+    top, inside the 1.2·qfs corner), which keeps the pointer.
+  - Fallbacks, the same for every rub start: without decor (not installed, or the page's ornaments off) the solid ۞
+    U+06DE in `qd-hafs` (0.75·qfs of ink) with the same print label under it, at every size, the label's box on the line
+    and the ۞ above it as a crest is (so decor arriving late moves no label). Without the print-labels
+    face no ornament is drawn: ۞ with its Hafs label underneath, `font-size: max(0.36·qfs, 11px)`, **only when
+    `0.36·qfs ≥ 10` (qfs ≥ 28)**: juz start → `الجزء N`; hizb start → `الحزب N`; else **(v1.2)** the quarter in words on
+    two lines, `ربع`/`نصف`/`ثلاثة أرباع` over `الحزب N` (on one line it is wider than the margin; the tooltip keeps one
+    line). Below that size the ۞ is drawn alone; the label goes into its tooltip, the a11y text and the running head.
+    The Hafs words are always the tooltip's.
+  - sajda: ۩ U+06E9 plus `سجدة`, plus ` واجبة` for obligatory ones (Hafs words, from qfs 28), beside the line where the
+    ayah ends.
+  - Vertical centre = block top + (line − 1)·LH + LH/2: a marker alone on its line meets it at its anchor, a rub
+    start's print label (in its ornament or under its ۞), else its middle. Markers on the same line (a rub start and
+    the sajda that ends there: pages 272, 309, 334, 379) stack with 0.2·qfs spacing, the rub start first, centred on the
+    line but never with the rub start's anchor below it: the lamp (309, 334, 379) keeps its box on the line and hangs
+    the ۩ right under it (its glyph 1.15·qfs below the line, beside the next line's top half); the medallion (272) stays
+    centred with the ۩, its frame 0.48–0.75·qfs above the line and the ۩ 1.7–2.0·qfs below it, beside the next line.
   - Hidden when `showMarginMarkers = false`. Pointer cursor; click selects the ayah; tooltip shows the full label.
-- **Margin marks** (`MarginMarks.svelte`), stacked after the markers on the ayah's first line with a 0.2·qfs gap, or
-  centred on a line without markers and pushed down to 0.2·qfs below a taller stack from the line above (a juz start
-  with its ornament and print label, about 3·qfs) (shown when `highlightBookmarks` — now "show bookmarks and notes in
-  the margin"):
+- **Margin marks** (`MarginMarks.svelte`), one stack per line, stacked after the markers on the ayah's first line with
+  a 0.2·qfs gap, or centred on a line without markers (shown when `highlightBookmarks` — now "show bookmarks and notes
+  in the margin"). No mark covers a marker or another line's marks, and they are drawn over the markers: the ornaments
+  reach well beyond their line (the lamp's crest 2.98·qfs above it, a juz start's medallion 2.24·qfs below it), so a
+  stack that would meet one moves to the nearest place 0.2·qfs clear of it, above or below (a tie goes below): the marks
+  of the line under a medallion go after the medallion line's own marks, those of the line above a lamp or medallion
+  above its crest (lifting the marks above them if they must), never above the dog-ear's corner (`placeMarks`):
   - **Ayah bookmark:** a filled bookmark glyph, 0.55·qfs, `--accent`.
   - **Note:** a note glyph, 0.5·qfs, `--text-muted`; tooltip with the first 80 characters; click opens the side pane on the
     Notes tab.
@@ -4157,8 +4180,8 @@ html[data-turn="prev"] { --qd-out: qd-out-left;  --qd-in: qd-in-right; }
     U+06DF–U+06E4, U+06E7–U+06ED and U+08F0–U+08F2 (small high/low letters, waqf signs and marks that Arabic TTS reads as symbol
     names). No contract change. WP8d verifies with NVDA + OneCore Arabic and VoiceOver "Majed" on 1:1–7, 2:255 and 38:24 and
     records the result in `docs/deviations/WP8d.md` (folded into §12.6 by the lead).
-  - A hidden span in the UI language carries the reference: `Al-Baqarah, ayah 255`, plus margin labels that are glyph-only
-    (§8.9).
+  - A hidden span in the UI language carries the reference: `Al-Baqarah, ayah 255`, plus the divisions and sajdas that
+    start there: the margin draws them for the eye only (`aria-hidden`, §8.9).
 - **One reading cursor:** `reader.cursorAyahId`.
   - `ArrowDown`/`ArrowUp` and `J`/`K` are aliases: they move the cursor to the next/previous ayah (crossing pages turns the
     page) **and set the selection to that single ayah**. `Shift+Arrow` / `Shift+J/K` extends the selection. DOM focus follows to
@@ -5117,7 +5140,7 @@ evidence.
 | S10 | Page 50, qcf_v4, night, tajweed off (palette 4), ink 65 % and 100 % | WP8b |
 | S11 | Page 600, qcf_v1, sepia (V1 layout differs from V2) + line-fit assertion | WP8b |
 | S12 | Page 255, qcf_v2 (centred line 2) | WP8a |
-| S13 | Page 176 (sajda and rub markers), margin labels, at 1600×1000 and at 1366×768 (glyph-only labels) | WP8c |
+| S13 | Pages 176/177 (sajda and rub markers): the rub's print label in its lamp, or under ۞ without decor, at 1600×1000 and at 1366×768 alike; the sajda's word from qfs 28 | WP8c |
 | S14 | 2:255 selected, side pane translation open | WP11b |
 | S15 | Hover word + WBW tooltip (page 1) | WP8d |
 | S16 | Audio paused at a fixed ms inside 1:2: ayah + word highlight | WP9a |

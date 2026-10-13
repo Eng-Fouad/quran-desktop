@@ -3,9 +3,10 @@
   notes in the margin") is on:
 
   - ayah bookmarks (a filled bookmark glyph, 0.55·qfs, --accent) and notes (a note glyph, 0.5·qfs, --text-muted),
-    stacked in the outer margin after the markers of the ayah's first line (0.2·qfs gap), or centred on that line. A
-    bookmark click selects its ayah; the note's tooltip shows its first 80 characters and a click opens the side pane
-    on the Notes tab.
+    stacked in the outer margin after the markers of the ayah's first line (0.2·qfs gap), or centred on that line;
+    never over a marker (an ornament reaches lines beyond its own) or another line's marks (`placeMarks`), and drawn
+    above the markers. A bookmark click selects its ayah; the note's tooltip shows its first 80 characters and a click
+    opens the side pane on the Notes tab.
   - the reading bookmark: a silk ribbon hanging from the top paper edge on the spine side, down to the ayah's line
     + 0.6·qfs, ending in a V-notched tail (--ribbon, a 1 px darker edge, and a drop shadow equivalent to shadow-1
     that follows the notch). A click opens a popover ("Reading bookmark · 2:255 · moved 3 days ago · Move here
@@ -37,6 +38,7 @@
     ribbonGeometry,
     round2,
     type MarginMark,
+    type Span,
   } from '$lib/mushaf/ornaments'
   import { fonts, i18n, library, quran, reader, settings, shortcuts, ui } from '$lib/stores'
 
@@ -123,23 +125,24 @@
 
   // ---- layout ---------------------------------------------------------------------------------------------------
 
-  const markerBottoms = $derived(
+  /** Where the markers stand, line by line: the marks keep clear of them and continue after them. */
+  const markerStacks = $derived(
     settings.value.showMarginMarkers
       ? placeMarkers(
           pageMarkers(data),
           qfs,
           marginLabelsVisible(qfs),
           // The markers' decor and print-label flags, exactly as MarginMarkers draws them (else the marks' stacking
-          // drifts).
+          // drifts): the ornaments, their anchors and every label size follow from them.
           (page?.ornaments ?? settings.value.ornateHeaders) &&
             fonts.status.get('qd-quran-common') === 'ready',
           false,
           fonts.printLabelsReady,
-        ).bottoms
-      : new Map<number, number>(),
+        ).stacks
+      : new Map<number, Span>(),
   )
   const placed = $derived(
-    marks ? placeMarks(pageMarks(data, marks.bookmarks, marks.notes), qfs, markerBottoms, opening) : [],
+    marks ? placeMarks(pageMarks(data, marks.bookmarks, marks.notes), qfs, markerStacks, opening) : [],
   )
   const pageBookmarked = $derived(marks?.pageBookmarks.some((b) => b.page === data.page) ?? false)
 

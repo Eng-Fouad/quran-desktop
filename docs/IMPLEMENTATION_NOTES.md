@@ -612,22 +612,32 @@ is the lead's fold-in of every accepted deviation (`docs/deviations/WP*.md`), ev
   (0.75·qfs, ≥ 13 px). The running head no longer draws quran-common's juz calligraphy (it was `U+E001 + (juz − 1)`,
   the `juz001` ligatures, WP8c 1): the print's own glyph replaces it (LEAD 25, below).
 - **Ornate surah headers** (`ornateHeaders`, default on, every style; owner 2026-10-11): off, a page draws the plain
-  look even with decor loaded: the cartouche, the Unicode basmala, and the solid ۞ without a frame in the margin. The
+  look even with decor loaded: the cartouche, the Unicode basmala, and the solid ۞ over its label in the margin. The
   running heads and the rub labels are bundled print furniture, not decor (LEAD 25): drawn the same either way.
   `MushafPageProps.ornaments` overrides the setting for one page (the onboarding's preview); the header, basmala,
   margin markers and margin marks read it from the page context, so marker stacking follows the same decor flag
   (CLS 0). The surah-name calligraphy of
   lists (Index, the surah popover, the palette) is UI chrome from the same pack and stays whenever decor is installed.
-- **Quarter markers with an inline ۞** (199 of 240) draw the label alone, centred on the line, and nothing below qfs 28;
-  never a second ۞. Ornaments appear only with their labels (qfs ≥ 28), stroked (`max(0.5px, 0.018em)`), with the hizb
-  number inside the frame; below 28 the solid ۞ is drawn; marker ink ≥ 4.5:1 in every theme (LEAD 17,
-  INT fix 1 mushaf).
+- **One family of rub markers at every page size** (owner request 2026-10-13, after the printed Mushaf; WP8c 9): with
+  decor and the print-labels face, a quarter, a half and three quarters hang the lamp (U+FC22, 3.56·qfs) and a hizb
+  start the medallion (U+FC23, 3.72·qfs; 4.48·qfs at a juz start), the print's label inside the ornament's box at one
+  size for the whole margin (`MARGIN_LABEL_EM` = 0.88·qfs), the box on the line's centre (`markerAnchor`,
+  `markerLabelTop`). A rub start whose first word carries the inline ۞ (199 of 240) draws the same: the text keeps its
+  ۞ (LEAD 17), the margin its marker. Without decor (or the page's ornaments off) the solid ۞ with the print label under
+  it, at every size, the label on the line and the ۞ above it (decor arriving moves no label); without the print face
+  no ornament: ۞ with the Hafs words from qfs 28, the ۞ alone below. No number in a frame any more. The ornaments'
+  ≈0.01 em hairlines are thickened just to a pixel (`decorStroke`; none from about qfs 28): the 0.018 em that the
+  1.45·qfs ornaments needed, and then a fixed half pixel, filled the larger lamp's filigree; the label's by 0.4 px
+  fading to none at 32 px (`marginLabelStroke`; both halved at 2 dppx), so its 5 px lines at qfs 18 read in the ink. The
+  ornament's ink is drawn over the page bookmark's dog-ear. A rub start and a sajda on one line stack centred, the rub
+  first, but a lamp keeps its box on the line with the ۩ right under it. The marks never cover a marker or each other:
+  a stack that would meet an ornament moves to the nearer side of it, 0.2·qfs clear (`placeMarks`). Marker ink ≥ 4.5:1
+  in every theme (INT fix 1 mushaf).
 - **Hizb quarters are words**, never the vulgar fractions ¼ ½ ¾ (which exist only in Western Arabic numbers, and which
   qd-hafs lacks): `ربع الحزب ٢٧`, `نصف الحزب ٢٧`, `ثلاثة أرباع الحزب ٢٧` in the tooltip and on one line in the running
   head. The margin label sets them on two lines, the words over `الحزب ٢٧` (6.6 em on one line against the 4.8 em the
-  margin holds at qfs 28), and the marker's height counts both. The U+FC22 ornament's frame holds the hizb number, as
-  U+FC23's does: the words do not fit it, and the label under it names the quarter of that hizb. Every furniture string
-  is in qd-hafs, the fallback of the print's own glyphs (LEAD 25, below). The Index's hizb chips are UI, not furniture: ¼ ½ ¾ with Western Arabic numbers, ١/٤ ١/٢ ٣/٤ with
+  margin holds at qfs 28), and the marker's height counts both (the print's own label, in its ornament or under the ۞,
+  replaces them with its face loaded). Every furniture string is in qd-hafs, the fallback of the print's own glyphs (LEAD 25, below). The Index's hizb chips are UI, not furniture: ¼ ½ ¾ with Western Arabic numbers, ١/٤ ١/٢ ٣/٤ with
   Eastern Arabic numbers (`i18n.fraction`, also the memo presets' ×½) (owner request; WP8c 2–3, INT owner 2026-10-11).
 - Sajda markers sit on the line where the ayah ends; the opening pages carry none; each marker appears once, on the page
   that shows its sign (WP8c 2). The CSS sajda overline is dropped: both renditions already draw the printed overline
@@ -640,11 +650,12 @@ is the lead's fold-in of every accepted deviation (`docs/deviations/WP*.md`), ev
   print's proportion (`PRINT_EM` = 1.7·qfs: the print's line is `TB_W`), all on one baseline 0.5·qfs above the frame
   (inside the 1.4·qfs band; `line-height: normal` boxes moved by a translate). The head's quarter (margin labels
   hidden) is the face's fraction word, «الحِزۡبُ» and digits, an RTL flex row of spans (its private-use code points are
-  bidi class L). Under a rub marker (qfs ≥ 28) the label is the print's stacked glyph U+F800 + rub at the same size, in
-  a box as tall as the ink of its kind of label (juz start, hizb start, each quarter; the face's own bounding boxes),
-  so marker stacking and the marks after it stay exact. The ۞ / ornament above it with the hizb number in its frame,
-  the sajda labels and the tooltips (Hafs words) are unchanged; each glyph carries its words in `data-text`. Without
-  the face every one of them stays Hafs text.
+  bidi class L). In the margin a rub start's label is the print's stacked glyph U+F800 + rub at every size, at
+  `MARGIN_LABEL_EM` = 0.88·qfs (one size, inside the lamp or the medallion, or under the ۞; owner request 2026-10-13),
+  in a box as tall as the ink of its kind of label (juz start, hizb start, each quarter; the face's own bounding
+  boxes), so the ornament's box, marker stacking and the marks after it stay exact. The sajda labels and the tooltips
+  (Hafs words) are unchanged; each glyph carries its words in `data-text`. Without the face every one of them stays
+  Hafs text.
 - Footer medallion: one rosette path, filled with `--frame-gold` at 10 % and stroked in it, so the tint follows the 12
   lobes at every qfs, in every theme and in forced colours. The earlier 0.8·r tinted disc inside a paper-filled rosette
   left the band under the valleys and every lobe unshaded (owner request; WP8c 4).

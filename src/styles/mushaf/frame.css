@@ -458,6 +458,11 @@
     left: 0; /* physical-ok: the outer margin of an even page */
   }
 
+  /* The marks are drawn over the markers, ornaments included (`placeMarks` keeps them apart). */
+  .mp-marks {
+    z-index: 2;
+  }
+
   .mk,
   .mm {
     position: absolute;
@@ -497,11 +502,12 @@
     opacity: 1;
   }
 
+  /* The gap between a glyph and the label under it is `LABEL_GAP` (ornaments.ts), which places the label exactly. */
   .mk {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: calc(var(--qfs) * 0.06);
+    gap: calc(var(--qfs) * 0.08);
     color: var(--marker-ink);
     user-select: none;
   }
@@ -516,34 +522,29 @@
   }
 
   /*
-   * A quran-common ornament (drawn only with its label): its ≈0.01 em hairlines are thickened under the fill
-   * (`--mk-stroke` = max(0.5px, 0.018em), ornaments.ts `decorStroke`), so they read at 3:1 like the solid ۞ (§9.2).
-   * On a 2× screen a hairline already covers whole device pixels: half the thickening keeps the filigree open there.
-   * Not Quran text: the .quran-text rules do not apply.
+   * A quran-common ornament (the lamp or the medallion, its label inside): its ≈0.01 em hairlines are thickened under
+   * the fill to a pixel (`--mk-stroke`, ornaments.ts `decorStroke`: 0.36 px for the lamp at qfs 18, none from about
+   * qfs 28), so they read in the ink like the solid ۞ (§9.2) and the filigree stays open. On a 2× screen a hairline
+   * already covers whole device pixels: half the thickening there. Its box is its ink's width (set inline), narrower than its 1 em advance, which is wider than
+   * the margin: the glyph is centred on it and overflows both sides, and only the marker's own box takes the pointer.
+   * Its ink is drawn over the page bookmark's dog-ear (z 1): the lamp beside line 1 starts 0.74·qfs below the paper's
+   * top, so its finial would vanish under the flap; the dog-ear keeps the pointer there. Not Quran text: the
+   * .quran-text rules do not apply.
    */
   .mk-glyph[data-ornament] {
+    z-index: 2;
+    display: flex;
+    justify-content: center;
     font-family: 'qd-quran-common';
     -webkit-text-stroke: calc(var(--mk-stroke, 0.5px) * var(--mk-stroke-k, 1)) currentColor;
     paint-order: stroke fill;
+    pointer-events: none;
   }
 
   @media (min-resolution: 2dppx) {
-    .mk-glyph[data-ornament] {
+    .mk {
       --mk-stroke-k: 0.5;
     }
-  }
-
-  /*
-   * The ornament's frame holds the number of the hizb it opens or divides (`markerInset`). `top` and the size come
-   * from `insetBox`, which centres the text's ink on the frame in this `line-height: 1` box.
-   */
-  .mk-inset {
-    position: absolute;
-    inset-inline: 0;
-    font-family: var(--mp-furniture-font);
-    line-height: 1;
-    text-align: center;
-    white-space: nowrap;
   }
 
   /*
@@ -561,15 +562,30 @@
 
   /*
    * A rub start's label in the print's own calligraphy (LEAD 25): one stacked glyph of `qd-print-labels` (U+F800 +
-   * rub). Its size and height come from the ink of its kind of label (`markerPrintLabel`, `markerGlyphBox`); its line,
-   * the face's own height, starts at the box's top, and the shift (`printLabelShift`) moves the ink onto the box. Not
-   * Quran text.
+   * rub), at the margin's one label size. Its height comes from the ink of its kind of label (`marginLabelBox`); its
+   * line, the face's own height, starts at the box's top, and the shift (`printLabelShift`) moves the ink onto the
+   * box. Its strokes get a hairline of the ink under the fill (`--mk-label-stroke`, printLabels.ts
+   * `marginLabelStroke`: 0.4 px on the smallest labels, fading to none at 32 px; halved at 2 dppx), as the ornament
+   * around it does: on the smallest 1× pages its three stacked lines are 5 px tall and antialias to a tint (paper,
+   * qfs 18: 11 % of its inked pixels reached 3:1, 36 % with the hairline; night 18 % → 52 %). Not Quran text.
    */
   .mk-label[data-print] {
     font-family: 'qd-print-labels', var(--mp-furniture-font);
     line-height: normal;
     white-space: nowrap;
+    -webkit-text-stroke: calc(var(--mk-label-stroke, 0px) * var(--mk-stroke-k, 1)) currentColor;
+    paint-order: stroke fill;
     translate: 0 var(--shift, 0);
+  }
+
+  /*
+   * Inside its ornament: `top` (`markerLabelTop`) centres its box on the ornament's box, as the print sets it, and it is
+   * drawn over the ornament's ink, which is lifted over the dog-ear.
+   */
+  .mk-label[data-inside] {
+    position: absolute;
+    inset-inline: 0;
+    z-index: 2;
   }
 
   .mm {

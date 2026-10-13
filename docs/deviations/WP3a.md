@@ -148,9 +148,10 @@ order*:
   - Nothing is lost either way: the inline ۞ is fully determined by the flags (rule above).
 
   **WP8c:** in the margin, draw the label or ornament (§8.9; quran-common U+FC23/U+FC22) for those rub starts, never a
-  second U+06DE glyph. Draw the U+06DE margin glyph only for the 41 rub starts at ayah 1. **WP1a:** copy text contains
-  the ۞, as printed. If the lead prefers stripping, it is one rule in `derive.rs`, using the ayah flags plus the
-  separator. The 4 unseparated codes then need the page fonts to decide.
+  second U+06DE glyph. Draw the U+06DE margin glyph only for the 41 rub starts at ayah 1. (Superseded in the margin by
+  WP8c deviation 9, owner request 2026-10-13: every rub start draws its marker, inline ۞ or not.) **WP1a:** copy text
+  contains the ۞, as printed. If the lead prefers stripping, it is one rule in `derive.rs`, using the ayah flags plus
+  the separator. The 4 unseparated codes then need the page fonts to decide.
 
 ### 4. Smaller decisions
 

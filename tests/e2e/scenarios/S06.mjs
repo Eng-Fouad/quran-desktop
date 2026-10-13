@@ -1,10 +1,11 @@
 // @ts-check
 // S06 (§12.6; WP8c): pages 261–262 as a spread, QCF V2, night. Page 262 opens Al-Ḥijr: the surah header and the
 // basmala (decor glyphs once loaded), the juz 14 / hizb 27 marker beside 15:1, and the running heads of both pages
-// (Ibrāhīm · juz 13 on 261; Al-Ḥijr · juz 14 on 262, with the hizb carried into the head because the labels are
-// glyph-only at this size). Frame, footers and page-stack hairlines in the night palette.
+// (Ibrāhīm · juz 13 on 261; Al-Ḥijr · juz 14 on 262). The marker is the print's medallion with «الجُزۡءُ ١٤ /
+// الحِزۡبُ ٢٧» in its frame (the label under a ۞ without decor) at this size too (owner request 2026-10-13), so the
+// head carries no hizb. Frame, footers and page-stack hairlines in the night palette.
 import { check, equal, mushaf } from '../lib/index.mjs'
-import { arabic, expectFramedPage, furniture, waitDecor } from './_furniture.mjs'
+import { arabic, expectFramedPage, expectRubMarker, furniture, waitDecor } from './_furniture.mjs'
 
 /** @type {import('../lib/types').ScenarioMeta} */
 export const meta = {
@@ -27,7 +28,7 @@ export default async function s06(ctx) {
   const state = await qd.state()
   equal(state.visiblePages, [261, 262], 'the 261–262 spread')
   equal(state.resolvedTheme, 'night', 'the resolved theme')
-  check(state.qfs < 28, `qfs ${state.qfs}: margin labels are glyph-only in this spread`)
+  check(state.qfs < 28, `qfs ${state.qfs}: below qfs 28 in this spread, where the marker keeps its label`)
 
   const p261 = await furniture(ctx, 261)
   const p262 = await furniture(ctx, 262)
@@ -36,13 +37,13 @@ export default async function s06(ctx) {
   check(!p261.medallion && !p262.medallion, 'no opening medallion on ordinary pages')
   check(p261.edges.shown && p262.edges.shown, 'page-stack hairlines in a spread')
 
-  // Running heads: surah on the right, juz on the left; the hizb that starts on 262 follows the juz. In the print's
+  // Running heads: surah on the right, juz on the left (the margin names the hizb that starts on 262). In the print's
   // calligraphy once its bundled face is loaded (LEAD 25), whatever the decor; the words are the glyphs' `data-text`.
   // Names as core.db spells them (`name_ar`; the qdc source writes ابراهيم without hamza).
   check(/^سورة [إا]براهيم$/.test(p261.head?.surah ?? ''), `page 261: the surah head (${p261.head?.surah})`)
   equal(p262.head?.surah, 'سورة الحجر', 'page 262: the surah head')
   equal(p261.head?.juz, `الجزء ${arabic(13)}`, 'page 261: the juz head')
-  equal(p262.head?.juz, `الجزء ${arabic(14)} الحزب ${arabic(27)}`, 'page 262: juz head with the hizb')
+  equal(p262.head?.juz, `الجزء ${arabic(14)}`, 'page 262: the juz head, the margin names the hizb')
   check(p262.head?.print === true, 'page 262: the heads in the print calligraphy')
 
   // The surah header and basmala of Al-Hijr on lines 1–2.
@@ -58,12 +59,14 @@ export default async function s06(ctx) {
   )
   equal(p261.headers.length + p261.basmalas.length, 0, 'page 261: no header lines')
 
-  // 15:1 opens juz 14 (and hizb 27): one marker on line 3, glyph only at this size.
+  // 15:1 opens juz 14 (and hizb 27): one marker on line 3, its label drawn at this size too.
   equal(
     p262.markers.map((m) => [m.kind, m.line, m.label]),
-    [['rub', 3, '']],
+    [['rub', 3, `الجزء ${arabic(14)}`]],
     'page 262: the juz 14 marker beside line 3',
   )
+  equal(p262.markers[0]?.ornament, decor, decor ? 'page 262: the medallion' : 'page 262: the ۞ without decor')
+  expectRubMarker(p262.markers[0], 'juz', 'page 262')
   equal(p261.markers, [], 'page 261: no markers')
 
   await ctx.shot()

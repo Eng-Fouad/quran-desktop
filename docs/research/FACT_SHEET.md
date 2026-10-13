@@ -145,7 +145,9 @@ A human downloads these once from QUL (SQLite where offered), commits them under
     `<۞ glyph> U+0020 <word glyph>` and 4 carry the two glyphs without a separator (7:47:1, 15:49:1, 22:38:1, 53:26:1). The QCF fonts, the QPC
     Hafs text and Tanzil all print it inline, before the quarter's first word. It is kept verbatim; `normalize_ar` deletes
     it (U+06DE is in step 1). The app's margin therefore shows the quarter's **label** for those words and never a second
-    ۞ glyph; the margin ۞ is drawn only for the 41 quarters without an inline sign.
+    ۞ glyph; the margin ۞ is drawn only for the 41 quarters without an inline sign. **Superseded (2026-10-13, owner
+    request; WP8c 9):** the margin draws the division's marker for every rub start, inline ۞ or not (the print's lamp
+    or medallion with its label, or the ۞ with the label under it without decor); the text keeps its inline ۞.
   - **Added (2026-10-10, build):** other spaces inside non-end `text_hafs` words: 9 before ۩ (17:109:5, 19:58:29,
     22:18:37, 22:77:11, 25:60:13, 32:15:15, 38:24:32, 41:38:12, 84:21:6), 199 after the inline ۞, and 4 inside printed
     compounds (2:181:3, 8:6:4, 13:37:8 `بَعۡدَ مَا`; 37:130:3 `إِلۡ يَاسِينَ`).
@@ -231,6 +233,8 @@ CREATE VIRTUAL TABLE ayah_fts USING fts5(loose, strict, content='', tokenize='un
 - Set the basmala as Unicode text `بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ` in the bundled Hafs font.
 - Draw ۞ as U+06DE. **Corrected (2026-10-10, build; LEAD 17):** only for the 41 quarter starts at ayah 1 of a surah. The
   other 199 already carry the ۞ inline in the text (§2.3), so their margin marker is the quarter's label alone.
+  **Superseded (2026-10-13, owner request; WP8c 9):** without decor every rub start's margin marker is the ۞ with its
+  label, inline ۞ or not; with quran-common it is the print's lamp or medallion with the label inside.
 - Upgrade to the QCF header, quran-common and page fonts once they are downloaded (they ship in the same on-demand "Mushaf pack").
 
 ### 4.3 Bundled Unicode Quran font (offline core)

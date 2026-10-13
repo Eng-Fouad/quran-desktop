@@ -174,10 +174,11 @@ describe('§8.7 composite contrast', () => {
 
 /**
  * The margin markers (§8.9, WP8c, read from `src/styles/mushaf/frame.css`): ۞, ۩, the quran-common ornaments with
- * the division in their frame, and the labels are all drawn in `--marker-ink` on the page. The ornaments' hairlines
- * are thickened with a text stroke in the same colour, so the drawn ink is `--marker-ink` itself, not an antialiased
- * tint of it (measured 2.4–2.9:1 before; the screenshot check is in INTEGRATION.md). Labels and the frame text are
- * text: 4.5:1 in every theme and contrast preference.
+ * the division's label in their box, and the labels are all drawn in `--marker-ink` on the page. The ornaments' and the
+ * print labels' hairlines are thickened with a text stroke in the same colour, so the drawn ink is `--marker-ink`
+ * itself, not an antialiased tint of it (the ornaments' darkest pixel 5.9:1 at qfs 18 on paper, WP8c deviation 9; the
+ * labels' share of inked pixels at 3:1 is measured by `furniture.browser.test.ts`). Labels are text: 4.5:1 in every
+ * theme and contrast preference.
  */
 describe('margin markers in --marker-ink (§8.9, §9.2)', () => {
   const FRAME_CSS = read('src/styles/mushaf/frame.css').replace(/\/\*[\s\S]*?\*\//g, '')
@@ -186,20 +187,25 @@ describe('margin markers in --marker-ink (§8.9, §9.2)', () => {
     return at < 0 ? '' : FRAME_CSS.slice(at, FRAME_CSS.indexOf('}', at))
   }
 
-  it('draws markers, ornaments, frame text and labels in --marker-ink, the ornaments thickened in that ink', () => {
+  it('draws markers, ornaments and labels in --marker-ink, the ornaments and print labels thickened in that ink', () => {
     expect(rule('  .mk')).toMatch(/color: var\(--marker-ink\)/)
     const ornament = rule('.mk-glyph[data-ornament]')
     expect(ornament).toMatch(
       /-webkit-text-stroke: calc\(var\(--mk-stroke, 0\.5px\) \* var\(--mk-stroke-k, 1\)\) currentColor/,
     )
     expect(ornament).toMatch(/paint-order: stroke fill/)
+    const label = rule('.mk-label[data-print]')
+    expect(label).toMatch(
+      /-webkit-text-stroke: calc\(var\(--mk-label-stroke, 0px\) \* var\(--mk-stroke-k, 1\)\) currentColor/,
+    )
+    expect(label).toMatch(/paint-order: stroke fill/)
     // Nothing inside a marker sets another colour.
     for (const part of [
       '.mk-glyph',
       '.mk-glyph[data-ornament]',
-      '.mk-inset',
       '.mk-label',
       '.mk-label[data-print]',
+      '.mk-label[data-inside]',
     ])
       expect(rule(part)).not.toMatch(/(^|[^-])color:/)
   })

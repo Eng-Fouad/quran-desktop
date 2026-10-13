@@ -34,7 +34,7 @@ export function inspectFurniture(pageNo) {
         /** @type {{ line: number, surah: number, decor: boolean, name: string, width: number }[]} */ ([]),
       basmalas: /** @type {{ line: number, decor: boolean, text: string }[]} */ ([]),
       markers:
-        /** @type {{ kind: string, line: number, glyph: string, label: string, print: boolean, top: number, height: number }[]} */ ([]),
+        /** @type {{ kind: string, line: number, glyph: string, ornament: boolean, label: string, print: boolean, inside: boolean, mid: number, top: number, height: number }[]} */ ([]),
       marks: /** @type {{ kind: string, ayah: number, top: number }[]} */ ([]),
       ribbon: /** @type {{ ayah: number, height: number, x: number, width: number } | null} */ (null),
       dogEar: false,
@@ -166,7 +166,9 @@ export function inspectFurniture(pageNo) {
     }
   })
 
-  // Margin markers and marks (§8.9): in the outer margin, centred on their line.
+  // Margin markers and marks (§8.9): in the outer margin, centred on their line. `mid`: the middle of the label's box
+  // where layout put it (its `translate` moves only the ink onto it), in qfs from the page top; for the print's label
+  // that box is the ink of its kind, which an ornament's box centres on the line (owner request 2026-10-13).
   const margin = /** @type {HTMLElement | null} */ (section.querySelector(':scope > .mp-markers'))
   const markers = [...(margin?.querySelectorAll('.mk') ?? [])].map((el) => {
     const box = el.getBoundingClientRect()
@@ -174,12 +176,22 @@ export function inspectFurniture(pageNo) {
     const outer =
       side === 'right' ? page.right - (box.left + box.width / 2) : box.left + box.width / 2 - page.left
     if (!near(outer, 0.95 * qfs, 1.5)) problems.push(`marker on line ${line} at ${outer} from the outer edge`)
+    const labelEl = /** @type {HTMLElement | null} */ (el.querySelector('.mk-label'))
+    const labelBox = labelEl?.getBoundingClientRect()
+    const shift = labelEl
+      ? Number.parseFloat(getComputedStyle(labelEl).translate.split(' ')[1] ?? '0') || 0
+      : 0
     return {
       kind: /** @type {HTMLElement} */ (el).dataset.kind ?? '',
       line,
       glyph: el.querySelector('.mk-glyph')?.textContent ?? '',
-      label: words(el.querySelector('.mk-label')),
-      print: el.querySelector('.mk-label')?.hasAttribute('data-print') ?? false,
+      ornament: el.querySelector('.mk-glyph')?.hasAttribute('data-ornament') ?? false,
+      label: words(labelEl),
+      print: labelEl?.hasAttribute('data-print') ?? false,
+      inside: labelEl?.hasAttribute('data-inside') ?? false,
+      mid: labelBox
+        ? Math.round(((labelBox.top - shift + labelBox.height / 2 - page.top) / qfs) * 100) / 100
+        : Number.NaN,
       top: Math.round(((box.top - page.top) / qfs) * 100) / 100,
       height: Math.round((box.height / qfs) * 100) / 100,
     }
@@ -286,6 +298,48 @@ export async function furniture(ctx, pageNo) {
 
 /** Arabic-Indic digits, as the furniture draws them. @param {number} n */
 export const arabic = (n) => new Intl.NumberFormat('ar-u-nu-arab', { useGrouping: false }).format(n)
+
+/** The centre of a line of an ordinary page, in qfs from the page top (§8.9: block top 2.85 + (line − ½)·1.75). */
+export const lineMid = (/** @type {number} */ line) => 2.85 + (line - 0.5) * 1.75
+
+/** The ornaments' heights in qfs (their ink is one em): the lamp, the medallion and, at a juz start, a larger one. */
+const ORNAMENT_QFS = { quarter: 3.56, hizb: 3.72, juz: 4.48 }
+
+/**
+ * A rub start's marker in the margin's one family (owner request 2026-10-13), at any page size: the print's label in
+ * the lamp (U+FC22, a quarter) or the medallion (U+FC23, a hizb or juz start; larger at a juz start), the ornament's
+ * box on the line, while decor is loaded; else the label under the solid ۞. Either way the label's box is on the line.
+ * @param {FurnitureReport['markers'][number] | undefined} m
+ * @param {'quarter' | 'hizb' | 'juz'} kind
+ * @param {string} where
+ */
+export function expectRubMarker(m, kind, where) {
+  check(m !== undefined && m.kind === 'rub', `${where}: a rub marker`)
+  if (!m) return
+  check(m.print, `${where}: the print's own label`)
+  const mid = lineMid(m.line)
+  if (m.ornament) {
+    const lamp = kind === 'quarter'
+    equal(
+      m.glyph,
+      String.fromCodePoint(lamp ? 0xfc22 : 0xfc23),
+      `${where}: the ${lamp ? 'lamp' : 'medallion'}`,
+    )
+    check(
+      Math.abs(m.height - ORNAMENT_QFS[kind]) <= 0.05,
+      `${where}: the ${kind} ornament ${ORNAMENT_QFS[kind]} qfs tall (${m.height} qfs)`,
+    )
+    check(m.inside, `${where}: the label inside the ornament`)
+  } else {
+    equal(m.glyph, '۞', `${where}: the ۞ without decor`)
+    check(!m.inside, `${where}: the label under the ۞`)
+    check(m.top + m.height / 2 < mid, `${where}: the ۞ above the line (${m.top} qfs, ${m.height} qfs tall)`)
+  }
+  check(
+    Math.abs(m.mid - mid) <= 0.05,
+    `${where}: the label's box on line ${m.line} (${m.mid} qfs, not ${mid})`,
+  )
+}
 
 /**
  * The frame, the footer and the page-stack edges of a spread page (§8.9).

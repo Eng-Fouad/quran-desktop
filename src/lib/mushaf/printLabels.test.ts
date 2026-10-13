@@ -10,6 +10,9 @@ import { describe, expect, it } from 'vitest'
 import { HEAD } from './geometry'
 import { arabicNum } from './ornaments'
 import {
+  MARGIN_LABEL_EM,
+  marginLabelBox,
+  marginLabelStroke,
   PRINT_CP,
   PRINT_EM,
   PRINT_HEAD_BASELINE,
@@ -21,6 +24,7 @@ import {
   printHeadDrop,
   printJuzHead,
   printLabelInk,
+  printLabelShift,
   printMarginKind,
   printQuarterLine,
   printRubLabel,
@@ -191,6 +195,13 @@ describe('sizes (LEAD 25)', () => {
     expect(printFontSize(30)).toBeCloseTo(51)
   })
 
+  it('gives the small margin labels a hairline, fading to none at 32 px', () => {
+    // The smallest label (qfs 18) gets the full 0.4 px; qfs 30's 26.4 px a trace; from 32 px none.
+    expect(marginLabelStroke(MARGIN_LABEL_EM * 18)).toBe(0.4)
+    expect(marginLabelStroke(MARGIN_LABEL_EM * 30)).toBeCloseTo(0.14, 2)
+    for (const px of [32, 52.8, 140]) expect(marginLabelStroke(px)).toBe(0)
+  })
+
   it('keeps every head glyph inside the HEAD band, clear of the frame', () => {
     for (const qfs of [20, 24, 30, 60, 160]) {
       const fs = printFontSize(qfs)
@@ -209,13 +220,22 @@ describe('sizes (LEAD 25)', () => {
     }
   })
 
-  it('gives a margin label the extent of its kind, centred by the face’s metrics', () => {
+  it('gives a margin label the extent of its kind, centred by the face’s metrics, at one size', () => {
     const ink = printLabelInk(106)
+    if (!ink) throw new Error('rub 106: no label')
     expect(ink).toMatchObject({ family: 'qd-print-labels', ascent: 0.615, descent: 0.384 })
-    expect(ink?.top).toBeCloseTo(PRINT_METRICS.marginQuarter1.yMax / 1000)
-    expect(ink?.bottom).toBeCloseTo(-PRINT_METRICS.marginQuarter1.yMin / 1000)
-    expect(ink?.size).toBeCloseTo(PRINT_EM * ((ink?.top ?? 0) + (ink?.bottom ?? 0)))
-    // Every label is narrower than the outer margin (1.9·qfs) at the print's size.
+    expect(ink.top).toBeCloseTo(PRINT_METRICS.marginQuarter1.yMax / 1000)
+    expect(ink.bottom).toBeCloseTo(-PRINT_METRICS.marginQuarter1.yMin / 1000)
+    // One size for the whole margin (owner request 2026-10-13), no px floor: the box is the ink, the shift puts it
+    // there.
+    for (const qfs of [18, 30, 160]) {
+      const box = marginLabelBox(qfs, ink)
+      expect(box.fontSize).toBeCloseTo(MARGIN_LABEL_EM * qfs)
+      expect(box.height).toBeCloseTo((ink.top + ink.bottom) * MARGIN_LABEL_EM * qfs)
+      expect(box.shift).toBeCloseTo(printLabelShift(ink))
+    }
+    expect(MARGIN_LABEL_EM).toBeLessThan(PRINT_EM)
+    // Every label is narrower than the outer margin (1.9·qfs), at the margin's size and at the print's.
     for (const kind of [
       'marginJuz',
       'marginHizb',

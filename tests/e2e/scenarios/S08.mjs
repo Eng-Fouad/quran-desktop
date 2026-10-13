@@ -1,10 +1,11 @@
 // @ts-check
 // S08 (§12.6; WP8c): page 187 alone, QCF V2, paper. At-Tawbah opens on line 1 with its surah header and, alone among the
-// surahs, no basmala: line 2 is already 9:1. 9:1 also opens the half of hizb 19, marked in the outer margin with its
-// label in words on two lines, نصف over الحزب ١٩ (single page at 1600×1000: qfs ≥ 28). When the surah info popover is mounted (MushafView, WP8e), a click on the
-// header opens it and it is shot too.
-import { check, equal, mushaf } from '../lib/index.mjs'
-import { arabic, expectFramedPage, furniture, waitDecor } from './_furniture.mjs'
+// surahs, no basmala: line 2 is already 9:1. 9:1 also opens the half of hizb 19, marked in the outer margin by the
+// print's lamp (U+FC22) with its label «نِصۡف / الحِزۡبُ / ١٩» inside its box, the box on line 2, at any page size (owner
+// request 2026-10-13; the label under a ۞ without decor). When the surah info popover is mounted (MushafView, WP8e), a
+// click on the header opens it and it is shot too.
+import { equal, mushaf } from '../lib/index.mjs'
+import { arabic, expectFramedPage, expectRubMarker, furniture, waitDecor } from './_furniture.mjs'
 
 /** @type {import('../lib/types').ScenarioMeta} */
 export const meta = {
@@ -14,7 +15,7 @@ export const meta = {
   mode: 'both',
   settings: { mushafStyle: 'qcf_v2', pageMode: 'single' },
   description:
-    'Page 187, qcf_v2: surah 9 header with no basmala, the half-hizb 19 marker with its worded label',
+    'Page 187, qcf_v2: surah 9 header with no basmala, the half-hizb 19 lamp with its label inside',
 }
 
 const PAGE = 187
@@ -29,7 +30,7 @@ export default async function s08(ctx) {
 
   const state = await qd.state()
   equal(state.visiblePages, [PAGE], 'page 187 alone')
-  check(state.qfs >= 28, `qfs ${state.qfs}: margin labels are drawn`)
+  ctx.log(`qfs ${state.qfs}: the margin draws the same at every size`)
 
   const r = await furniture(ctx, PAGE)
   expectFramedPage(r, PAGE)
@@ -43,9 +44,11 @@ export default async function s08(ctx) {
   equal(
     r.markers.map((m) => [m.kind, m.line, m.label]),
     [['rub', 2, `نصف\nالحزب ${arabic(19)}`]],
-    'the half-hizb 19 marker beside 9:1, labelled in words',
+    'the half-hizb 19 marker beside 9:1, labelled in words (the print label carries them)',
   )
-  if (!decor) check(r.markers[0]?.glyph === '۞', 'the ۞ glyph without decor')
+  equal(r.markers[0]?.ornament, decor, decor ? 'the lamp, with decor' : 'the ۞, without decor')
+  expectRubMarker(r.markers[0], 'quarter', 'page 187')
+  equal(r.head?.juz, `الجزء ${arabic(10)}`, 'no quarter in the running head: the margin names it')
 
   await ctx.shot()
   await ctx.shot('page', { selector: mushaf.page(PAGE) })

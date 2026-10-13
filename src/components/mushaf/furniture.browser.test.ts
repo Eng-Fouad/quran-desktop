@@ -9,7 +9,13 @@
  * and fit there at every size, in both UI languages. With the bundled print-labels face (loaded for real here,
  * `fonts.printLabelsReady`; LEAD 25) the running heads and the rub labels are the 1441H print's own calligraphy: their
  * glyphs and face, one baseline inside the head band, the stacked labels in boxes as tall as their ink, the quarter
- * right to left, whatever the ornaments, without a layout shift, in both UI languages. Without it, the Hafs text.
+ * right to left, whatever the ornaments, without a layout shift, in both UI languages; with decor on (owner request
+ * 2026-10-13), every rub start hangs the print's lamp or medallion with its label inside, its box on the line, at every
+ * size, inline ۞ or not, and its ink over the page bookmark's dog-ear. The marks never cover a marker. None of that
+ * geometry depends on the decor face (the marker's size is set inline, the label's ink is measured in the bundled
+ * face), so it runs in CI, which has no decor fonts; the one check that measures the ornaments' own ink and boxes needs
+ * the dev packs' quran-common (`pnpm dev-packs`) and skips without it. Without the print face, the Hafs text under a
+ * ۞.
  */
 import { flushSync } from 'svelte'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
@@ -19,14 +25,25 @@ import '../../app.css'
 import type { MushafStyle, Note, PageData, UserMarks } from '$lib/ipc/bindings'
 import { fixtures } from '$lib/ipc/mock/fixtures'
 import {
+  decorStroke,
+  DOG_EAR,
   FOOTER_DEPTH,
   FOOTER_LOBES,
   footerMedallion,
+  INK,
+  LABEL_GAP,
   LABEL_LEADING,
   labelSize,
   lineCenterY,
+  STACK_GAP,
 } from '$lib/mushaf/ornaments'
-import { PRINT_EM, PRINT_HEAD_BASELINE, PRINT_METRICS, printMarginKind } from '$lib/mushaf/printLabels'
+import {
+  MARGIN_LABEL_EM,
+  PRINT_EM,
+  PRINT_HEAD_BASELINE,
+  PRINT_METRICS,
+  printMarginKind,
+} from '$lib/mushaf/printLabels'
 import { parseColor, type Rgba } from '../../styles/token-harness'
 import { fonts, library, pages, player, quran, reader, settings } from '$lib/stores'
 import MushafPage from './MushafPage.svelte'
@@ -159,7 +176,7 @@ describe('CLS 0 (§8.1)', () => {
 describe('Ornate surah headers off (§8.8, §8.9; owner 2026-10-11)', () => {
   /**
    * The decor faces are loaded, yet nothing ornate is drawn: the cartouche, the Unicode basmala, the juz in words, the
-   * solid ۞ without a frame (a quarter keeps its words in the label). Page 262 at qfs 30: 15:1's header and basmala,
+   * solid ۞, never an ornament (a quarter keeps its words in the label). Page 262 at qfs 30: 15:1's header and basmala,
    * the juz 14 head and marker.
    */
   async function expectPlain(props: { ornaments?: boolean }, where: string): Promise<void> {
@@ -173,14 +190,13 @@ describe('Ornate surah headers off (§8.8, §8.9; owner 2026-10-11)', () => {
     const glyph = section.querySelector<HTMLElement>('.mp-markers .mk-glyph')
     expect(glyph?.textContent, where).toBe('۞')
     expect(glyph?.hasAttribute('data-ornament'), where).toBe(false)
-    expect(section.querySelector('.mp-markers .mk-inset'), where).toBeNull()
     expect(section.querySelector('.mp-markers .mk-label')?.textContent, where).toBe('الجزء ١٤')
     screen.unmount()
     // A quarter: the solid ۞, its words in the label (9:1, the half of hizb 19, page 187).
     const quarter = await show(187, { qfs: 30, ...props })
     const mk = quarter.section.querySelector<HTMLElement>('.mp-markers .mk[data-rub="quarter"]')
     expect(mk?.querySelector('.mk-glyph')?.textContent, where).toBe('۞')
-    expect(mk?.querySelector('.mk-inset'), where).toBeNull()
+    expect(mk?.querySelector('.mk-glyph')?.hasAttribute('data-ornament'), where).toBe(false)
     expect(mk?.querySelector('.mk-label')?.textContent, where).toBe('نصف\nالحزب ١٩')
     quarter.screen.unmount()
   }
@@ -197,7 +213,11 @@ describe('Ornate surah headers off (§8.8, §8.9; owner 2026-10-11)', () => {
   it('follows the ornateHeaders setting by default, and a page’s ornaments prop overrides it', async () => {
     settings.value = { ...settings.value, ornateHeaders: false }
     await expectPlain({}, 'ornateHeaders off')
-    // The onboarding's preview shows the ornaments before the choice is saved.
+    // The onboarding's preview shows the ornaments before the choice is saved (they hold the print's label).
+    fonts.printLabelsReady = true
+    onTestFinished(() => {
+      fonts.printLabelsReady = false
+    })
     const { section } = await show(262, { qfs: 30, ornaments: true })
     expect(section.querySelector('.sh-line')?.hasAttribute('data-decor')).toBe(true)
     expect(section.querySelector('.bsm-decor')).not.toBeNull()
@@ -709,7 +729,7 @@ describe('BasmalaLine (§8.8)', () => {
 })
 
 describe('MarginMarkers (§8.9)', () => {
-  it('puts the juz marker of 15:1 in the outer margin, centred on its line, glyph-only below qfs 28', async () => {
+  it('puts the juz marker of 15:1 in the outer margin, centred on its line, glyph-only below qfs 28 (no print face)', async () => {
     const { section } = await show(262)
     const markers = [...section.querySelectorAll<HTMLElement>(':scope > .mp-markers .mk')]
     expect(markers).toHaveLength(1)
@@ -737,8 +757,8 @@ describe('MarginMarkers (§8.9)', () => {
     expect(select).toHaveBeenCalledWith(Number(mk?.dataset.ayah))
   })
 
-  it('labels a quarter whose first word carries the inline ۞ without a second ۞ (LEAD 17)', async () => {
-    // 2:253 opens juz 3 on page 42's first line with "۞ تِلۡكَ".
+  it('draws a juz start whose first word carries the inline ۞ like any other (LEAD 17; owner request 2026-10-13)', async () => {
+    // 2:253 opens juz 3 on page 42's first line with "۞ تِلۡكَ": the text keeps its ۞, the margin draws its own.
     const { section, screen } = await show(42, { qfs: 30 })
     const first = section.querySelector('.mp-glyphs .ln:first-child .w')
     expect(first?.textContent?.startsWith('۞')).toBe(true)
@@ -746,46 +766,32 @@ describe('MarginMarkers (§8.9)', () => {
     expect(markers).toHaveLength(1)
     const mk = markers[0]
     expect(mk?.hasAttribute('data-inline')).toBe(true)
-    expect(mk?.querySelector('.mk-glyph')).toBeNull()
+    expect(mk?.querySelector('.mk-glyph')?.textContent).toBe('۞')
     expect(mk?.querySelector('.mk-label')?.textContent).toBe('الجزء ٣')
     const box = mk?.getBoundingClientRect()
     const pageBox = section.getBoundingClientRect()
     if (!box) throw new Error('no marker box')
     expect(near(box.top + box.height / 2 - pageBox.top, lineCenterY(30, 1), 1)).toBe(true)
     screen.unmount()
-    // Below qfs 28 the margin draws nothing for it: the inline ۞ marks the place, the running head names it.
+    // Below qfs 28, without the print face, the ۞ alone; the running head names the hizb.
     const small = await show(42)
-    expect(small.section.querySelector('.mp-markers')).toBeNull()
+    expect(small.section.querySelector('.mp-markers .mk-glyph')?.textContent).toBe('۞')
+    expect(small.section.querySelector('.mp-markers .mk-label')).toBeNull()
     expect(small.section.querySelector('.mp-head')?.textContent).toContain('الحزب ٥')
   })
 
-  it('draws the decor ornament, thickened and with the hizb number in its frame, only with labels', async () => {
+  it('draws no ornament without the print face, whose label it holds: the ۞ and the Hafs words', async () => {
     fonts.status.set('qd-quran-common', 'ready')
-    const { section, screen } = await show(262, { qfs: 30 })
-    const glyph = section.querySelector<HTMLElement>('.mp-markers .mk-glyph')
-    expect(glyph?.hasAttribute('data-ornament')).toBe(true)
-    expect(glyph?.textContent).toBe('ﰣ')
-    expect(Number.parseFloat(getComputedStyle(glyph as HTMLElement).webkitTextStrokeWidth)).toBeGreaterThan(
-      0.5,
-    )
-    expect(getComputedStyle(glyph as HTMLElement).fontFamily).toContain('qd-quran-common')
-    const inset = section.querySelector<HTMLElement>('.mp-markers .mk-inset')
-    expect(inset?.textContent).toBe('٢٧')
-    // Inside the ornament's box, centred on it.
-    const g = glyph?.getBoundingClientRect()
-    const i = inset?.getBoundingClientRect()
-    if (!g || !i) throw new Error('no boxes')
-    expect(i.top).toBeGreaterThan(g.top)
-    expect(i.bottom).toBeLessThan(g.bottom)
-    expect(near(i.left + i.width / 2, g.left + g.width / 2, 1)).toBe(true)
-    expect(section.querySelector('.mp-markers .mk-label')?.textContent).toBe('الجزء ١٤')
-    screen.unmount()
-    // Smaller pages draw the solid ۞ even with decor loaded.
-    const small = await show(262)
-    const smallGlyph = small.section.querySelector<HTMLElement>('.mp-markers .mk-glyph')
-    expect(smallGlyph?.textContent).toBe('۞')
-    expect(smallGlyph?.hasAttribute('data-ornament')).toBe(false)
-    expect(small.section.querySelector('.mp-markers .mk-inset')).toBeNull()
+    for (const qfs of [30, QFS]) {
+      const { section, screen } = await show(262, { qfs })
+      const glyph = section.querySelector<HTMLElement>('.mp-markers .mk-glyph')
+      expect(glyph?.textContent).toBe('۞')
+      expect(glyph?.hasAttribute('data-ornament')).toBe(false)
+      expect(section.querySelector('.mp-markers .mk-label')?.textContent ?? null).toBe(
+        qfs >= 28 ? 'الجزء ١٤' : null,
+      )
+      screen.unmount()
+    }
   })
 
   it('is hidden when showMarginMarkers is off, and absent on the opening pages', async () => {
@@ -855,17 +861,9 @@ describe('Hizb quarters in words (§8.9; owner 2026-10-11)', () => {
           expect(near((l.left + l.right) / 2, box.left + box.width / 2, 1), where).toBe(true)
         expect(near(box.height, 2 * labelSize(30) * LABEL_LEADING, 1), where).toBe(true)
         expect(mk.getBoundingClientRect().bottom, where).toBeGreaterThanOrEqual(box.bottom - 0.5)
-        // The ornament's frame holds the hizb number (the words do not fit it); the solid ۞ has no frame.
-        const inset = mk.querySelector<HTMLElement>('.mk-inset')
-        if (decor) {
-          expect(inset?.textContent, where).toBe('١٩')
-          const g = mk.querySelector('.mk-glyph')?.getBoundingClientRect()
-          const i = inset?.getBoundingClientRect()
-          if (!g || !i) throw new Error('no ornament boxes')
-          expect(i.top).toBeGreaterThan(g.top)
-          expect(i.bottom).toBeLessThan(g.bottom)
-          expect(near(i.left + i.width / 2, g.left + g.width / 2, 1), where).toBe(true)
-        } else expect(inset, where).toBeNull()
+        // Without the print face no ornament is drawn, decor or not: the words go under the solid ۞.
+        expect(mk.querySelector('.mk-glyph')?.textContent, where).toBe('۞')
+        expect(mk.querySelector('.mk-glyph')?.hasAttribute('data-ornament'), where).toBe(false)
         expect(markers?.textContent, where).not.toMatch(WESTERN)
         expect(section.querySelector(':scope > .mp-head')?.textContent, where).not.toMatch(WESTERN)
         screen.unmount()
@@ -894,7 +892,7 @@ describe('Hizb quarters in words (§8.9; owner 2026-10-11)', () => {
 
   it('fits a quarter’s two lines in the outer margin at every size that draws labels, on both sides', async () => {
     fonts.status.set('qd-quran-common', 'ready')
-    // The widest line, ثلاثة أرباع: label-only on page 529 (right) and 600 (left); ربع under its ornament on 594.
+    // The widest line, ثلاثة أرباع: inline ۞ on page 529 (right) and 600 (left); ربع on 594; each under its ۞.
     for (const [n, text] of [
       [529, 'ثلاثة أرباع\nالحزب ٥٣'],
       [600, 'ثلاثة أرباع\nالحزب ٦٠'],
@@ -980,7 +978,10 @@ describe('The 1441H print’s calligraphy (§8.9; LEAD 25)', () => {
   const FACE = 'qd-print-labels'
   const cp = (n: number) => String.fromCodePoint(n)
 
-  /** The real quran-common face (dev packs, `pnpm dev-packs`), so an ornament above a label has its own width. */
+  /**
+   * The real quran-common face (dev packs, `pnpm dev-packs`; CI has none): only the check that measures the ornaments'
+   * own ink needs it. Elsewhere `fonts.status` alone switches the margin to its ornaments, whose boxes are set inline.
+   */
   let decorFace: FontFace | null = null
 
   beforeAll(async () => {
@@ -1106,7 +1107,9 @@ describe('The 1441H print’s calligraphy (§8.9; LEAD 25)', () => {
   it('names the surah and the juz in the print’s calligraphy, with the quarter right to left, in both UIs', async () => {
     for (const lang of ['en', 'ar'] as const) {
       uiLanguage(lang)
-      // Page 262 at qfs 24: 15:1 opens juz 14 and hizb 27; the labels are glyph-only, so the head names the hizb.
+      // Page 262 at qfs 24: 15:1 opens juz 14 and hizb 27. The margin names it at every size with this face, so the
+      // head names the hizb only with the markers off.
+      settings.value = { ...settings.value, showMarginMarkers: false }
       const { section, screen } = await show(262, { interactive: false })
       const head = section.querySelector<HTMLElement>(':scope > .mp-head')
       const surah = head?.querySelector<HTMLElement>('.mp-head-surah .mp-head-print')
@@ -1190,15 +1193,11 @@ describe('The 1441H print’s calligraphy (§8.9; LEAD 25)', () => {
   })
 
   it('fits the widest heads beside the widest quarter on one line, from qfs 20 up', async () => {
-    // The widest glyphs of the face: «سُورَةُ المُرۡسَلَاتِ» (77) and juz 25's ordinal, beside ثلاثة أرباع الحزب ٥٣.
+    // The widest glyphs of the face: «سُورَةُ المُرۡسَلَاتِ» (77) and juz 25's ordinal, beside ثلاثة أرباع الحزب ٥٣. With
+    // this face the margin names the quarter at every size, so the head carries it with the markers off.
     const data = await page(529)
-    for (const [qfs, showMarginMarkers] of [
-      [20, true],
-      [24, true],
-      [27, true],
-      [60, false],
-    ] as const) {
-      settings.value = { ...settings.value, showMarginMarkers }
+    settings.value = { ...settings.value, showMarginMarkers: false }
+    for (const qfs of [20, 24, 27, 60]) {
       const screen = await render(MushafPage, {
         data: { ...data, info: { ...data.info, headSurah: 77, juz: 25 } },
         qfs,
@@ -1233,16 +1232,16 @@ describe('The 1441H print’s calligraphy (§8.9; LEAD 25)', () => {
     }
   })
 
-  it('labels the margin with the print’s stacked labels, sized by the ink of their kind, in both UIs', async () => {
-    // A juz start (262, under its ۞ or ornament), a half (187), a three-quarter with the inline ۞ (529, label alone),
-    // a quarter and a three-quarter on left pages (594, 600): every kind of stacked label, hizbs 19 to 60.
+  it('labels the margin with the print’s stacked labels at one size, sized by the ink of their kind, in both UIs', async () => {
+    // A juz start (262), a hizb start with the inline ۞ (51), a half (187), a three-quarter with the inline ۞ (529), a
+    // quarter and a three-quarter on left pages (594, 600): every kind of stacked label, hizbs 6 to 60, in the
+    // ornament (decor on) or under the ۞ (decor off).
     for (const lang of ['en', 'ar'] as const) {
       uiLanguage(lang)
-      // With the ornaments only where their face is here: a stand-in font would draw them wider than the margin.
-      for (const decor of decorFace ? [false, true] : [false]) {
+      for (const decor of [false, true]) {
         if (decor) fonts.status.set('qd-quran-common', 'ready')
         else fonts.status.delete('qd-quran-common')
-        for (const n of [262, 187, 529, 594, 600]) {
+        for (const n of [262, 51, 187, 529, 594, 600]) {
           const { section, screen, data } = await show(n, { qfs: 30, interactive: false })
           const where = `page ${n}, ${lang}, decor ${decor}`
           const rub = rubOn(data)
@@ -1256,11 +1255,11 @@ describe('The 1441H print’s calligraphy (§8.9; LEAD 25)', () => {
           expect(document.fonts.check(`30px "${FACE}"`, label.textContent ?? ''), where).toBe(true)
           const style = getComputedStyle(label)
           expect(style.fontFamily, where).toContain(FACE)
-          expect(Number.parseFloat(style.fontSize), where).toBeCloseTo(PRINT_EM * 30, 1)
+          expect(Number.parseFloat(style.fontSize), where).toBeCloseTo(MARGIN_LABEL_EM * 30, 1)
           // The box is the ink extent of its kind of label; the glyph's own ink stays inside it.
           const { yMin, yMax } = PRINT_METRICS[printMarginKind(rub)]
           const box = layoutBox(label)
-          expect(box.height, where).toBeCloseTo(((yMax - yMin) / 1000) * PRINT_EM * 30, 0)
+          expect(box.height, where).toBeCloseTo(((yMax - yMin) / 1000) * MARGIN_LABEL_EM * 30, 0)
           const ink = inkOf(label)
           expect(ink.top, where).toBeGreaterThanOrEqual(box.top - 1)
           expect(ink.bottom, where).toBeLessThanOrEqual(box.bottom + 1)
@@ -1268,15 +1267,23 @@ describe('The 1441H print’s calligraphy (§8.9; LEAD 25)', () => {
           const m = mk.getBoundingClientRect()
           expect(box.top, where).toBeGreaterThanOrEqual(m.top - 0.75)
           expect(box.bottom, where).toBeLessThanOrEqual(m.bottom + 0.75)
-          expect(box.left, where).toBeGreaterThanOrEqual(column.left - 0.5)
-          expect(box.right, where).toBeLessThanOrEqual(column.right + 0.5)
-          expect(box.right <= block.left || box.left >= block.right, where).toBe(true)
-          // The marker is centred on its line (a label alone included).
-          const pageBox = section.getBoundingClientRect()
-          expect(
-            near(m.top + m.height / 2 - pageBox.top, lineCenterY(30, Number(mk.dataset.line)), 1),
-            where,
-          ).toBe(true)
+          for (const r of [box, m]) {
+            expect(r.left, where).toBeGreaterThanOrEqual(column.left - 0.5)
+            expect(r.right, where).toBeLessThanOrEqual(column.right + 0.5)
+            expect(r.right <= block.left || r.left >= block.right, where).toBe(true)
+          }
+          const line = section.getBoundingClientRect().top + lineCenterY(30, Number(mk.dataset.line))
+          // The label's box (the ink of its kind) on the line's centre: in its ornament, or under the ۞, which then
+          // stands above the line as the crest does.
+          expect(near(box.top + box.height / 2, line, 1), where).toBe(true)
+          if (decor) {
+            expect(label.hasAttribute('data-inside'), where).toBe(true)
+            expect(mk.querySelector('.mk-glyph')?.hasAttribute('data-ornament'), where).toBe(true)
+          } else {
+            expect(label.hasAttribute('data-inside'), where).toBe(false)
+            expect(mk.querySelector('.mk-glyph')?.textContent, where).toBe('۞')
+            expect(m.top + m.height / 2, where).toBeLessThan(line)
+          }
           expect(mk.textContent, where).not.toMatch(/[0-9]/u)
           screen.unmount()
         }
@@ -1284,24 +1291,178 @@ describe('The 1441H print’s calligraphy (§8.9; LEAD 25)', () => {
     }
   })
 
-  it('stacks exactly from qfs 28 to 160, and the marks continue after a print-labelled marker', async () => {
-    for (const n of [529, 594]) {
-      for (const qfs of [28, 48, 96, 160]) {
+  it('hangs the lamp or the medallion with the label in its box on the line, at every size, inline ۞ or not', async () => {
+    // No decor face needed: the marker's font size, width and height come from the model (`INK`, set inline) and the
+    // label's ink is measured in the bundled face; the model's ink and free boxes are measured in the real ornaments by
+    // the next test.
+    fonts.status.set('qd-quran-common', 'ready')
+    for (const [n, o] of [
+      [262, INK.decorJuz], // juz 14 on line 3, a surah start
+      [42, INK.decorJuz], // juz 3 on line 1, the inline ۞
+      [51, INK.decorHizb], // hizb 6, the inline ۞ (a right page)
+      [534, INK.decorQuarter], // a quarter at a surah start (the owner's page)
+      [529, INK.decorQuarter], // three quarters, the inline ۞ (a right page)
+      [415, INK.decorQuarter], // a quarter on line 14, the inline ۞
+    ] as const) {
+      for (const qfs of [18, 24, 30, 60]) {
         const { section, screen } = await show(n, { qfs, interactive: false })
         const where = `page ${n} at qfs ${qfs}`
-        const label = section.querySelector<HTMLElement>('.mp-markers .mk-label[data-print]')
+        const pageBox = section.getBoundingClientRect()
         const column = section.querySelector(':scope > .mp-markers')?.getBoundingClientRect()
-        if (!label || !column) throw new Error(`no print label (${where})`)
+        const mk = section.querySelector<HTMLElement>('.mp-markers .mk[data-kind="rub"]')
+        const glyph = mk?.querySelector<HTMLElement>('.mk-glyph')
+        const label = mk?.querySelector<HTMLElement>('.mk-label')
+        if (!column || !mk || !glyph || !label) throw new Error(`no ornament (${where})`)
+        const G = o.size * qfs
+        expect(glyph.textContent, where).toBe(o.char)
+        expect(glyph.hasAttribute('data-ornament'), where).toBe(true)
+        const style = getComputedStyle(glyph)
+        expect(style.fontFamily, where).toContain('qd-quran-common')
+        expect(Number.parseFloat(style.fontSize), where).toBeCloseTo(G, 0)
+        // The hairlines thickened just to a pixel (none from about qfs 28), halved at 2 dppx.
+        const k = window.devicePixelRatio >= 2 ? 0.5 : 1
+        expect(Number.parseFloat(style.webkitTextStrokeWidth), where).toBeCloseTo(decorStroke(G) * k, 1)
+        // The marker is the ornament's ink, centred in the outer margin, inside the paper.
+        const m = mk.getBoundingClientRect()
+        expect(m.width, where).toBeCloseTo(o.width * G, 0)
+        expect(m.height, where).toBeCloseTo(G, 0)
+        expect(near(m.left + m.width / 2, column.left + column.width / 2, 1), where).toBe(true)
+        expect(m.left, where).toBeGreaterThanOrEqual(column.left - 0.5)
+        expect(m.right, where).toBeLessThanOrEqual(column.right + 0.5)
+        expect(m.top, where).toBeGreaterThanOrEqual(pageBox.top)
+        expect(m.bottom, where).toBeLessThanOrEqual(pageBox.bottom)
+        // Its free box on the line's centre: `hollow.cy` em above the baseline, `top` em below the ink's top.
+        const line = pageBox.top + lineCenterY(qfs, Number(mk.dataset.line))
+        const free = { cy: m.top + (o.top - o.hollow.cy) * G, w: o.hollow.w * G, h: o.hollow.h * G }
+        expect(near(free.cy, line, 1), where).toBe(true)
+        // The label inside it: the box of its kind centred there, its own ink within the free box, its advance
+        // centred, and its ink (the advance less 0.05 em bearings) narrower than the box.
+        expect(label.hasAttribute('data-inside'), where).toBe(true)
         const box = layoutBox(label)
+        expect(near(box.top + box.height / 2, line, 1), where).toBe(true)
         const ink = inkOf(label)
-        expect(ink.top, where).toBeGreaterThanOrEqual(box.top - 1)
-        expect(ink.bottom, where).toBeLessThanOrEqual(box.bottom + 1)
-        expect(box.left, where).toBeGreaterThanOrEqual(column.left - 0.5)
-        expect(box.right, where).toBeLessThanOrEqual(column.right + 0.5)
+        expect(ink.top, where).toBeGreaterThanOrEqual(free.cy - free.h / 2 - 0.5)
+        expect(ink.bottom, where).toBeLessThanOrEqual(free.cy + free.h / 2 + 0.5)
+        const range = document.createRange()
+        range.selectNodeContents(label)
+        const advance = range.getBoundingClientRect()
+        expect(advance.width - 0.1 * MARGIN_LABEL_EM * qfs, where).toBeLessThan(free.w)
+        expect(near(advance.left + advance.width / 2, m.left + m.width / 2, 1), where).toBe(true)
         screen.unmount()
       }
     }
-    // A bookmark on 15:1 (page 262) goes on 0.2·qfs below the juz marker and its print label.
+  })
+
+  it('measures the real ornaments as the model has them: one em of ink, its width, a free box their rules bound', (ctx) => {
+    // The one check that needs the dev packs' quran-common (`pnpm dev-packs`; CI has no decor fonts): `INK`'s ink and
+    // free box of each ornament, which size and place it and its label, rasterised from the face at 1024 px.
+    if (!decorFace) ctx.skip()
+    const px = 1024
+    for (const [name, o] of [
+      ['lamp', INK.decorQuarter],
+      ['medallion', INK.decorHizb],
+    ] as const) {
+      const canvas = document.createElement('canvas')
+      canvas.width = 2 * px
+      canvas.height = 2 * px
+      const c = canvas.getContext('2d', { willReadFrequently: true })
+      if (!c) throw new Error('no canvas')
+      c.font = `${px}px "qd-quran-common"`
+      c.textAlign = 'center'
+      c.fillText(o.char, px, px)
+      const { data } = c.getImageData(0, 0, 2 * px, 2 * px)
+      // Ink at a pixel; (x, y) in em from the advance's centre and the baseline, y up.
+      const inked = (i: number, j: number) => (data[(j * 2 * px + i) * 4 + 3] ?? 0) > 96
+      const col = (x: number) => Math.round(px + x * px)
+      const row = (y: number) => Math.round(px - y * px)
+      let [top, bottom, left, right] = [2 * px, 0, 2 * px, 0]
+      for (let j = 0; j < 2 * px; j++)
+        for (let i = 0; i < 2 * px; i++)
+          if (inked(i, j)) {
+            top = Math.min(top, j)
+            bottom = Math.max(bottom, j + 1)
+            left = Math.min(left, i)
+            right = Math.max(right, i + 1)
+          }
+      expect((px - top) / px, `${name}: ink top`).toBeCloseTo(o.top, 2)
+      expect((bottom - px) / px, `${name}: ink bottom`).toBeCloseTo(o.bottom, 2)
+      expect((right - left) / px, `${name}: ink width`).toBeCloseTo(o.width, 2)
+      expect((left + right) / 2 - px, `${name}: ink centred in the advance`).toBeLessThanOrEqual(2)
+      /** Whether any pixel of the rectangle (em) is inked. */
+      const any = (x0: number, x1: number, y0: number, y1: number) => {
+        for (let j = row(y1); j <= row(y0); j++)
+          for (let i = col(x0); i <= col(x1); i++) if (inked(i, j)) return true
+        return false
+      }
+      const { cy, w, h } = o.hollow
+      // Empty: 0.02 em in from its sides (the lamp's arch springs, the frame's corners are rounded) and 0.004 em in
+      // from its top and foot.
+      expect(
+        any(-w / 2 + 0.02, w / 2 - 0.02, cy - h / 2 + 0.004, cy + h / 2 - 0.004),
+        `${name}: free box`,
+      ).toBe(false)
+      // Bound within 0.02 em: its sides at its middle, and its foot (the medallion's top too) off the axis, where the
+      // medallion's frame has a notch.
+      expect(any(-w / 2 - 0.02, -w / 2 + 0.004, cy - 0.01, cy + 0.01), `${name}: left rule`).toBe(true)
+      expect(any(w / 2 - 0.004, w / 2 + 0.02, cy - 0.01, cy + 0.01), `${name}: right rule`).toBe(true)
+      expect(any(0.05, 0.07, cy - h / 2 - 0.02, cy - h / 2 + 0.004), `${name}: foot`).toBe(true)
+      if (name === 'medallion')
+        expect(any(0.05, 0.07, cy + h / 2 - 0.004, cy + h / 2 + 0.02), `${name}: top`).toBe(true)
+    }
+  })
+
+  it('draws the ۞ with the print’s label under it while the ornaments are off, at every size', async () => {
+    fonts.status.set('qd-quran-common', 'ready')
+    for (const qfs of [18, 30]) {
+      for (const n of [262, 529]) {
+        const { section, screen } = await show(n, { qfs, ornaments: false, interactive: false })
+        const where = `page ${n} at qfs ${qfs}`
+        const mk = section.querySelector<HTMLElement>('.mp-markers .mk[data-kind="rub"]')
+        const glyph = mk?.querySelector<HTMLElement>('.mk-glyph')
+        const label = mk?.querySelector<HTMLElement>('.mk-label')
+        if (!mk || !glyph || !label) throw new Error(`no marker (${where})`)
+        expect(glyph.textContent, where).toBe('۞')
+        expect(glyph.hasAttribute('data-ornament'), where).toBe(false)
+        expect(label.hasAttribute('data-print'), where).toBe(true)
+        expect(label.hasAttribute('data-inside'), where).toBe(false)
+        expect(Number.parseFloat(getComputedStyle(label).fontSize), where).toBeCloseTo(
+          MARGIN_LABEL_EM * qfs,
+          1,
+        )
+        // `LABEL_GAP` under the ۞, its box (the ink of its kind) on the line: the ۞ stands above it as a crest does.
+        const box = layoutBox(label)
+        expect(box.top - layoutBox(glyph).bottom, where).toBeCloseTo(LABEL_GAP * qfs, 0)
+        const line = section.getBoundingClientRect().top + lineCenterY(qfs, Number(mk.dataset.line))
+        expect(near(box.top + box.height / 2, line, 1), where).toBe(true)
+        // The margin names the quarter, so the running head does not.
+        expect(section.querySelector('.mp-head-quarter'), where).toBeNull()
+        screen.unmount()
+      }
+    }
+  })
+
+  it('sets the label exactly at every size, from qfs 18 to 160, and the marks continue after its marker', async () => {
+    for (const decor of [false, true]) {
+      if (decor) fonts.status.set('qd-quran-common', 'ready')
+      else fonts.status.delete('qd-quran-common')
+      for (const n of [529, 594]) {
+        for (const qfs of [18, 28, 48, 96, 160]) {
+          const { section, screen } = await show(n, { qfs, interactive: false })
+          const where = `page ${n} at qfs ${qfs}, decor ${decor}`
+          const label = section.querySelector<HTMLElement>('.mp-markers .mk-label[data-print]')
+          const column = section.querySelector(':scope > .mp-markers')?.getBoundingClientRect()
+          if (!label || !column) throw new Error(`no print label (${where})`)
+          const box = layoutBox(label)
+          const ink = inkOf(label)
+          expect(ink.top, where).toBeGreaterThanOrEqual(box.top - 1)
+          expect(ink.bottom, where).toBeLessThanOrEqual(box.bottom + 1)
+          expect(box.left, where).toBeGreaterThanOrEqual(column.left - 0.5)
+          expect(box.right, where).toBeLessThanOrEqual(column.right + 0.5)
+          screen.unmount()
+        }
+      }
+    }
+    // A bookmark on 15:1 (page 262) goes on 0.2·qfs below the juz marker: its ۞ and print label, or its medallion.
     user.marks = {
       bookmarks: [{ ayahId: 1803, bookmarkId: 'b1' }],
       pageBookmarks: [],
@@ -1309,12 +1470,17 @@ describe('The 1441H print’s calligraphy (§8.9; LEAD 25)', () => {
       notes: [],
       readingAyahId: null,
     }
-    const { section } = await show(262, { qfs: 30 })
-    await expect.poll(() => section.querySelectorAll('.mp-marks .mm').length).toBe(1)
-    const marker = section.querySelector('.mp-markers .mk')?.getBoundingClientRect()
-    const mark = section.querySelector('.mp-marks .mm')?.getBoundingClientRect()
-    if (!marker || !mark) throw new Error('no marker or mark')
-    expect(near(mark.top - marker.bottom, 0.2 * 30, 1)).toBe(true)
+    for (const decor of [false, true]) {
+      if (decor) fonts.status.set('qd-quran-common', 'ready')
+      else fonts.status.delete('qd-quran-common')
+      const { section, screen } = await show(262, { qfs: 30 })
+      await expect.poll(() => section.querySelectorAll('.mp-marks .mm').length).toBe(1)
+      const marker = section.querySelector('.mp-markers .mk')?.getBoundingClientRect()
+      const mark = section.querySelector('.mp-marks .mm')?.getBoundingClientRect()
+      if (!marker || !mark) throw new Error('no marker or mark')
+      expect(near(mark.top - marker.bottom, 0.2 * 30, 1), `decor ${decor}`).toBe(true)
+      screen.unmount()
+    }
   })
 
   it('keeps the Hafs words in the marker’s tooltip', async () => {
@@ -1327,6 +1493,62 @@ describe('The 1441H print’s calligraphy (§8.9; LEAD 25)', () => {
     while (!document.querySelector('.mk-tip-label') && performance.now() < end) await frames()
     expect(document.querySelector('.mk-tip-label')?.textContent).toBe('نصف الحزب ١٩')
     await userEvent.unhover(mk)
+  })
+
+  it('draws the label’s hairlines in the ink on the smallest page, paper and night', async () => {
+    // At qfs 18 its stacked lines are about 5 px tall: without the hairline under its fill they antialias to a tint,
+    // the faintest thing in the ornament. Measured on the label alone (the ۞ hidden), as the share of its inked pixels
+    // that reach 3:1 against the page.
+    onTestFinished(() => setTheme('paper'))
+    const off = document.createElement('style')
+    off.textContent = '.mk-label[data-print] { -webkit-text-stroke-width: 0 !important }'
+    onTestFinished(() => off.remove())
+    for (const theme of ['paper', 'night']) {
+      setTheme(theme)
+      const shares: number[] = []
+      for (const hairline of [false, true]) {
+        if (hairline) off.remove()
+        else document.head.append(off)
+        const { section, screen } = await show(534, { qfs: 18, interactive: false })
+        const label = section.querySelector<HTMLElement>('.mp-markers .mk-label[data-print]')
+        const glyph = section.querySelector<HTMLElement>('.mp-markers .mk-glyph')
+        const paperEl = section.querySelector<HTMLElement>('.mp-paper')
+        if (!label || !glyph || !paperEl) throw new Error('no label')
+        glyph.style.visibility = 'hidden'
+        await frames()
+        const img = await screenshotPixels(label)
+        const paper = parseColor(getComputedStyle(paperEl).backgroundColor)
+        const ink = parseColor(getComputedStyle(label).color)
+        const lum = (c: Rgba) => {
+          const f = (v: number) => {
+            const s = v / 255
+            return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4
+          }
+          return 0.2126 * f(c.r) + 0.7152 * f(c.g) + 0.0722 * f(c.b)
+        }
+        const span = [ink.r - paper.r, ink.g - paper.g, ink.b - paper.b] as const
+        const norm = span[0] ** 2 + span[1] ** 2 + span[2] ** 2
+        let inked = 0
+        let dark = 0
+        for (let k = 0; k < img.data.length; k += 4) {
+          const c = { r: img.data[k] ?? 0, g: img.data[k + 1] ?? 0, b: img.data[k + 2] ?? 0, a: 1 }
+          const cover =
+            ((c.r - paper.r) * span[0] + (c.g - paper.g) * span[1] + (c.b - paper.b) * span[2]) / norm
+          if (cover <= 0.1) continue
+          inked++
+          const [hi, lo] = [Math.max(lum(c), lum(paper)), Math.min(lum(c), lum(paper))]
+          if ((hi + 0.05) / (lo + 0.05) >= 3) dark++
+        }
+        shares.push(inked ? dark / inked : 0)
+        screen.unmount()
+      }
+      const [plain = 0, drawn = 0] = shares
+      // Measured in Edge (1×): paper 11 % → 36 %, night 18 % → 52 %.
+      expect(
+        drawn,
+        `${theme}: ${(plain * 100).toFixed(1)} % → ${(drawn * 100).toFixed(1)} %`,
+      ).toBeGreaterThan(Math.max(0.2, 1.4 * plain))
+    }
   })
 
   it('moves nothing while the page is drawn with it and the decor arrives (CLS 0)', async () => {
@@ -1436,6 +1658,98 @@ describe('MarginMarks (§8.9)', () => {
     await frames(3)
     expect(user.calls).toBe(0)
     expect(section.querySelector('.mp-marks, .mp-ribbon, .mp-dogear')).toBeNull()
+  })
+
+  it('never draws a mark over an ornament or another mark: beside a juz start and above a quarter’s lamp', async () => {
+    // No decor face needed: the marks keep clear of the ornaments' boxes, which the model sizes (set inline).
+    fonts.printLabelsReady = true
+    fonts.status.set('qd-quran-common', 'ready')
+    onTestFinished(() => {
+      fonts.printLabelsReady = false
+    })
+    // Page 262: 15:1 opens juz 14 on line 3 and 15:3 starts line 4, under the medallion's lower crest. Page 529: 54:7
+    // on line 1 sits under the crest of the lamp that 54:9 hangs on line 2, and 54:10 starts line 3.
+    for (const [n, ayahs] of [
+      [262, [1803, 1805]],
+      [529, [4853, 4855, 4856]],
+    ] as const) {
+      user.marks = {
+        bookmarks: ayahs.map((ayahId, i) => ({ ayahId, bookmarkId: `b${i}` })),
+        pageBookmarks: [],
+        highlights: [],
+        notes: [],
+        readingAyahId: null,
+      }
+      for (const qfs of [18, 30]) {
+        // The page's marks afresh (the store caches them per page).
+        library.reset()
+        const { section, screen } = await show(n, { qfs })
+        await expect.poll(() => section.querySelectorAll('.mp-marks .mm').length).toBe(ayahs.length)
+        const where = `page ${n} at qfs ${qfs}`
+        expect(section.querySelector('.mp-markers .mk-glyph')?.hasAttribute('data-ornament'), where).toBe(
+          true,
+        )
+        const boxes = [...section.querySelectorAll<HTMLElement>('.mp-markers .mk, .mp-marks .mm')].map(
+          (el) => ({
+            key: `${el.className.split(' ')[0]} ${el.dataset.ayah}`,
+            r: el.getBoundingClientRect(),
+          }),
+        )
+        for (const [i, a] of boxes.entries())
+          for (const b of boxes.slice(i + 1)) {
+            const gap = Math.max(b.r.top - a.r.bottom, a.r.top - b.r.bottom)
+            expect(gap, `${where}: ${a.key} and ${b.key}`).toBeGreaterThan(STACK_GAP * qfs - 1)
+          }
+        screen.unmount()
+      }
+    }
+  })
+
+  it('draws a line-1 lamp’s ink over the page bookmark’s dog-ear, which keeps the pointer, and the marks over both', async () => {
+    fonts.printLabelsReady = true
+    fonts.status.set('qd-quran-common', 'ready')
+    onTestFinished(() => {
+      fonts.printLabelsReady = false
+    })
+    // Page 42 opens juz 3 on line 1 (2:253): drawn as a quarter's start, the lamp rises nearest the paper's top.
+    const data = await page(42)
+    const quarter = {
+      ...data,
+      ayahs: data.ayahs.map((a) => (a.flags & 1 && a.startsOnPage ? { ...a, flags: 1, rub: 18 } : a)),
+    }
+    user.marks = {
+      bookmarks: [{ ayahId: quarter.ayahs.find((a) => a.flags & 1)?.id ?? 0, bookmarkId: 'b' }],
+      pageBookmarks: [{ page: 42, bookmarkId: 'p' }],
+      highlights: [],
+      notes: [],
+      readingAyahId: null,
+    }
+    const qfs = 30
+    const screen = await render(MushafPage, { data: quarter, qfs, side: 'left', interactive: true })
+    await expect.poll(() => screen.container.querySelector('.mp-dogear')).not.toBeNull()
+    await expect.poll(() => screen.container.querySelector('.mp-marks .mm')).not.toBeNull()
+    const glyph = screen.container.querySelector<HTMLElement>('.mp-markers .mk-glyph[data-ornament]')
+    const dogear = screen.container.querySelector<HTMLElement>('.mp-dogear')
+    const marks = screen.container.querySelector<HTMLElement>('.mp-marks')
+    if (!glyph || !dogear || !marks) throw new Error('no lamp, dog-ear or marks')
+    expect(glyph.textContent).toBe(INK.decorQuarter.char)
+    // The lamp starts 0.74·qfs below the paper's top, inside the 1.2·qfs dog-ear.
+    const page42 = screen.container.querySelector('section.mp')?.getBoundingClientRect()
+    const g = glyph.getBoundingClientRect()
+    expect((g.top - (page42?.top ?? 0)) / qfs).toBeLessThan(DOG_EAR)
+    expect(g.top).toBeLessThan(dogear.getBoundingClientRect().bottom)
+    // Its ink is painted over the dog-ear (z 2 over z 1, one stacking context: the page), which keeps the pointer.
+    const z = (el: Element) => Number(getComputedStyle(el).zIndex)
+    expect(z(glyph)).toBeGreaterThan(z(dogear))
+    expect(getComputedStyle(glyph).pointerEvents).toBe('none')
+    // The marks come later in the page at the same level: over the markers.
+    expect(z(marks)).toBeGreaterThanOrEqual(z(glyph))
+    // The bookmark of 2:253 hangs under the lamp.
+    const lamp = glyph.closest('.mk')?.getBoundingClientRect()
+    expect(marks.querySelector('.mm')?.getBoundingClientRect().top).toBeCloseTo(
+      (lamp?.bottom ?? 0) + STACK_GAP * qfs,
+      0,
+    )
   })
 
   it('opens the reading-bookmark popover and moves the ribbon to the action target', async () => {

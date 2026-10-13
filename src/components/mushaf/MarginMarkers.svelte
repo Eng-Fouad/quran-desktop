@@ -1,32 +1,40 @@
 <!--
-  MarginMarkers (§8.9). Owner: WP8c. The division and sajda markers in the page's outer margin (M_OUT), in --marker-ink:
+  MarginMarkers (§8.9). Owner: WP8c. The division and sajda markers in the page's outer margin (M_OUT), in --marker-ink.
+  One family at every page size, whether or not the ayah's first word carries the ۞ inline (LEAD 17: the text keeps
+  it; owner request 2026-10-13, after the printed Mushaf):
 
-  - a rub start (`flags & 1`, the mushaf-source rub, D6): ۞ in qd-hafs, or, while labels are drawn and decor is loaded
-    (and the page's ornaments are on: `MushafPageProps.ornaments`, else `ornateHeaders`), the quran-common ornament (U+FC23 for a hizb start, U+FC22 for the other quarters). Glyphs are sized by their
-    measured ink, not their em (۞ has only 0.45 em of ink): 0.75·qfs tall (≥ 13 px), the decor ornaments 1.45·qfs
-    (U+FC22) and a line, 1.75·qfs (the slender U+FC23; `markerGlyphBox`). An ornament's hairlines are thickened
-    (`-webkit-text-stroke`, `decorStroke`) so it reads at 3:1 like the solid ۞, and its empty frame holds the
-    number of the hizb it opens or divides (`markerInset`; a quarter's words do not fit a frame);
-  - a rub start whose first word already carries the ۞ inline (LEAD 17, ≈198 quarters): the label alone, centred on
-    the line, never a second ۞ beside the inline one; not drawn while labels are hidden (the running head names the
-    quarter then);
-  - a sajda: ۩ beside the line where its ayah ends;
-  - under each glyph its label, only while 0.36·qfs ≥ 10 (qfs ≥ 28); smaller pages draw the glyph alone and the
-    running head carries the quarter. A rub start's label is the 1441H print's own (LEAD 25): its stacked calligraphy
-    in the bundled `qd-print-labels` face (U+F800 + rub: «رُبُع» / «الحِزۡبُ» / «٢٧», or «الجُزۡءُ ١٤» / «الحِزۡبُ ٢٧» at a
-    juz start), at the print's proportion (`PRINT_EM`·qfs) in a box as tall as the ink of its kind of label
-    (`markerPrintLabel`), drawn whatever `ornateHeaders` says (bundled print furniture, not decor). A sajda's label,
-    and every label when that face did not load, is Hafs text at max(0.36·qfs, 11px) (الجزء ١٤ · الحزب ٢٧ · سجدة ·
-    سجدة واجبة), a quarter in words on two lines, ربع / نصف / ثلاثة أرباع over الحزب ٢٧ (`rubLabelLines`): on one
-    line it is wider than the margin. The tooltip always has the Hafs words, and a print label carries them in
-    `data-text`.
+  - a rub start (`flags & 1`, the mushaf-source rub, D6), with decor (the page's ornaments are on:
+    `MushafPageProps.ornaments`, else `ornateHeaders`, and quran-common is loaded) and the bundled print-labels face:
+    the print's ornament, its label inside it (`markerInk`, `markerLabelTop`). A quarter, a half or three quarters
+    hangs the lamp (U+FC22 at 3.56·qfs: a crest over an arched box) with «رُبُع» / «الحِزۡبُ» / «٢٧» in its box; a hizb
+    start the medallion (U+FC23 at 3.72·qfs: crest, frame, crest) with «الحِزۡبُ» / «٢٧» in its frame; a juz start the
+    same medallion at 4.48·qfs with «الجُزۡءُ ١٤» / «الحِزۡبُ ٢٧». The box (the label's ink centre) sits on the line's
+    centre, the crests rise above it (and the medallion's below). An ornament's advance (1 em) is wider than the
+    margin, so its box is its ink's width and the glyph is centred on it; its hairlines are thickened
+    (`-webkit-text-stroke`, `decorStroke`) so it reads at 3:1;
+  - a rub start without decor: the solid ۞ in qd-hafs, its label under it;
+  - a sajda: ۩ beside the line where its ayah ends, «سجدة» under it from qfs 28.
+
+  A rub start's label is the 1441H print's own (LEAD 25): its stacked calligraphy in the bundled `qd-print-labels`
+  face (U+F800 + rub), at one size for the whole margin (`MARGIN_LABEL_EM`·qfs) in a box as tall as the ink of its
+  kind of label (`marginLabelBox`), its hairlines thickened like the ornament's, drawn whatever `ornateHeaders` says
+  (bundled print furniture) and at every page size. Glyphs are sized by their measured ink, not their em (۞ and ۩
+  0.75·qfs tall, ≥ 13 px; `markerGlyphBox`). Without that face no ornament is drawn: ۞ with the Hafs words under it
+  (`rubLabelLines`: الجزء ١٤ · الحزب ٢٧, or a quarter's words over its hizb, ربع / نصف / ثلاثة أرباع over الحزب ٢٧), at
+  max(0.36·qfs, 11px), which need 0.36·qfs ≥ 10 (qfs ≥ 28) like the sajda's: smaller pages draw the glyph alone and the
+  running head carries the quarter. The tooltip always has the Hafs words, and a print label carries them in
+  `data-text`.
 
   The furniture is Arabic in every UI language, so the column carries `dir="rtl" lang="ar"` itself, as the running
   head does: inside a settings or onboarding preview no `.spread` gives it a direction.
 
-  Markers on the same line stack 0.2·qfs apart, centred on the line. On an interactive page each marker is a pointer
-  target: its tooltip shows the full label and a description in the UI language, a click selects the ayah. The
-  container is `aria-hidden` (the a11y layer announces divisions); the targets are `tabindex=-1`.
+  A marker alone on its line meets it at its anchor (`markerAnchor`): a rub start's label, in its ornament or under its
+  ۞ (which then stands above the line as a crest does, so decor arriving late moves no label), else its middle. Markers
+  sharing a line stack 0.2·qfs apart, centred on the line, but a lamp keeps its box on the line with the ۩ under it.
+  An ornament's ink is drawn over the page bookmark's dog-ear (a line-1 lamp reaches into it); the marks are drawn over
+  the markers and keep clear of them (`placeMarks`). On an interactive page each marker is a pointer target: its
+  tooltip shows the full label and a description in the UI language, a click selects the ayah. The container is
+  `aria-hidden` (the a11y layer announces divisions); the targets are `tabindex=-1`.
 -->
 <script lang="ts">
   import { Tooltip } from '$components/ui'
@@ -35,20 +43,20 @@
   import { getPageContext } from '$lib/mushaf/geometry'
   import {
     decorStroke,
-    insetBox,
     isDecorInk,
     labelSize,
     marginLabelsVisible,
     markerGlyphBox,
     markerInk,
-    markerInset,
+    markerLabelShown,
+    markerLabelTop,
     markerPrintLabel,
     pageMarkers,
     placeMarkers,
     round2,
     type MarginMarker,
   } from '$lib/mushaf/ornaments'
-  import { printLabelShift } from '$lib/mushaf/printLabels'
+  import { marginLabelBox, marginLabelStroke } from '$lib/mushaf/printLabels'
   import { fonts, i18n, reader, settings } from '$lib/stores'
 
   let { data, qfs, side }: PageFurnitureProps = $props()
@@ -56,13 +64,14 @@
   const page = getPageContext()
   const interactive = $derived(page?.interactive ?? false)
   const labels = $derived(marginLabelsVisible(qfs))
-  /** The page's ornaments are on and the quran-common face is loaded; they are drawn while labels are (`markerInk`). */
+  /** The page's ornaments are on and the quran-common face is loaded. */
   const decor = $derived(
     (page?.ornaments ?? settings.value.ornateHeaders) && fonts.status.get('qd-quran-common') === 'ready',
   )
-  const ornaments = $derived(decor && labels)
   /** The print's own rub labels (the bundled face is loaded); else the Hafs words. */
   const print = $derived(fonts.printLabelsReady)
+  /** The ornaments are drawn: decor, and the print's labels to hold (`markerInk`). */
+  const ornaments = $derived(decor && print)
   const placed = $derived(
     settings.value.showMarginMarkers
       ? placeMarkers(pageMarkers(data), qfs, labels, decor, false, print).placed
@@ -71,28 +80,28 @@
   /** Tooltips open away from the text block, into the canvas beside the page. */
   const tooltipSide = $derived(side === 'right' ? 'right' : 'left')
 
-  /** The glyph, its font, the box that centres its ink (sized by ink, not em), and an ornament's frame text. */
+  /** The glyph, its font, the box that centres its ink (sized by ink, not em), and an ornament's ink width. */
   function glyph(m: MarginMarker) {
-    const ink = markerInk(m, decor, labels)
+    const ink = markerInk(m, decor, print)
     const box = markerGlyphBox(qfs, ink)
     const decorGlyph = isDecorInk(ink)
-    const text = decorGlyph ? markerInset(m, ink) : null
-    const place = text === null ? null : insetBox(qfs, ink, text)
     return {
       ink,
       ...box,
       decor: decorGlyph,
+      width: decorGlyph && ink.width !== undefined ? ink.width * box.fontSize : null,
       stroke: decorGlyph ? decorStroke(box.fontSize) : 0,
-      inset: text !== null && place !== null ? { text, ...place } : null,
     }
   }
 
-  /** A rub start's print label: the glyph, its font size, its box (the ink of its kind) and the shift onto it. */
+  /**
+   * A rub start's print label: the glyph, its font size, its box (the ink of its kind), the shift onto it, and its top
+   * inside an ornament (null: under the ۞).
+   */
   function printLabel(m: MarginMarker) {
     const ink = markerPrintLabel(m, print)
     if (!ink) return null
-    const { fontSize, height } = markerGlyphBox(qfs, ink)
-    return { char: ink.char, fontSize, height, shift: printLabelShift(ink) }
+    return { char: ink.char, ...marginLabelBox(qfs, ink), top: markerLabelTop(m, qfs, decor, print) }
   }
 
   function description(m: MarginMarker): string {
@@ -133,6 +142,7 @@
     <!-- Keyed by the face too: decor arriving late re-creates the markers rather than moving them (CLS 0). -->
     {#each placed as { item, top, height } (`${item.key}|${ornaments}|${labels}|${print}`)}
       {#snippet marker(props: Record<string, unknown>)}
+        {@const g = glyph(item)}
         <button
           {...props}
           type="button"
@@ -146,34 +156,28 @@
           style:top="{round2(top)}px"
           style:height="{round2(height)}px"
         >
-          {#if !item.inline}
-            {@const g = glyph(item)}
-            <span
-              class="mk-glyph"
-              data-ornament={g.decor ? '' : undefined}
-              style:font-size="{round2(g.fontSize)}px"
-              style:height="{round2(g.height)}px"
-              style:line-height="{round2(g.height)}px"
-              style:--shift="{Math.round(g.shift * 1000) / 1000}em"
-              style:--mk-stroke={g.decor ? `${round2(g.stroke)}px` : undefined}>{g.ink.char}</span
-            >
-            {#if g.inset}
-              <span
-                class="mk-inset"
-                style:top="{round2(g.inset.top)}px"
-                style:font-size="{round2(g.inset.fontSize)}px">{g.inset.text}</span
-              >
-            {/if}
-          {/if}
-          {#if labels}
+          <span
+            class="mk-glyph"
+            data-ornament={g.decor ? '' : undefined}
+            style:font-size="{round2(g.fontSize)}px"
+            style:height="{round2(g.height)}px"
+            style:line-height="{round2(g.height)}px"
+            style:width={g.width === null ? undefined : `${round2(g.width)}px`}
+            style:--shift="{Math.round(g.shift * 1000) / 1000}em"
+            style:--mk-stroke={g.decor ? `${round2(g.stroke)}px` : undefined}>{g.ink.char}</span
+          >
+          {#if markerLabelShown(item, labels, print)}
             {@const p = printLabel(item)}
             {#if p}
               <span
                 class="mk-label"
                 data-print=""
+                data-inside={p.top === null ? undefined : ''}
                 data-text={item.lines.join('\n')}
+                style:top={p.top === null ? undefined : `${round2(p.top)}px`}
                 style:font-size="{round2(p.fontSize)}px"
                 style:height="{round2(p.height)}px"
+                style:--mk-label-stroke="{round2(marginLabelStroke(p.fontSize))}px"
                 style:--shift="{Math.round(p.shift * 1000) / 1000}em">{p.char}</span
               >
             {:else}
