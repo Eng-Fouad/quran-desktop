@@ -82,7 +82,8 @@ from Tanzil's metadata, placeholder words). For real pages, build the data below
 
 ### Core data (core.db), fixtures and dev packs
 
-`core.db` is generated and **never committed** (BRIEF §4):
+`core.db` is generated. A development build is **never committed** (BRIEF §4); only the QUL release build is, at
+`data/core/core.db` (LEAD 29, [`data/core/README.md`](../data/core/README.md)):
 
 ```sh
 pnpm core:qdc        # cargo xtask build-core --source qdc → src-tauri/resources/core.db (dev only; caches data/cache/)
@@ -93,8 +94,9 @@ pnpm dev-packs       # cargo xtask fetch-dev-packs → data/dev-packs/ (QCF font
 
 - `--source qdc` reads Quran.Foundation APIs (1,812 page requests on a cold cache, about 90 s; a warm build takes a few
   seconds). Everything it produces (core.db, fixtures, `data/cache/`, `data/dev-packs/`) is QF-derived: keep it on your
-  machine. Never commit, upload, attach or share it. Release builds use `--source qul` (`pnpm core:qul`, inputs placed by
-  a person, see [`data/sources/README.md`](../data/sources/README.md)).
+  machine. Never commit, upload, attach or share it. Releases ship the `--source qul` build committed at
+  `data/core/core.db` (`pnpm core:release`, inputs placed by a person, see
+  [`data/sources/README.md`](../data/sources/README.md)).
 - Cached QDC responses older than 7 days are refetched (QF terms); `--offline` never touches the network and fails on a
   stale file instead. Two builds with the same `SOURCE_DATE_EPOCH` are byte-identical.
 - While the repository is private, CI may publish `core.db` and `fixtures/` as 1-day artifacts (§13.3; the artifact
@@ -256,8 +258,9 @@ always uses a fresh temporary `QD_DATA_DIR`, so it never touches either.
   `pnpm install --lockfile-only` / `cargo metadata`; never hand-merge.
 - **Generated files** are never edited by hand: `src/lib/ipc/bindings.ts` (`pnpm bindings`) and
   `src/lib/about/thirdparty.json` (`cargo xtask licenses`). Both are excluded from Prettier and ESLint.
-- **Never committed:** `core.db*`, `src/lib/ipc/mock/fixtures/`, `data/cache/`, `data/dev-packs/`, QUL inputs,
-  `public/fonts/*.ttf`, `artifacts/`, `tests/e2e/baselines/`, any Mushaf screenshot. `.gitignore` covers all of them.
+- **Never committed:** `core.db*` (except the QUL release build `data/core/core.db`, LEAD 29),
+  `src/lib/ipc/mock/fixtures/`, `data/cache/`, `data/dev-packs/`, QUL inputs, `public/fonts/*.ttf`, `artifacts/`,
+  `tests/e2e/baselines/`, any Mushaf screenshot. `.gitignore` covers all of them.
 - **Line endings:** `.gitattributes` stores and checks out text as LF on every OS (`* text=auto eol=lf`), whatever
   `core.autocrlf` says. If a file was committed with CRLF: `git add --renormalize .`.
 - **IPC boundary (ESLint):** outside `src/lib/ipc/**`, code imports `api`, `events`, `call`, `fontBytes` from `$lib/ipc`.

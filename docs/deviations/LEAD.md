@@ -155,3 +155,14 @@ summarises them); item 17's data rulings are also corrected in place in ARCHITEC
     over a Hafs-only page or waiting for the release (QUL) data, knowing the page's layout and fonts come from the
     development data and the downloaded page fonts. It is the only Mushaf image in git; every QA screenshot stays under
     the gitignored `artifacts/`.
+29. **The release `core.db` is committed** (owner decision, 2026-10-13; changes BRIEF §4's "core.db is generated, never
+    committed" for the QUL release build only, and replaces §13.4's private QUL store): a person builds it once from
+    the QUL exports with `pnpm core:release` (`build-core --source qul --out data/core/core.db`) and commits
+    `data/core/core.db` with the manifest's hashes. The QUL inputs stay out of git, so CI never rebuilds it and needs
+    no QUL files: `./.github/actions/core` with `source: qul` copies the committed file into `src-tauri/resources/`,
+    asserts it (`meta.source = 'qul'`) and runs `verify-core` against the release commit. The `QUL_SOURCES_URL` and
+    `QUL_SOURCES_TOKEN` secrets are gone. CI's lint job refuses any other committed SQLite database and a
+    `data/core/core.db` that is not a QUL build; `test-core` runs `verify-core` on it at every push, so a schema or
+    normaliser change that needs a rebuild fails there before a release does. The development (qdc) `core.db` stays
+    QF-derived and is never committed. Committing the file publishes it, so the QUL permission (RELEASE_CHECKLIST
+    blocker 1) applies to the commit as to a release. `data/core/README.md` documents the file.

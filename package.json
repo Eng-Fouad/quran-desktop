@@ -29,6 +29,7 @@
     "bindings:check": "node scripts/check-bindings.mjs",
     "core:qdc": "cargo xtask build-core --source qdc",
     "core:qul": "cargo xtask build-core --source qul",
+    "core:release": "cargo xtask build-core --source qul --out data/core/core.db",
     "core:verify": "cargo xtask verify-core",
     "fixtures": "cargo xtask export-fixtures",
     "dev-packs": "cargo xtask fetch-dev-packs",

@@ -5,27 +5,19 @@
 # only in a private repository and saved only by pushes to the default branch; its key rotates every 7 days and xtask
 # refetches any file older than that (QF terms). Callers end the job with ./.github/actions/scrub.
 #
-# source: qul (release.yml). The QUL exports are not public: they come from a private store as a tar.gz of the files
-# named in data/sources/qul/manifest.toml (`qul-sources-url`, fetched with the bearer `qul-sources-token`). The
-# committed manifest is never replaced by the archive's, so `build-core --source qul` checks every file against the
-# SHA-256 recorded in the repository. Release is blocked until the QUL/QF permission (FACT §8.1, §15.3 item 1) exists:
-# without the two secrets this step fails and says so.
+# source: qul (release.yml). The release core.db is committed at data/core/core.db (LEAD 29): a person builds it once
+# from the QUL exports (`pnpm core:release`, data/sources/README.md) and commits it; CI never rebuilds it and needs no
+# QUL files or secrets. It is copied into place, then asserted (meta.source = qul) and checked by verify-core against
+# this commit's code, so a core.db that no longer matches the schema or the normaliser stops the release. Release is
+# blocked until the QUL/QF permission (FACT §8.1, §15.3 item 1) exists.
 name: core.db
-description: Build core.db in this job (qdc from the QDC API, or qul from the private QUL store), assert it and run verify-core
+description: Build core.db in this job (qdc, from the QDC API) or take the committed QUL build (qul), assert it and run verify-core
 
 inputs:
   source:
     description: qdc (CI) or qul (release)
     required: false
     default: qdc
-  qul-sources-url:
-    description: qul only — URL of the tar.gz of the QUL inputs (secret QUL_SOURCES_URL)
-    required: false
-    default: ''
-  qul-sources-token:
-    description: qul only — bearer token for that URL (secret QUL_SOURCES_TOKEN)
-    required: false
-    default: ''
   report:
     description: Where verify-core writes its JSON gate report
     required: false
@@ -59,34 +51,22 @@ runs:
         key: ${{ steps.bucket.outputs.key }}
         restore-keys: qdc-raw-v1-
 
-    - name: QUL inputs from the private store (data/sources/qul)
+    - name: The committed QUL core.db (data/core/core.db)
       if: inputs.source == 'qul'
       shell: bash
-      env:
-        QUL_SOURCES_URL: ${{ inputs.qul-sources-url }}
-        QUL_SOURCES_TOKEN: ${{ inputs.qul-sources-token }}
       run: |
-        if [ -z "$QUL_SOURCES_URL" ] || [ -z "$QUL_SOURCES_TOKEN" ]; then
-          echo "::error title=core.db (qul)::The QUL_SOURCES_URL and QUL_SOURCES_TOKEN secrets are not set. A release core.db is built only from the QUL exports in the private store, and release is blocked until the QUL/QF permission exists (ARCHITECTURE §13.4, §15.3 item 1; docs/RELEASE_CHECKLIST.md)."
+        if [ ! -s data/core/core.db ]; then
+          echo "::error title=core.db (qul)::data/core/core.db is not committed. A release ships the QUL build committed there: build it with pnpm core:release from the QUL exports (data/sources/README.md) and commit it. Release is blocked until the QUL/QF permission exists (ARCHITECTURE §13.4, §15.3 item 1; docs/RELEASE_CHECKLIST.md)."
           exit 1
         fi
-        archive="$RUNNER_TEMP/qul-sources.tar.gz"
-        curl --fail --silent --show-error --location --retry 3 --proto '=https' \
-          -H "Authorization: Bearer $QUL_SOURCES_TOKEN" -o "$archive" "$QUL_SOURCES_URL"
-        # Plain member names only; the committed manifest (with the recorded SHA-256s) is never replaced.
-        if tar -tzf "$archive" | grep -E '(^/|(^|/)\.\.(/|$))'; then
-          echo "::error title=core.db (qul)::the QUL archive has absolute or '..' member names"
-          exit 1
-        fi
-        tar --exclude manifest.toml --exclude .gitkeep -xzf "$archive" -C data/sources/qul
-        rm -f "$archive"
-        ls -l data/sources/qul
+        mkdir -p src-tauri/resources
+        cp data/core/core.db src-tauri/resources/core.db
+        ls -l src-tauri/resources/core.db
 
-    - name: cargo xtask build-core --source ${{ inputs.source }}
+    - name: cargo xtask build-core --source qdc
+      if: inputs.source == 'qdc'
       shell: bash
-      env:
-        QD_SOURCE: ${{ inputs.source }}
-      run: cargo xtask build-core --source "$QD_SOURCE"
+      run: cargo xtask build-core --source qdc
 
     - name: Assert a real core.db (> 1 MiB, core tables, meta.source = ${{ inputs.source }})
       shell: bash

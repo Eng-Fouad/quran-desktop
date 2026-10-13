@@ -66,6 +66,16 @@ jobs:
           node --test scripts/*.test.mjs .github/actions/*/*.test.mjs src-tauri/scripts/*.test.mjs
           tests/e2e/lib/*.test.mjs tests/e2e/metrics/*.test.mjs scripts/qa/lib/*.test.mjs
 
+      - name: Committed databases (only the QUL release core.db, data/core/core.db; LEAD 29)
+        run: |
+          tracked="$(git ls-files -- '*.db' '*.db3' '*.sqlite' '*.sqlite3' '*.db-wal' '*.db-shm' '*.db-journal')"
+          if [ -n "$tracked" ] && [ "$tracked" != data/core/core.db ]; then
+            echo "::error title=committed database::only data/core/core.db, a QUL build, may be committed:"
+            echo "$tracked"
+            exit 1
+          fi
+          if [ -n "$tracked" ]; then node .github/actions/core/assert-core.mjs --db data/core/core.db --source qul; fi
+
       - name: Type-check the CI tooling and the QA harness
         run: |
           pnpm exec tsc -p .github/actions/tsconfig.json
@@ -148,6 +158,10 @@ jobs:
 
       - name: core.db (qdc, built in this job; verify-core)
         uses: ./.github/actions/core
+
+      - name: The committed release core.db passes verify-core on this commit (data/core/core.db; LEAD 29)
+        if: hashFiles('data/core/core.db') != ''
+        run: cargo xtask verify-core --db data/core/core.db --report target/verify-core-release.json
 
       - name: quran-core integration tests on the real core.db (§12.2)
         run: cargo test -p quran-core -- --ignored

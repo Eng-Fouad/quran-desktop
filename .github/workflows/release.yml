@@ -9,8 +9,8 @@
 #   linux-x64        ubuntu-22.04      deb + AppImage (the AppImage is the portable build; the old glibc is deliberate)
 #   linux-arm64      ubuntu-22.04-arm  the same for arm64 (an AppImage cannot be cross-built)
 # Each build job:
-#   1. builds core.db from the QUL exports in the private store (never qdc) and asserts it: > 1 MiB, the core tables,
-#      meta.source = 'qul', verify-core (./.github/actions/core with source: qul);
+#   1. takes the QUL core.db committed at data/core/core.db (never qdc; LEAD 29) and asserts it: > 1 MiB, the core
+#      tables, meta.source = 'qul', verify-core against this commit (./.github/actions/core with source: qul);
 #   2. builds with tauri-action (pinned; build only, it uploads nothing itself) under QD_REQUIRE_CORE=1, signing what
 #      is configured (below; otherwise unsigned, and ad hoc on macOS); on Linux, recompresses the deb's payload with xz
 #      (scripts/deb-xz.mjs: tauri writes gzip, which cannot meet the 9 MB deb budget);
@@ -26,12 +26,11 @@
 #      over 100 MB) and only store.yml uses it.
 # Then `checksums` writes SHA256SUMS over every file of the draft and, with a GPG key, SHA256SUMS.asc.
 #
-# Release is blocked until the QUL/QF permission exists (FACT §8.1, §15.3 item 1): without the QUL_SOURCES_URL and
-# QUL_SOURCES_TOKEN secrets step 1 fails and says so. workflow_dispatch on a branch is a dry run: the same builds and
-# checks, nothing uploaded. On a v* tag it (re)fills that tag's draft.
+# Release is blocked until the QUL/QF permission exists (FACT §8.1, §15.3 item 1): without a committed
+# data/core/core.db step 1 fails and says so. workflow_dispatch on a branch is a dry run: the same builds and checks,
+# nothing uploaded. On a v* tag it (re)fills that tag's draft.
 #
 # Secrets and variables (environment `release`; each signature is used only when all of its values are set):
-#   QUL_SOURCES_URL, QUL_SOURCES_TOKEN   required: a tar.gz of the files named in data/sources/qul/manifest.toml
 #   Windows, Azure Artifact Signing (tauri's signCommand signs the exe, the uninstaller and the setup):
 #     secrets AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID; variables AZURE_SIGNING_ENDPOINT (e.g.
 #     https://weu.codesigning.azure.net), AZURE_SIGNING_ACCOUNT, AZURE_SIGNING_PROFILE
@@ -204,12 +203,10 @@ jobs:
             echo "clang: $vs\\VC\\Tools\\Llvm\\x64\\bin"
           fi
 
-      - name: core.db (qul from the private store; > 1 MiB, meta.source = qul, verify-core)
+      - name: core.db (the committed QUL build; > 1 MiB, meta.source = qul, verify-core)
         uses: ./.github/actions/core
         with:
           source: qul
-          qul-sources-url: ${{ secrets.QUL_SOURCES_URL }}
-          qul-sources-token: ${{ secrets.QUL_SOURCES_TOKEN }}
 
       - name: Which signatures are configured
         id: signing

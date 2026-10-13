@@ -14,7 +14,8 @@ there.
       ARCHITECTURE §15.3 item 1, risk R1). Record where the permission is kept and its exact scope (layouts v1/v2/v4,
       glyph codes, the Imla'i text). Until it exists no installer may leave a developer's machine: local builds carry
       the development (qdc) core.db and pass the bundle guard only with `QD_ALLOW_DEV_CORE=1` (private previews), and
-      `release.yml` stops at its core step without the QUL secrets.
+      `release.yml` stops at its core step without a committed `data/core/core.db`. Committing that file publishes
+      it, so the permission comes before the commit too (LEAD 29).
 - [ ] **quran org approval (identity gate).** The github.com/quran maintainers approved, in writing (link the issue or
       discussion here), the release under the Quran.com identity (LEAD.md item 16):
   - the names "Quran" and "Quran for Desktop" (and «قرآن», «قرآن لسطح المكتب»);
@@ -49,9 +50,10 @@ there.
 ### Data, version and secrets
 
 - [ ] Every input in `data/sources/qul/manifest.toml` has its SHA-256 recorded and checked against its QUL resource
-      (`data/sources/README.md`, step 4). `pnpm core:qul` passes locally: 18/18 gates.
-- [ ] The private store holds a `tar.gz` of exactly those files (flat, no directories). The environment `release` has
-      the secrets `QUL_SOURCES_URL` and `QUL_SOURCES_TOKEN`.
+      (`data/sources/README.md`, step 4). `pnpm core:release` passes locally: 18/18 gates.
+- [ ] `data/core/core.db` is that build, committed with the manifest (`data/sources/README.md`, step 6), and CI's
+      `test-core` job ran `verify-core` on it at the release commit. Rebuild it after any change to `core.sql`, the
+      search normaliser or `build-core`'s output (`data/core/README.md`).
 - [ ] The version is bumped in `package.json`, `src-tauri/tauri.conf.json` and `[workspace.package]` of
       `Cargo.toml`, and `node scripts/check-version.mjs v<version>` passes.
 - [ ] `cargo xtask licenses` leaves `src/lib/about/thirdparty.json` unchanged (the CI drift check is green), and
