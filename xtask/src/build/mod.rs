@@ -23,7 +23,7 @@ pub mod write;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
-use anyhow::{Context, bail};
+use anyhow::{Context, bail, ensure};
 use sha2::{Digest, Sha256};
 use time::OffsetDateTime;
 use time::format_description::well_known::Rfc3339;
@@ -45,12 +45,22 @@ pub fn run(args: &BuildCoreArgs) -> anyhow::Result<()> {
     let out = args.out();
     let cache = args.cache();
     let built_at = built_at()?;
-    let (source, tanzil_path) = match args.source {
+    ensure!(
+        !args.for_release || args.source == Source::Qdc,
+        "--for-release applies to --source qdc only: a qul build is release-grade as it is"
+    );
+    let (mut source, tanzil_path) = match args.source {
         Source::Qdc => {
-            eprintln!(
-                "build-core: source {} (development only: QF Developer Terms, never distribute the result)",
-                args.source.as_str()
-            );
+            if args.for_release {
+                eprintln!(
+                    "build-core: source qdc for release (redistributed with the Quran Foundation's permission, LEAD 30)"
+                );
+            } else {
+                eprintln!(
+                    "build-core: source {} (development only: QF Developer Terms, never distribute the result)",
+                    args.source.as_str()
+                );
+            }
             let phase = Instant::now();
             let prepared = qdc::prepare(&cache, &qdc::Endpoints::live(), args.offline, args.jobs)?;
             eprintln!(
@@ -89,6 +99,9 @@ pub fn run(args: &BuildCoreArgs) -> anyhow::Result<()> {
             )?
         }
     };
+    if args.for_release {
+        source.info.licence_note = qdc::release_licence_note();
+    }
     build(&source, &tanzil_path, &out, built_at)?;
     eprintln!(
         "build-core: done in {:.1} s",

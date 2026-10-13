@@ -9,8 +9,11 @@ there.
 
 ### Blockers (any open one stops the release)
 
-- [ ] **Data permission (QUL gate).** Written permission from QUL (Tarteel), and from Quran.Foundation where the data
-      originates with it, to distribute a `core.db` built from the QUL layout and glyph exports (FACT §8.1,
+- [x] **Data permission.** The release `core.db` is the QDC build made for release (`pnpm core:release`), which the
+      Quran Foundation permitted on 2026-10-13, as reported by the owner (LEAD 30; the record and its scope are in
+      `data/sources/README.md`). Shipping a QUL build instead needs the QUL gate below.
+- [ ] **QUL gate (only for a QUL `core.db`).** Written permission from QUL (Tarteel), and from Quran.Foundation where the
+      data originates with it, to distribute a `core.db` built from the QUL layout and glyph exports (FACT §8.1,
       ARCHITECTURE §15.3 item 1, risk R1). Record where the permission is kept and its exact scope (layouts v1/v2/v4,
       glyph codes, the Imla'i text). Until it exists no installer may leave a developer's machine: local builds carry
       the development (qdc) core.db and pass the bundle guard only with `QD_ALLOW_DEV_CORE=1` (private previews), and
@@ -49,11 +52,9 @@ there.
 
 ### Data, version and secrets
 
-- [ ] Every input in `data/sources/qul/manifest.toml` has its SHA-256 recorded and checked against its QUL resource
-      (`data/sources/README.md`, step 4). `pnpm core:release` passes locally: 18/18 gates.
-- [ ] `data/core/core.db` is that build, committed with the manifest (`data/sources/README.md`, step 6), and CI's
-      `test-core` job ran `verify-core` on it at the release commit. Rebuild it after any change to `core.sql`, the
-      search normaliser or `build-core`'s output (`data/core/README.md`).
+- [ ] `data/core/core.db` is the release build (`pnpm core:release`: 18/18 gates; or a QUL build once its gate is
+      open), and CI's `test-core` job ran `verify-core` on it at the release commit. Rebuild it after any change to
+      `core.sql`, the search normaliser or `build-core`'s output (`data/core/README.md`).
 - [ ] The version is bumped in `package.json`, `src-tauri/tauri.conf.json` and `[workspace.package]` of
       `Cargo.toml`, and `node scripts/check-version.mjs v<version>` passes.
 - [ ] `cargo xtask licenses` leaves `src/lib/about/thirdparty.json` unchanged (the CI drift check is green), and

@@ -8,10 +8,11 @@
 //   node src-tauri/scripts/check-release-core.mjs [core.db]
 //
 // Accepted:
-//   - meta.source = 'qul': the release build (`pnpm core:qul`, §4.3);
+//   - a release core.db (check-artifacts' `isReleaseCore`): a QUL build (meta.source = 'qul', §4.3), or a QDC build
+//     made for release with the Quran Foundation's permission (`pnpm core:release`, LEAD 30), whose licence note says so;
 //   - a 0-byte placeholder (build.rs writes one without a core.db): CI's installer-size check; such a bundle cannot
 //     start (release builds refuse the placeholder), so a warning says so.
-// Refused (exit 1): a qdc core.db, any other source, a file that is not a readable core.db, a missing file.
+// Refused (exit 1): a development qdc core.db, any other source, a file that is not a readable core.db, a missing file.
 //
 // QD_ALLOW_DEV_CORE=1 lets a qdc core.db through for a private preview build, with a loud warning: such a bundle must
 // never be published, uploaded or shared. The SQLite reader is check-artifacts' (the CI upload guard), so the two agree.
@@ -21,7 +22,7 @@ import path from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 
-import { readSqliteFile } from '../../scripts/check-artifacts.mjs'
+import { isReleaseCore, readSqliteFile } from '../../scripts/check-artifacts.mjs'
 
 /** src-tauri/resources/core.db, whatever the working directory. */
 export const DEFAULT_CORE = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'resources', 'core.db')
@@ -42,7 +43,7 @@ export function verdict(file, { allowDevCore = false } = {}) {
   try {
     stat = fs.statSync(file)
   } catch {
-    return { ok: false, level: 'error', message: `${file} is missing: build core.db first (pnpm core:qul)` }
+    return { ok: false, level: 'error', message: `${file} is missing: build core.db first (pnpm core:release)` }
   }
   if (!stat.isFile()) return { ok: false, level: 'error', message: `${file} is not a file` }
   if (stat.size === 0)
@@ -51,17 +52,26 @@ export function verdict(file, { allowDevCore = false } = {}) {
       level: 'warn',
       message:
         `${file} is the 0-byte placeholder: this bundle is for size checks only and cannot start ` +
-        '(build the release core.db with pnpm core:qul)',
+        '(build the release core.db with pnpm core:release)',
     }
-  /** @type {string | undefined} */
-  let source
+  /** @type {Record<string, string> | undefined} */
+  let meta
   try {
-    source = readSqliteFile(file).meta?.source
+    meta = readSqliteFile(file).meta ?? undefined
   } catch (error) {
     const why = error instanceof Error ? error.message : String(error)
     return { ok: false, level: 'error', message: `${file} is not a readable core.db (${why})` }
   }
-  if (source === 'qul') return { ok: true, level: 'ok', message: `${file}: release core.db (meta.source = 'qul')` }
+  const source = meta?.source
+  if (isReleaseCore(meta))
+    return {
+      ok: true,
+      level: 'ok',
+      message:
+        source === 'qdc'
+          ? `${file}: release core.db (meta.source = 'qdc', built for release with the Quran Foundation's permission)`
+          : `${file}: release core.db (meta.source = '${source}')`,
+    }
   if (source === 'qdc') {
     if (allowDevCore)
       return {
@@ -75,15 +85,15 @@ export function verdict(file, { allowDevCore = false } = {}) {
       ok: false,
       level: 'error',
       message:
-        `${file} is QF-derived (meta.source = 'qdc'): development only, never bundled (BRIEF §4, FACT §2.1). ` +
-        'Build the release core.db with pnpm core:qul, or set QD_ALLOW_DEV_CORE=1 for a private preview that is ' +
-        'never shared.',
+        `${file} is a development QF-derived core.db (meta.source = 'qdc'): never bundled (BRIEF §4, FACT §2.1). ` +
+        'Build the release core.db with pnpm core:release, or set QD_ALLOW_DEV_CORE=1 for a private preview that ' +
+        'is never shared.',
     }
   }
   return {
     ok: false,
     level: 'error',
-    message: `${file} has meta.source = ${JSON.stringify(source ?? null)}; only a 'qul' core.db is bundled`,
+    message: `${file} has meta.source = ${JSON.stringify(source ?? null)}; only a release core.db is bundled`,
   }
 }
 

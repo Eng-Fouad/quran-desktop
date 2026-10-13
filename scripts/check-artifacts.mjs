@@ -33,9 +33,10 @@
 //
 // --release applies the release rules of §13.4 (release.yml, before the installers go to the draft release): installers
 // and executables are what is published, so `bundle` and `executable` are allowed; an SQLite database is allowed only
-// when it is a core.db whose `meta.source` is 'qul' (a .db name only together with such content); every other rule
+// when it is a release core.db (`isReleaseCore`: a QUL build, or a QDC build made for release under the Quran
+// Foundation's permission, LEAD 30; a .db name only together with such content); every other rule
 // still refuses. A deb is opened (ar → data.tar.gz or data.tar.xz). An installer the guard cannot open (NSIS, dmg, AppImage) is
-// refused unless --verified names a `qd-bundle-check/1` manifest from `scripts/check-bundles.mjs --core qul` that
+// refused unless --verified names a `qd-bundle-check/1` manifest from `scripts/check-bundles.mjs --core release` that
 // lists it by size and SHA-256 as verified: check-bundles unpacks it with the platform tool and runs these same rules
 // on what is inside.
 //
@@ -73,7 +74,7 @@ const MAX_JSON_SCAN = 64 * MIB
  * @typedef {{ title: string, privateAllowed: boolean, releaseAllowed: boolean }} Rule
  */
 
-// Under the release rules `sqlite` and `db-file` are decided per file (a qul core.db only), see `Inspector.refuses`.
+// Under the release rules `sqlite` and `db-file` are decided per file (a release core.db only), see `Inspector.refuses`.
 /** @type {Record<RuleId, Rule>} */
 export const RULES = {
   sqlite: { title: 'SQLite database', privateAllowed: true, releaseAllowed: false },
@@ -101,7 +102,7 @@ export const RULES = {
 const SUBSUMED_BY = { 'fixture-data': 'fixtures', 'qdc-response': 'data-cache', font: 'dev-packs' }
 
 /**
- * @typedef {{ rule: RuleId, detail: string, qul?: boolean }} Reason  `qul`: an SQLite core.db with meta.source = 'qul'
+ * @typedef {{ rule: RuleId, detail: string, release?: boolean }} Reason  `release`: a release core.db (`isReleaseCore`)
  * @typedef {{ path: string, reasons: Reason[] }} Finding
  * @typedef {'public' | 'private' | 'release'} Rules
  * @typedef {{
@@ -401,7 +402,27 @@ export function readSqliteFile(file) {
   }
 }
 
-/** @param {ByteSource} src @returns {{ detail: string, qul: boolean }} */
+/**
+ * How a QDC core.db built for release begins its `meta.licence_note` (`cargo xtask build-core --source qdc
+ * --for-release`; xtask/src/build/qdc.rs `RELEASE_NOTE_PREFIX`, LEAD 30).
+ */
+export const QF_RELEASE_NOTE_PREFIX = "Redistributed with the Quran Foundation's permission"
+
+/**
+ * Whether a core.db's `meta` makes it one a release may ship: a QUL build, or a QDC build made for release, which the
+ * Quran Foundation permitted (LEAD 30) and whose licence note says so. A plain QDC build stays development only.
+ * @param {Record<string, string> | null | undefined} meta @returns {boolean}
+ */
+export function isReleaseCore(meta) {
+  if (meta?.source === 'qul') return true
+  return (
+    meta?.source === 'qdc' &&
+    typeof meta.licence_note === 'string' &&
+    meta.licence_note.startsWith(QF_RELEASE_NOTE_PREFIX)
+  )
+}
+
+/** @param {ByteSource} src @returns {{ detail: string, release: boolean }} */
 function describeSqlite(src) {
   /** @type {SqliteInfo} */
   let info
@@ -410,7 +431,7 @@ function describeSqlite(src) {
   } catch (error) {
     return {
       detail: `SQLite database whose schema cannot be read (${message(error)}); every database is refused`,
-      qul: false,
+      release: false,
     }
   }
   const tables = new Set(info.tables.map((t) => t.toLowerCase()))
@@ -421,17 +442,25 @@ function describeSqlite(src) {
       : meta.pack_id
         ? `pack.db "${meta.pack_id}"`
         : 'database'
+  if (kind === 'core.db' && isReleaseCore(meta))
+    return {
+      detail:
+        meta.source === 'qdc'
+          ? "release core.db (meta.source = 'qdc', built for release with the Quran Foundation's permission, LEAD 30)"
+          : `release core.db (meta.source = '${meta.source}')`,
+      release: true,
+    }
   if (meta.source === 'qdc')
     return {
       detail: `QF-derived ${kind} built from the QDC API (meta.source = 'qdc'): development only, never distributed (BRIEF §4, FACT §2.1)`,
-      qul: false,
+      release: false,
     }
   if (meta.source)
     return {
       detail: `SQLite ${kind} (meta.source = '${meta.source}')`,
-      qul: kind === 'core.db' && meta.source === 'qul',
+      release: false,
     }
-  return { detail: `SQLite ${kind}${info.meta ? '' : ' (no meta table)'}`, qul: false }
+  return { detail: `SQLite ${kind}${info.meta ? '' : ' (no meta table)'}`, release: false }
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -833,13 +862,14 @@ class Inspector {
     return Math.max(0, MAX_TOTAL_DECOMPRESSED - this.decompressed)
   }
 
-  /** @param {string} where @param {RuleId} rule @param {string} detail @param {boolean} [qul] */
-  add(where, rule, detail, qul = false) {
+  /** @param {string} where @param {RuleId} rule @param {string} detail @param {boolean} [release] */
+  add(where, rule, detail, release = false) {
     const tree = SUBSUMED_BY[rule]
     if (tree && this.inTree(tree, where)) return
     const reasons = this.findings.get(where) ?? []
     // The first reason per rule says it all.
-    if (!reasons.some((r) => r.rule === rule)) reasons.push(qul ? { rule, detail, qul } : { rule, detail })
+    if (!reasons.some((r) => r.rule === rule))
+      reasons.push(release ? { rule, detail, release } : { rule, detail })
     this.findings.set(where, reasons)
   }
 
@@ -850,8 +880,8 @@ class Inspector {
   refuses(reason, reasons) {
     if (this.rules === 'private') return !RULES[reason.rule].privateAllowed
     if (this.rules === 'release') {
-      if (reason.rule === 'sqlite') return reason.qul !== true
-      if (reason.rule === 'db-file') return !reasons.some((r) => r.rule === 'sqlite' && r.qul === true)
+      if (reason.rule === 'sqlite') return reason.release !== true
+      if (reason.rule === 'db-file') return !reasons.some((r) => r.rule === 'sqlite' && r.release === true)
       return !RULES[reason.rule].releaseAllowed
     }
     return true
@@ -883,7 +913,7 @@ class Inspector {
       where,
       'uninspectable',
       `an installer whose contents this guard cannot open (sha256 ${sha256.slice(0, 12)}…): unpack and verify it ` +
-        'with `node scripts/check-bundles.mjs --core qul --manifest <file>`, then pass --verified <file>',
+        'with `node scripts/check-bundles.mjs --core release --manifest <file>`, then pass --verified <file>',
     )
   }
 
@@ -1047,8 +1077,8 @@ class Inspector {
     const lowerName = name.toLowerCase()
     const head = src.read(0, 512)
     if (head.subarray(0, 16).equals(SQLITE_MAGIC)) {
-      const { detail, qul } = describeSqlite(src)
-      this.add(where, 'sqlite', detail, qul)
+      const { detail, release } = describeSqlite(src)
+      this.add(where, 'sqlite', detail, release)
       return false
     }
     const zip = startsWith(head, [0x50, 0x4b, 0x03, 0x04]) || startsWith(head, [0x50, 0x4b, 0x05, 0x06])
@@ -1306,8 +1336,9 @@ recursively.
   --private        private-repository rules: databases and fixtures are allowed (only when the GitHub event payload
                    says repository.private is true)
   --release        release rules (§13.4, release.yml): installers and executables are allowed, an SQLite database only
-                   as a core.db with meta.source = 'qul'; installers the guard cannot open need --verified
-  --verified FILE  the qd-bundle-check/1 manifest of \`node scripts/check-bundles.mjs --core qul --manifest FILE\`
+                   as a release core.db (QUL, or QDC built for release with QF's permission); installers the guard
+                   cannot open need --verified
+  --verified FILE  the qd-bundle-check/1 manifest of \`node scripts/check-bundles.mjs --core release --manifest FILE\`
   --from-env VAR   also read paths from the environment variable VAR, one per line
   --json           print the report as JSON
   --help
@@ -1318,7 +1349,7 @@ Exit codes: 0 nothing forbidden, 1 something forbidden (or --private refused), 2
 export const BUNDLE_CHECK_FORMAT = 'qd-bundle-check/1'
 
 /**
- * The installers a check-bundles manifest verified for a release: a qul run whose installers passed.
+ * The installers a check-bundles manifest verified for a release: a `--core release` run whose installers passed.
  * @param {string} file @returns {{ ok: true, verified: VerifiedInstaller[] } | { ok: false, reason: string }}
  */
 export function readVerified(file) {
@@ -1331,10 +1362,10 @@ export function readVerified(file) {
   }
   if (manifest?.format !== BUNDLE_CHECK_FORMAT)
     return { ok: false, reason: `${file} is not a ${BUNDLE_CHECK_FORMAT} manifest` }
-  if (manifest.core !== 'qul')
+  if (manifest.core !== 'release')
     return {
       ok: false,
-      reason: `${file} verified bundles around a ${JSON.stringify(manifest.core)} core.db; a release needs --core qul`,
+      reason: `${file} verified bundles around a ${JSON.stringify(manifest.core)} core.db; a release needs --core release`,
     }
   /** @type {VerifiedInstaller[]} */
   const verified = []
@@ -1464,7 +1495,7 @@ export function main(
       !report.ok
         ? `check-artifacts FAILED: ${report.forbidden.length} forbidden path(s); nothing may be uploaded (ARCHITECTURE ${release ? '§13.4' : '§13.3'})`
         : release
-          ? `check-artifacts passed (release): ${report.allowed.length} installer, executable or qul core.db path(s), nothing QF-derived`
+          ? `check-artifacts passed (release): ${report.allowed.length} installer, executable or release core.db path(s), nothing else`
           : report.allowed.length > 0
             ? `check-artifacts passed (private repository): ${report.allowed.length} QF-derived development path(s) allowed, nothing else forbidden`
             : 'check-artifacts passed: nothing QF-derived or distributable would be uploaded',

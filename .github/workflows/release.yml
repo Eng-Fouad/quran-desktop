@@ -9,14 +9,15 @@
 #   linux-x64        ubuntu-22.04      deb + AppImage (the AppImage is the portable build; the old glibc is deliberate)
 #   linux-arm64      ubuntu-22.04-arm  the same for arm64 (an AppImage cannot be cross-built)
 # Each build job:
-#   1. takes the QUL core.db committed at data/core/core.db (never qdc; LEAD 29) and asserts it: > 1 MiB, the core
-#      tables, meta.source = 'qul', verify-core against this commit (./.github/actions/core with source: qul);
+#   1. takes the release core.db committed at data/core/core.db (LEAD 29) and asserts it: > 1 MiB, the core tables, a
+#      release build (a QUL one, or the QDC one built for release with the Quran Foundation's permission, LEAD 30),
+#      verify-core against this commit (./.github/actions/core with source: release);
 #   2. builds with tauri-action (pinned; build only, it uploads nothing itself) under QD_REQUIRE_CORE=1, signing what
 #      is configured (below; otherwise unsigned, and ad hoc on macOS); on Linux, recompresses the deb's payload with xz
 #      (scripts/deb-xz.mjs: tauri writes gzip, which cannot meet the 9 MB deb budget);
 #   3. packs the portable build (scripts/make-portable.mjs);
-#   4. unpacks and checks every installer and portable build (scripts/check-bundles.mjs --core qul --arch: identity,
-#      resources, the qul core.db, every binary's architecture, deb Depends and desktop entry, the signatures, …;
+#   4. unpacks and checks every installer and portable build (scripts/check-bundles.mjs --core release --arch:
+#      identity, resources, the release core.db, every binary's architecture, deb Depends and desktop entry, the signatures, …;
 #      --signed once the platform's signing is configured) and enforces §13.6 (scripts/size-budget.mjs);
 #   5. uploads through ./.github/actions/release-upload, which runs check-artifacts --release first and refuses to
 #      touch a release that is no longer a draft;
@@ -26,8 +27,7 @@
 #      over 100 MB) and only store.yml uses it.
 # Then `checksums` writes SHA256SUMS over every file of the draft and, with a GPG key, SHA256SUMS.asc.
 #
-# Release is blocked until the QUL/QF permission exists (FACT §8.1, §15.3 item 1): without a committed
-# data/core/core.db step 1 fails and says so. workflow_dispatch on a branch is a dry run: the same builds and checks,
+# Without a committed release core.db (data/core/core.db) step 1 fails and says so. workflow_dispatch on a branch is a dry run: the same builds and checks,
 # nothing uploaded. On a v* tag it (re)fills that tag's draft.
 #
 # Secrets and variables (environment `release`; each signature is used only when all of its values are set):
@@ -203,10 +203,10 @@ jobs:
             echo "clang: $vs\\VC\\Tools\\Llvm\\x64\\bin"
           fi
 
-      - name: core.db (the committed QUL build; > 1 MiB, meta.source = qul, verify-core)
+      - name: core.db (the committed release build; > 1 MiB, a release core.db, verify-core)
         uses: ./.github/actions/core
         with:
-          source: qul
+          source: release
 
       - name: Which signatures are configured
         id: signing
@@ -334,8 +334,8 @@ jobs:
           args: ${{ matrix.args }} ${{ steps.winsign.outputs.args }}
           uploadWorkflowArtifacts: false
 
-      - name: The bundled core.db is still the qul build
-        run: node .github/actions/core/assert-core.mjs --db src-tauri/resources/core.db --source qul
+      - name: The bundled core.db is still the release build
+        run: node .github/actions/core/assert-core.mjs --db src-tauri/resources/core.db --release
 
       - name: The deb's payload recompressed with xz (scripts/deb-xz.mjs; tauri writes gzip)
         if: runner.os == 'Linux'
@@ -353,7 +353,7 @@ jobs:
           if [ "$QD_UNIVERSAL" = "true" ]; then set -- "$@" --universal; fi
           node scripts/make-portable.mjs "$@"
 
-      - name: Installer contents (scripts/check-bundles.mjs --core qul)
+      - name: Installer contents (scripts/check-bundles.mjs --core release)
         env:
           QD_KINDS: ${{ matrix.kinds }}
           QD_ARCH: ${{ matrix.arch }}
@@ -362,7 +362,7 @@ jobs:
           QD_ARTIFACTS: ${{ steps.tauri.outputs.artifactPaths }}
         run: |
           echo "tauri-action built: $QD_ARTIFACTS"
-          set -- --core qul --require "$QD_KINDS" --arch "$QD_ARCH" --manifest "$RUNNER_TEMP/bundle-check.json"
+          set -- --core release --require "$QD_KINDS" --arch "$QD_ARCH" --manifest "$RUNNER_TEMP/bundle-check.json"
           if [ "$QD_UNIVERSAL" = "true" ]; then set -- "$@" --universal; fi
           if [ "$QD_SIGNED" = "true" ]; then set -- "$@" --signed; fi
           node scripts/check-bundles.mjs "$@"
@@ -415,7 +415,7 @@ jobs:
           release="${CARGO_TARGET_DIR:-target}${QD_TARGET:+/$QD_TARGET}/release"
           setup="$(ls -t "$release"/bundle/nsis/*-setup.exe | head -1)"
           mv "$setup" "${setup%-setup.exe}-store-setup.exe"
-          set -- --core qul --require nsis --arch "$QD_ARCH" --webview offlineInstaller \
+          set -- --core release --require nsis --arch "$QD_ARCH" --webview offlineInstaller \
             --manifest "$RUNNER_TEMP/bundle-check-store.json"
           if [ "$QD_SIGNED" = "true" ]; then set -- "$@" --signed; fi
           node scripts/check-bundles.mjs "$@"

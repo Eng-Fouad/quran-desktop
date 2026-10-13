@@ -5,17 +5,17 @@
 # only in a private repository and saved only by pushes to the default branch; its key rotates every 7 days and xtask
 # refetches any file older than that (QF terms). Callers end the job with ./.github/actions/scrub.
 #
-# source: qul (release.yml). The release core.db is committed at data/core/core.db (LEAD 29): a person builds it once
-# from the QUL exports (`pnpm core:release`, data/sources/README.md) and commits it; CI never rebuilds it and needs no
-# QUL files or secrets. It is copied into place, then asserted (meta.source = qul) and checked by verify-core against
-# this commit's code, so a core.db that no longer matches the schema or the normaliser stops the release. Release is
-# blocked until the QUL/QF permission (FACT §8.1, §15.3 item 1) exists.
+# source: release (release.yml). The release core.db is committed at data/core/core.db (LEAD 29): a person builds it
+# once (`pnpm core:release`: the QDC build made for release with the Quran Foundation's permission, LEAD 30; or a QUL
+# build, data/sources/README.md) and commits it; CI never rebuilds it and needs no QUL files or secrets. It is copied
+# into place, then asserted (a release core.db, assert-core --release) and checked by verify-core against this
+# commit's code, so a core.db that no longer matches the schema or the normaliser stops the release.
 name: core.db
-description: Build core.db in this job (qdc, from the QDC API) or take the committed QUL build (qul), assert it and run verify-core
+description: Build core.db in this job (qdc, from the QDC API) or take the committed release build (release), assert it and run verify-core
 
 inputs:
   source:
-    description: qdc (CI) or qul (release)
+    description: qdc (CI) or release (release.yml)
     required: false
     default: qdc
   report:
@@ -32,8 +32,8 @@ runs:
         QD_SOURCE: ${{ inputs.source }}
       run: |
         case "$QD_SOURCE" in
-          qdc|qul) echo "core.db source: $QD_SOURCE" ;;
-          *) echo "::error title=core.db::source must be qdc or qul, not '$QD_SOURCE'"; exit 2 ;;
+          qdc|release) echo "core.db source: $QD_SOURCE" ;;
+          *) echo "::error title=core.db::source must be qdc or release, not '$QD_SOURCE'"; exit 2 ;;
         esac
 
     - name: Raw-response cache key (7-day buckets; private repository only)
@@ -51,12 +51,12 @@ runs:
         key: ${{ steps.bucket.outputs.key }}
         restore-keys: qdc-raw-v1-
 
-    - name: The committed QUL core.db (data/core/core.db)
-      if: inputs.source == 'qul'
+    - name: The committed release core.db (data/core/core.db)
+      if: inputs.source == 'release'
       shell: bash
       run: |
         if [ ! -s data/core/core.db ]; then
-          echo "::error title=core.db (qul)::data/core/core.db is not committed. A release ships the QUL build committed there: build it with pnpm core:release from the QUL exports (data/sources/README.md) and commit it. Release is blocked until the QUL/QF permission exists (ARCHITECTURE §13.4, §15.3 item 1; docs/RELEASE_CHECKLIST.md)."
+          echo "::error title=core.db (release)::data/core/core.db is not committed. A release ships the core.db committed there: build it with pnpm core:release and commit it (data/core/README.md)."
           exit 1
         fi
         mkdir -p src-tauri/resources
@@ -68,11 +68,13 @@ runs:
       shell: bash
       run: cargo xtask build-core --source qdc
 
-    - name: Assert a real core.db (> 1 MiB, core tables, meta.source = ${{ inputs.source }})
+    - name: Assert a real core.db (> 1 MiB, core tables; meta.source = qdc, or a release core.db)
       shell: bash
       env:
         QD_SOURCE: ${{ inputs.source }}
-      run: node "$GITHUB_ACTION_PATH/assert-core.mjs" --db src-tauri/resources/core.db --source "$QD_SOURCE"
+      run: |
+        if [ "$QD_SOURCE" = release ]; then set -- --release; else set -- --source "$QD_SOURCE"; fi
+        node "$GITHUB_ACTION_PATH/assert-core.mjs" --db src-tauri/resources/core.db "$@"
 
     - name: cargo xtask verify-core (gates G1–G16)
       shell: bash

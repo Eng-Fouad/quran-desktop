@@ -22,9 +22,9 @@ src-tauri/gen/schemas/
 /*.snap
 
 # Generated data and third-party binaries: never committed (BRIEF §4, D10, D23), except the pinned KFGQPC TTF in
-# xtask/assets/ that `cargo xtask fetch-assets` falls back to (LEAD 24); its output here stays ignored, and the QUL
-# release build data/core/core.db (`pnpm core:release`, LEAD 29); only its build leftovers are ignored. The development
-# (qdc) core.db in src-tauri/resources/ is QF-derived and never committed.
+# xtask/assets/ that `cargo xtask fetch-assets` falls back to (LEAD 24); its output here stays ignored, and the release
+# build data/core/core.db (`pnpm core:release`, LEAD 29/30); only its build leftovers are ignored. The development
+# core.db in src-tauri/resources/ is never committed.
 # src-tauri/resources/catalog.json IS committed (WP5a).
 src-tauri/resources/core.db*
 data/core/core.db?*

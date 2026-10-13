@@ -5,6 +5,7 @@ import fs from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { after, describe, it } from 'node:test'
+import { QF_RELEASE_NOTE_PREFIX } from '../../../scripts/check-artifacts.mjs'
 import { assertCore } from './assert-core.mjs'
 
 /** @type {typeof import('node:sqlite') | null} */
@@ -18,8 +19,8 @@ try {
 const work = fs.mkdtempSync(path.join(tmpdir(), 'qd-assert-core-'))
 after(() => fs.rmSync(work, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }))
 
-/** @param {string} name @param {{ source?: string, tables?: string[] }} options */
-function makeCore(name, { source, tables = ['mushaf', 'ayah', 'word'] }) {
+/** @param {string} name @param {{ source?: string, tables?: string[], licenceNote?: string }} options */
+function makeCore(name, { source, tables = ['mushaf', 'ayah', 'word'], licenceNote }) {
   if (!sqlite) throw new Error('node:sqlite unavailable')
   const file = path.join(work, name)
   const db = new sqlite.DatabaseSync(file)
@@ -28,6 +29,7 @@ function makeCore(name, { source, tables = ['mushaf', 'ayah', 'word'] }) {
   const insert = db.prepare('INSERT INTO meta VALUES (?, ?)')
   insert.run('schema_version', '1')
   if (source) insert.run('source', source)
+  if (licenceNote) insert.run('licence_note', licenceNote)
   db.close()
   return file
 }
@@ -38,6 +40,24 @@ describe('assert-core', { skip: sqlite ? false : 'node:sqlite is not available' 
     const result = assertCore(file, { source: 'qdc', minBytes: 1024 })
     assert.equal(result.ok, true, result.lines.join('\n'))
     assert.ok(result.lines.some((l) => /^source\s+qdc$/.test(l)))
+  })
+
+  it("--release takes a QUL build or a QDC one built for release with QF's permission (LEAD 30)", () => {
+    const qul = makeCore('release-qul.db', { source: 'qul' })
+    assert.equal(assertCore(qul, { release: true, minBytes: 0 }).ok, true)
+    const permitted = makeCore('release-qdc.db', {
+      source: 'qdc',
+      licenceNote: `${QF_RELEASE_NOTE_PREFIX} (…)`,
+    })
+    assert.equal(assertCore(permitted, { release: true, minBytes: 0 }).ok, true)
+    const development = makeCore('dev-qdc.db', {
+      source: 'qdc',
+      licenceNote: 'DEVELOPMENT BUILD, NEVER DISTRIBUTE',
+    })
+    assert.match(
+      assertCore(development, { release: true, minBytes: 0 }).lines.at(-1) ?? '',
+      /"qdc" and this is not a release build/,
+    )
   })
 
   it('refuses the placeholder, a missing file, a wrong source and a non-core database', () => {

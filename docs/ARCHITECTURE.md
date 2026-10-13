@@ -5325,10 +5325,10 @@ Rust toolchain from `rust-toolchain.toml`. Caching: `Swatinem/rust-cache` and th
     baseline is deliberate.
 
   Uses `tauri-apps/tauri-action`, pinned to a commit SHA when the workflow is created.
-- `core.db` uses `--source qul`, built once by a person (`pnpm core:release`) and committed at `data/core/core.db`
-  (LEAD 29); the QUL inputs themselves are not public and stay out of git, so CI never rebuilds it. **Release is blocked
-  until the QUL/QF permission in FACT §8.1 is obtained.** With `QD_REQUIRE_CORE=1`, the job copies it into
-  `src-tauri/resources/` and asserts core.db > 1 MB, `verify-core` passes and `meta.source = 'qul'` before `tauri build`.
+- `core.db` is the release build committed at `data/core/core.db` (LEAD 29): the QDC build made for release with the
+  Quran Foundation's permission (`pnpm core:release`, LEAD 30), or a QUL build once Tarteel's permission exists. CI never
+  rebuilds it. With `QD_REQUIRE_CORE=1`, the job copies it into `src-tauri/resources/` and asserts core.db > 1 MB,
+  `verify-core` passes and that it is a release core.db (`isReleaseCore`) before `tauri build`.
 - Portable builds (`scripts/make-portable.mjs`): Windows `Quran_<version>_<arch>_portable.zip` (`Quran/quran-desktop.exe`
   with `data/` beside it, where the exe looks for its resources; it needs the WebView2 runtime and keeps its data in the
   profile like the installed app); macOS `Quran_<version>_universal.app.zip` (ditto, so the signature survives).

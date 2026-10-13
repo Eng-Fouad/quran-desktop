@@ -6,6 +6,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { after, before, describe, it } from 'node:test'
 
+import { QF_RELEASE_NOTE_PREFIX } from '../../scripts/check-artifacts.mjs'
 import { main, verdict } from './check-release-core.mjs'
 
 /** @type {typeof import('node:sqlite') | null} */
@@ -25,11 +26,16 @@ describe('check-release-core', { skip: sqlite === null && 'node:sqlite is unavai
   after(() => fs.rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }))
 
   /** A core.db-shaped database whose `meta.source` is `source` (no meta row when `null`). */
-  const core = (/** @type {string} */ name, /** @type {string | null} */ source) => {
+  const core = (
+    /** @type {string} */ name,
+    /** @type {string | null} */ source,
+    /** @type {string} */ licenceNote = '',
+  ) => {
     const file = path.join(dir, name)
     const db = new (/** @type {typeof import('node:sqlite')} */ (sqlite).DatabaseSync)(file)
     db.exec('CREATE TABLE meta(key TEXT PRIMARY KEY, value TEXT) WITHOUT ROWID; CREATE TABLE ayah(id INTEGER);')
     if (source !== null) db.prepare('INSERT INTO meta VALUES (?, ?)').run('source', source)
+    if (licenceNote) db.prepare('INSERT INTO meta VALUES (?, ?)').run('licence_note', licenceNote)
     db.close()
     return file
   }
@@ -40,7 +46,14 @@ describe('check-release-core', { skip: sqlite === null && 'node:sqlite is unavai
     assert.equal(v.level, 'ok')
   })
 
-  it('refuses a qdc core.db unless QD_ALLOW_DEV_CORE=1, which warns', () => {
+  it("bundles a qdc core.db built for release with the Quran Foundation's permission (LEAD 30)", () => {
+    const v = verdict(core('qdc-release.db', 'qdc', `${QF_RELEASE_NOTE_PREFIX} (granted …)`))
+    assert.equal(v.ok, true)
+    assert.equal(v.level, 'ok')
+    assert.match(v.message, /permission/)
+  })
+
+  it('refuses a development qdc core.db unless QD_ALLOW_DEV_CORE=1, which warns', () => {
     const file = core('qdc.db', 'qdc')
     const refused = verdict(file)
     assert.equal(refused.ok, false)

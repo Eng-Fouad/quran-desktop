@@ -3,9 +3,11 @@
 // Asserts that a core.db is a real build before anything is tested or bundled with it (ARCHITECTURE §5.15, §13.3,
 // §13.4): the file exists, is larger than --min-bytes (default 1 MiB; build.rs's placeholder is 0 bytes), is an
 // SQLite database with the core tables (mushaf, ayah, word, meta), and, with --source, carries that `meta.source`
-// (`qdc` for development and CI, `qul` for release builds).
+// (`qdc` for development and CI, `qul` for a QUL build). --release instead requires a core.db a release may ship
+// (check-artifacts' `isReleaseCore`: a QUL build, or a QDC one built for release with QF's permission, LEAD 30).
 //
-//   node .github/actions/core/assert-core.mjs [--db src-tauri/resources/core.db] [--source qdc|qul] [--min-bytes N]
+//   node .github/actions/core/assert-core.mjs [--db src-tauri/resources/core.db] [--source qdc|qul | --release]
+//                                             [--min-bytes N]
 //
 // Exit codes: 0 the database is what was asked for, 1 it is not, 2 bad usage.
 import console from 'node:console'
@@ -14,16 +16,16 @@ import path from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 import { parseArgs } from 'node:util'
-import { readSqliteFile } from '../../../scripts/check-artifacts.mjs'
+import { isReleaseCore, readSqliteFile } from '../../../scripts/check-artifacts.mjs'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..')
 const REQUIRED_TABLES = ['meta', 'mushaf', 'ayah', 'word']
 
 /**
- * @param {string} db @param {{ source?: string, minBytes: number }} expect
+ * @param {string} db @param {{ source?: string, release?: boolean, minBytes: number }} expect
  * @returns {{ ok: boolean, lines: string[] }}
  */
-export function assertCore(db, { source, minBytes }) {
+export function assertCore(db, { source, release = false, minBytes }) {
   /** @type {string[]} */
   const lines = []
   const fail = (/** @type {string} */ why) => ({ ok: false, lines: [...lines, `FAIL ${why}`] })
@@ -52,6 +54,11 @@ export function assertCore(db, { source, minBytes }) {
   if (!meta.schema_version) return fail('meta.schema_version is missing')
   if (source && meta.source !== source)
     return fail(`meta.source is ${JSON.stringify(meta.source ?? null)}, expected ${JSON.stringify(source)}`)
+  if (release && !isReleaseCore(meta))
+    return fail(
+      `meta.source is ${JSON.stringify(meta.source ?? null)} and this is not a release build ` +
+        "(a QUL build, or a QDC one built for release with the Quran Foundation's permission, pnpm core:release)",
+    )
   return { ok: true, lines }
 }
 
@@ -64,6 +71,7 @@ export function main(argv) {
       options: {
         db: { type: 'string', default: path.join(ROOT, 'src-tauri', 'resources', 'core.db') },
         source: { type: 'string' },
+        release: { type: 'boolean', default: false },
         'min-bytes': { type: 'string', default: String(1024 * 1024) },
       },
     }).values
@@ -81,7 +89,11 @@ export function main(argv) {
     return 2
   }
   const db = path.resolve(values.db)
-  const result = assertCore(db, { source: values.source, minBytes })
+  if (values.release && values.source !== undefined) {
+    console.error(`assert-core: --release and --source are exclusive`)
+    return 2
+  }
+  const result = assertCore(db, { source: values.source, release: values.release, minBytes })
   const rel = path.relative(process.cwd(), db)
   console.log(`assert-core ${rel && !rel.startsWith('..') && !path.isAbsolute(rel) ? rel : db}`)
   for (const line of result.lines) console.log(`  ${line}`)

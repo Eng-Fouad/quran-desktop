@@ -4,8 +4,8 @@
 # counterpart of ./.github/actions/upload. Before anything leaves the runner:
 #   1. every installer gets a `<name>.sha256` next to it (in $RUNNER_TEMP), unless `sums: false` (the checksum files);
 #   2. scripts/check-artifacts.mjs --release [--verified <manifest>] runs on exactly the files to upload: installers
-#      and executables are allowed, an SQLite database only as a qul core.db, and an installer the guard cannot open
-#      (NSIS, dmg, AppImage) only when scripts/check-bundles.mjs --core qul unpacked and verified it (same size and
+#      and executables are allowed, an SQLite database only as a release core.db, and an installer the guard
+#      cannot open (NSIS, dmg, AppImage) only when scripts/check-bundles.mjs --core release unpacked and verified it (same size and
 #      SHA-256). Without a manifest nothing is taken on trust: every file must be one the guard reads itself;
 #   3. the release must exist and still be a draft: a published release is never modified.
 name: Release upload (guarded)
@@ -17,7 +17,7 @@ inputs:
     required: true
   manifest:
     description: >-
-      The qd-bundle-check/1 manifest written by `scripts/check-bundles.mjs --core qul --manifest`; empty for files the
+      The qd-bundle-check/1 manifest written by `scripts/check-bundles.mjs --core release --manifest`; empty for files the
       guard reads itself (SHA256SUMS and its signature)
     required: false
     default: ''

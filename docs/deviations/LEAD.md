@@ -166,3 +166,16 @@ summarises them); item 17's data rulings are also corrected in place in ARCHITEC
     normaliser change that needs a rebuild fails there before a release does. The development (qdc) `core.db` stays
     QF-derived and is never committed. Committing the file publishes it, so the QUL permission (RELEASE_CHECKLIST
     blocker 1) applies to the commit as to a release. `data/core/README.md` documents the file.
+30. **The release `core.db` is the QDC build, with the Quran Foundation's permission** (owner decision, 2026-10-13;
+    changes item 29's "a QUL build only" and BRIEF §4's "qdc builds are for local development only" for this one
+    build): the owner reported that Ahmed, of the Quran Foundation, replied "Yes" by Twitter DM on 2026-10-13 to a request
+    to redistribute the `core.db` built from the QDC API in the app's installers and its public repository (the request
+    and the scope are in `data/sources/README.md`). `cargo xtask build-core --source qdc --for-release`
+    (`pnpm core:release`, into `data/core/core.db`) writes the same rows as a development build, with a licence note
+    that starts "Redistributed with the Quran Foundation's permission" instead of "DEVELOPMENT BUILD, NEVER
+    DISTRIBUTE". The guards share one rule, `isReleaseCore` in `scripts/check-artifacts.mjs`: a release may ship a QUL
+    core.db or a QDC one with that note; a development build is still refused everywhere (the bundling guard without
+    `QD_ALLOW_DEV_CORE=1`, check-bundles `--core release`, check-artifacts `--release`, assert-core `--release`, the
+    lint job's committed-database check). About credits the Quran.com API "Used with the permission of the Quran
+    Foundation". `data/cache/`, fixtures and dev packs stay development only. The first such file (2026-10-13, built
+    `--offline` from the 2026-10-10 cache) has every row of the development `core.db` the owner tested.

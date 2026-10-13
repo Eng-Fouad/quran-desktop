@@ -124,6 +124,8 @@ const VOCAB_TERMS: std::ops::RangeInclusive<usize> = 14_000..=15_500;
 const MAX_DB_BYTES: u64 = 16 * 1024 * 1024;
 /// G14: `PRAGMA page_size` of core.sql.
 const PAGE_SIZE: u32 = 4_096;
+/// G14: how a qdc build made for release begins its licence note (`build::qdc::RELEASE_NOTE_PREFIX`, LEAD 30).
+const QF_RELEASE_NOTE_PREFIX: &str = "Redistributed with the Quran Foundation's permission";
 /// G14: `meta` keys (§3.1.1).
 const META_KEYS: [&str; 10] = [
     "ayah_count",
@@ -2967,8 +2969,14 @@ fn check_meta(meta: &BTreeMap<String, String>, gate: &mut Recorder) {
         !licence.trim().is_empty(),
         format!("{} chars", licence.chars().count()),
     );
-    if get("source") == Some("qdc") && !licence.contains("NEVER DISTRIBUTE") {
-        gate.warn("a qdc build's licence_note should say NEVER DISTRIBUTE (QF Developer Terms)");
+    if get("source") == Some("qdc")
+        && !licence.contains("NEVER DISTRIBUTE")
+        && !licence.starts_with(QF_RELEASE_NOTE_PREFIX)
+    {
+        gate.warn(
+            "a qdc build's licence_note should say NEVER DISTRIBUTE, or cite the Quran Foundation's permission \
+             (--for-release, LEAD 30)",
+        );
     }
 }
 

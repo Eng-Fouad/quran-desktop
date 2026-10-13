@@ -66,15 +66,15 @@ jobs:
           node --test scripts/*.test.mjs .github/actions/*/*.test.mjs src-tauri/scripts/*.test.mjs
           tests/e2e/lib/*.test.mjs tests/e2e/metrics/*.test.mjs scripts/qa/lib/*.test.mjs
 
-      - name: Committed databases (only the QUL release core.db, data/core/core.db; LEAD 29)
+      - name: Committed databases (only the release core.db, data/core/core.db; LEAD 29, LEAD 30)
         run: |
           tracked="$(git ls-files -- '*.db' '*.db3' '*.sqlite' '*.sqlite3' '*.db-wal' '*.db-shm' '*.db-journal')"
           if [ -n "$tracked" ] && [ "$tracked" != data/core/core.db ]; then
-            echo "::error title=committed database::only data/core/core.db, a QUL build, may be committed:"
+            echo "::error title=committed database::only data/core/core.db, a release build, may be committed:"
             echo "$tracked"
             exit 1
           fi
-          if [ -n "$tracked" ]; then node .github/actions/core/assert-core.mjs --db data/core/core.db --source qul; fi
+          if [ -n "$tracked" ]; then node .github/actions/core/assert-core.mjs --db data/core/core.db --release; fi
 
       - name: Type-check the CI tooling and the QA harness
         run: |

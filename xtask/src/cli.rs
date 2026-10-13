@@ -76,6 +76,10 @@ pub struct BuildCoreArgs {
     /// Concurrent requests.
     #[arg(long, default_value_t = 4, value_parser = clap::value_parser!(u32).range(1..=16))]
     pub jobs: u32,
+    /// qdc only: a release build, redistributed with the Quran Foundation's permission (LEAD 30). Its licence note
+    /// says so, and the release guards accept it; without this flag a qdc build stays development only.
+    #[arg(long)]
+    pub for_release: bool,
 }
 
 impl BuildCoreArgs {

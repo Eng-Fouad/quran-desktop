@@ -2,7 +2,7 @@
 // @ts-check
 // check-bundles: what the release installers contain (WP13b; ARCHITECTURE §13.4, §13.5, §2.4; WP6b/WP6d requests).
 //
-//   node scripts/check-bundles.mjs --core placeholder|qul [--bundle-dir <dir>]... [--require <kinds>] [--universal]
+//   node scripts/check-bundles.mjs --core placeholder|release [--bundle-dir <dir>]... [--require <kinds>] [--universal]
 //                                  [--arch x64|arm64] [--signed] [--webview <mode>] [--manifest <file>] [--json]
 //
 // Every installer found under the bundle directories (default: every <target>/release/bundle and
@@ -26,13 +26,14 @@
 // --signed requires a valid Authenticode signature on Windows (the setup, the portable exe) and a Developer ID one on
 // macOS; without it the signature is only reported. --webview names the WebView2 install mode the NSIS script must
 // carry when it differs from the config's: `offlineInstaller` for the Microsoft Store's installer (release.yml).
-// --core: `placeholder` (CI, §13.3) expects build.rs's 0-byte core.db in every bundle; `qul` (release, §13.4) expects
-// a real core.db (> 1 MiB, the core tables, meta.source = 'qul'). Everything unpacked also passes check-artifacts'
-// release rules (no QF-derived file, no qdc database, no fixtures or fonts).
+// --core: `placeholder` (CI, §13.3) expects build.rs's 0-byte core.db in every bundle; `release` (§13.4) expects a
+// real core.db (> 1 MiB, the core tables) that a release may ship: a QUL build, or a QDC build made for release under
+// the Quran Foundation's permission (check-artifacts' `isReleaseCore`, LEAD 30). Everything unpacked also passes
+// check-artifacts' release rules (no QF-derived development data, no other database, no fixtures or fonts).
 //
 // --manifest writes a `qd-bundle-check/1` file listing every installer with its size and SHA-256 and whether it passed;
 // `check-artifacts.mjs --release --verified <file>` accepts the installers it cannot open itself only from such a
-// manifest made with --core qul.
+// manifest made with --core release.
 //
 // Exit codes: 0 every installer passed (and every --require kind was found), 1 otherwise, 2 bad usage.
 import console from 'node:console'
@@ -49,6 +50,7 @@ import {
   BUNDLE_CHECK_FORMAT,
   bufferSource,
   inspect,
+  isReleaseCore,
   listAr,
   listTar,
   readSqliteInfo,
@@ -59,7 +61,7 @@ import { defaultBundleDirs, findInstallers, MIB } from './size-budget.mjs'
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const KINDS = /** @type {const} */ (['nsis', 'dmg', 'deb', 'appimage', 'portable'])
 /** @typedef {(typeof KINDS)[number]} Kind */
-/** @typedef {'placeholder' | 'qul'} CoreMode */
+/** @typedef {'placeholder' | 'release'} CoreMode */
 /** @typedef {import('./check-artifacts.mjs').VerifiedInstaller} VerifiedInstaller */
 export const ARCHES = /** @type {const} */ (['x64', 'arm64'])
 /** @typedef {(typeof ARCHES)[number]} Arch */
@@ -173,8 +175,11 @@ export function checkCore(bytes, core) {
     const tables = new Set(info.tables.map((t) => t.toLowerCase()))
     const missing = ['meta', 'mushaf', 'ayah', 'word'].filter((t) => !tables.has(t))
     if (missing.length) return [`core.db lacks the tables ${missing.join(', ')}`]
-    if (info.meta?.source !== 'qul')
-      return [`core.db has meta.source = ${JSON.stringify(info.meta?.source ?? null)}, not 'qul'`]
+    if (!isReleaseCore(info.meta))
+      return [
+        `core.db has meta.source = ${JSON.stringify(info.meta?.source ?? null)} and is not a release build ` +
+          "(a QUL build, or a QDC one built for release with the Quran Foundation's permission)",
+      ]
     return []
   } catch (error) {
     return [
@@ -573,7 +578,7 @@ function checkNsis(file, ctx, r) {
     return
   }
   const text = 'cannot unpack the installer: 7-Zip (7z) is not installed'
-  if (core === 'qul' || process.env.GITHUB_ACTIONS === 'true') r.problems.push(text)
+  if (core === 'release' || process.env.GITHUB_ACTIONS === 'true') r.problems.push(text)
   else r.notes.push(`${text}; checked tauri's NSIS script and the files it packs instead`)
 }
 
@@ -838,13 +843,13 @@ export function checkBundles({ bundleDirs, core, universal, expect, arch = hostA
 // ---------------------------------------------------------------------------------------------------------------------
 // CLI.
 
-const USAGE = `Usage: node scripts/check-bundles.mjs --core placeholder|qul [--bundle-dir <dir>]... [--require <kinds>]
+const USAGE = `Usage: node scripts/check-bundles.mjs --core placeholder|release [--bundle-dir <dir>]... [--require <kinds>]
                                      [--universal] [--arch x64|arm64] [--signed] [--webview <mode>]
                                      [--manifest <file>] [--json]
 
 Unpacks every installer (nsis, dmg, deb, appimage, portable) and checks its contents (see the header of this file).
 
-  --core placeholder|qul  CI bundles carry the 0-byte placeholder; release bundles a qul core.db
+  --core placeholder|release  CI bundles carry the 0-byte placeholder; release bundles a release core.db
   --bundle-dir <dir>      a tauri bundle directory (repeatable; default: every release bundle dir of the target)
   --require <kinds>       kinds that must be present (comma-separated: nsis, dmg, deb, appimage, portable)
   --universal             the macOS binary must be universal (x86_64 + arm64)
@@ -883,8 +888,8 @@ export function main(argv, env = process.env) {
     console.log(USAGE)
     return 0
   }
-  if (values.core !== 'placeholder' && values.core !== 'qul') {
-    console.error(`check-bundles: --core must be placeholder or qul\n\n${USAGE}`)
+  if (values.core !== 'placeholder' && values.core !== 'release') {
+    console.error(`check-bundles: --core must be placeholder or release\n\n${USAGE}`)
     return 2
   }
   const required = values.require

@@ -167,17 +167,22 @@ describe('attributionGroups', () => {
     expect(ids(groups, 'text')).toEqual(['qul', 'kfgqpc', 'tanzil'])
   })
 
-  it('credits the source core.db was built from: QUL for a release build, the Quran.com API for a qdc one', () => {
+  it('credits the source core.db was built from: QUL, or the Quran.com API with QF permission', () => {
     expect(ids(attributionGroups({ packs: [], coreSource: 'qul' }), 'text')).toEqual([
       'qul',
       'kfgqpc',
       'tanzil',
     ])
     expect(ids(attributionGroups({ packs: [], coreSource: 'qdc' }), 'text')).toEqual([
-      'qdc-dev',
+      'quran-foundation',
       'kfgqpc',
       'tanzil',
     ])
+    const qf = attributionGroups({ packs: [], coreSource: 'qdc' })
+      .flatMap((g) => g.entries)
+      .find((e) => e.id === 'quran-foundation')
+    expect(qf?.licence.en).toBe('Used with the permission of the Quran Foundation')
+    expect(qf?.credit.en).not.toMatch(/development/i)
     // Neither (the browser mock's synthetic data): only the sources every build uses.
     expect(ids(attributionGroups({ packs: [], coreSource: 'synthetic' }), 'text')).toEqual([
       'kfgqpc',

@@ -7,8 +7,8 @@
  *   full text of the repository's `LICENSE`), the link to its source code (GPL-3.0 §6: the Corresponding Source must
  *   be reachable from the program; `SOURCE_URL`, Cargo's `repository`) and the credit for its name and icon, the
  *   identity of the Quran.com project (github.com/quran) taken from quran_android.
- * - **Quran text and layout** credits the source the bundled core.db was built from (`coreSource`): QUL in a release
- *   (`qul`) build, the Quran.com API in a development (`qdc`) build, never both.
+ * - **Quran text and layout** credits the source the bundled core.db was built from (`coreSource`): QUL for a `qul`
+ *   build, the Quran.com API of the Quran Foundation, with its permission (LEAD 30), for a `qdc` one; never both.
  * - **Static sources** (`attributions`) are credited whatever is installed: the data core.db is built from, the
  *   bundled and on-demand fonts, and the audio sources every recitation streams from.
  * - **Pack sources** come from the catalogue (`PackInfo.attribution`, WP5a): each installed translation and tafsir is
@@ -171,16 +171,19 @@ const TANZIL: AttributionEntry = {
   licenceUrl: 'https://creativecommons.org/licenses/by/3.0/',
 }
 
-/** Only for a core.db built by the development adapter (`AppInfo.core.source === 'qdc'`, §4.2). */
-const QDC_DEV: AttributionEntry = {
-  id: 'qdc-dev',
+/**
+ * Only for a core.db built from the Quran.com API (`AppInfo.core.source === 'qdc'`, §4.2), which the Quran Foundation
+ * permitted the app to redistribute (LEAD 30; recorded in `data/sources/README.md`).
+ */
+const QURAN_FOUNDATION: AttributionEntry = {
+  id: 'quran-foundation',
   name: { en: 'Quran.com API (Quran Foundation)', ar: 'واجهة Quran.com البرمجية (Quran Foundation)' },
   credit: {
-    en: "This development build's Quran data was fetched from the Quran.com API, for local development only.",
-    ar: 'جُلبت بيانات القرآن في نسخة التطوير هذه من واجهة Quran.com البرمجية، للتطوير المحلي فقط.',
+    en: 'The Quran text, the Mushaf page layouts and the word glyph codes the pages are built from.',
+    ar: 'نص القرآن وتخطيطات صفحات المصحف ورموز خطوط الكلمات التي تُبنى منها الصفحات.',
   },
-  licence: { en: 'Quran Foundation developer terms', ar: 'شروط Quran Foundation للمطورين' },
-  url: 'https://api-docs.quran.foundation/legal/developer-terms/',
+  licence: { en: 'Used with the permission of the Quran Foundation', ar: 'مستخدمة بإذن من Quran Foundation' },
+  url: 'https://quran.foundation',
 }
 
 const HAFS_FONT: AttributionEntry = {
@@ -390,7 +393,7 @@ function creditedPacks(packs: readonly PackInfo[], kind: PackKind): PackInfo[] {
 export interface AttributionInput {
   /** The catalogue with each pack's state (`packs.list`). */
   packs: readonly PackInfo[]
-  /** `AppInfo.core.source`: `qul` (release) or `qdc` (development data, credited separately). */
+  /** `AppInfo.core.source`: `qul` (QUL data) or `qdc` (the Quran.com API's, with QF's permission, LEAD 30). */
   coreSource: string
 }
 
@@ -409,10 +412,10 @@ export function attributionGroups({ packs, coreSource }: AttributionInput): Attr
       case 'app':
         break
       case 'text': {
-        // The source core.db was built from: QUL for a release build, the Quran.com API for a development one.
+        // The source core.db was built from: QUL, or the Quran.com API (the Quran Foundation's permission, LEAD 30).
         const qul = entries.findIndex((e) => e.id === QUL.id)
         if (coreSource !== 'qul' && qul >= 0) entries.splice(qul, 1)
-        if (coreSource === 'qdc') entries.unshift(QDC_DEV)
+        if (coreSource === 'qdc') entries.unshift(QURAN_FOUNDATION)
         break
       }
       case 'fonts':

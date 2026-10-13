@@ -28,6 +28,7 @@ import {
   nsisFirstHeader,
   pngSize,
 } from './check-bundles.mjs'
+import { QF_RELEASE_NOTE_PREFIX } from './check-artifacts.mjs'
 import { recompressDeb } from './deb-xz.mjs'
 
 /** @type {typeof import('node:sqlite') | null} */
@@ -52,13 +53,14 @@ const fresh = () => {
 const expect = expectations()
 
 /** A core.db-shaped SQLite file (> 1 MiB when `big`). @param {string} source @param {boolean} [big] */
-function coreDb(source, big = true) {
+function coreDb(source, big = true, licenceNote = '') {
   if (!sqlite) throw new Error('node:sqlite unavailable')
   const file = path.join(fresh(), 'core.db')
   const db = new sqlite.DatabaseSync(file)
   db.exec('CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT) WITHOUT ROWID')
   for (const t of ['mushaf', 'ayah', 'word']) db.exec(`CREATE TABLE ${t} (id INTEGER PRIMARY KEY, x TEXT)`)
   db.prepare('INSERT INTO meta VALUES (?, ?)').run('source', source)
+  if (licenceNote) db.prepare('INSERT INTO meta VALUES (?, ?)').run('licence_note', licenceNote)
   if (big) {
     const insert = db.prepare('INSERT INTO word (x) VALUES (?)')
     db.exec('BEGIN')
@@ -249,13 +251,22 @@ describe('expectations', () => {
 })
 
 describe('checks', () => {
-  it('core.db: the placeholder in CI bundles, a qul build in releases', needsSqlite, () => {
+  it('core.db: the placeholder in CI bundles, a release build in releases', needsSqlite, () => {
     assert.deepEqual(checkCore(Buffer.alloc(0), 'placeholder'), [])
     assert.match(checkCore(Buffer.alloc(5), 'placeholder')[0] ?? '', /0-byte placeholder/)
-    assert.match(checkCore(Buffer.alloc(0), 'qul')[0] ?? '', /placeholder or a failed build/)
-    assert.deepEqual(checkCore(coreDb('qul'), 'qul'), [])
-    assert.match(checkCore(coreDb('qdc'), 'qul')[0] ?? '', /meta\.source = "qdc", not 'qul'/)
-    assert.match(checkCore(Buffer.alloc(2 * 1024 * 1024, 1), 'qul')[0] ?? '', /not a readable SQLite/)
+    assert.match(checkCore(Buffer.alloc(0), 'release')[0] ?? '', /placeholder or a failed build/)
+    assert.deepEqual(checkCore(coreDb('qul'), 'release'), [])
+    // A QDC build made for release with the Quran Foundation's permission (LEAD 30); a plain one is refused.
+    assert.deepEqual(checkCore(coreDb('qdc', true, `${QF_RELEASE_NOTE_PREFIX} (granted …)`), 'release'), [])
+    assert.match(
+      checkCore(coreDb('qdc'), 'release')[0] ?? '',
+      /meta\.source = "qdc" and is not a release build/,
+    )
+    assert.match(
+      checkCore(coreDb('qdc', true, 'DEVELOPMENT BUILD, NEVER DISTRIBUTE: …'), 'release')[0] ?? '',
+      /not a release build/,
+    )
+    assert.match(checkCore(Buffer.alloc(2 * 1024 * 1024, 1), 'release')[0] ?? '', /not a readable SQLite/)
   })
 
   it('the desktop entry names the app, its binary and its icon (MPRIS DesktopEntry, §2.4)', () => {
@@ -451,12 +462,12 @@ describe('a deb end to end', () => {
     assert.match(bad?.problems.join('\n') ?? '', /data\.tar\.xz!\/usr\/lib\/Quran\/fixtures.*fixtures/)
   })
 
-  it('a release deb needs the qul core.db', needsSqlite, () => {
+  it('a release deb needs a release core.db', needsSqlite, () => {
     const bundle = path.join(fresh(), 'bundle')
     const file = path.join(bundle, 'deb', `Quran_${expect.version}_amd64.deb`)
     fs.mkdirSync(path.dirname(file), { recursive: true })
     fs.writeFileSync(file, deb(CONTROL, debTree(coreDb('qul'))))
-    const opts = /** @type {const} */ ({ core: 'qul', universal: false, expect, arch: 'x64' })
+    const opts = /** @type {const} */ ({ core: 'release', universal: false, expect, arch: 'x64' })
     assert.equal(checkBundles({ bundleDirs: [bundle], ...opts })[0]?.ok, true)
     fs.writeFileSync(file, deb(CONTROL, debTree(coreDb('qdc'))))
     const [qdc] = checkBundles({ bundleDirs: [bundle], ...opts })

@@ -52,6 +52,22 @@ const MAX_ATTEMPTS: u32 = 5;
 /// The longest `Retry-After` honoured.
 const MAX_RETRY_AFTER: Duration = Duration::from_secs(60);
 
+/// How a qdc build made for release (`--for-release`, LEAD 30) begins its `meta.licence_note`. The release guards
+/// (`scripts/check-artifacts.mjs` `QF_RELEASE_NOTE_PREFIX`) accept a qdc core.db only with this prefix.
+pub const RELEASE_NOTE_PREFIX: &str = "Redistributed with the Quran Foundation's permission";
+
+/// `meta.licence_note` of a qdc build made for release: the Quran Foundation agreed to the database being
+/// redistributed in this app's installers and repository (LEAD 30; recorded in data/sources/README.md).
+#[must_use]
+pub fn release_licence_note() -> String {
+    format!(
+        "{RELEASE_NOTE_PREFIX} (granted 2026-10-13 for Quran for Desktop's installers and source repository; recorded \
+         in data/sources/README.md): Quran text, layouts and glyph codes come from the Quran Foundation QDC API \
+         (api.qurancdn.com). Division metadata, ruku, sajda and English surah meanings: {}.",
+        tanzil::ATTRIBUTION
+    )
+}
+
 /// `meta.licence_note` of a qdc build.
 #[must_use]
 pub fn licence_note() -> String {
@@ -823,6 +839,25 @@ fn parse_page(bytes: &[u8], layout: MushafLayout, page: u32) -> anyhow::Result<P
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_release_build_cites_the_permission_and_a_development_build_never_distributes() {
+        let release = release_licence_note();
+        assert!(release.starts_with(RELEASE_NOTE_PREFIX), "{release}");
+        assert!(
+            release.contains("CC BY 3.0") && !release.contains("NEVER DISTRIBUTE"),
+            "{release}"
+        );
+        let development = licence_note();
+        assert!(
+            development.starts_with("DEVELOPMENT BUILD, NEVER DISTRIBUTE"),
+            "{development}"
+        );
+        assert!(
+            !development.starts_with(RELEASE_NOTE_PREFIX),
+            "{development}"
+        );
+    }
 
     fn page_json(next_page: &str, page: u32, line: u32, char_type: &str) -> String {
         format!(

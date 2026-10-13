@@ -105,7 +105,7 @@ describe('about view', () => {
     expect(entries('app')).toEqual(['app', 'app-icon'])
     // The source core.db was built from: QUL (release), the Quran.com API (qdc fixtures), never both.
     const source = app.info.core.source
-    const builtFrom = source === 'qul' ? ['qul'] : source === 'qdc' ? ['qdc-dev'] : []
+    const builtFrom = source === 'qul' ? ['qul'] : source === 'qdc' ? ['quran-foundation'] : []
     expect(entries('text')).toEqual([...builtFrom, 'kfgqpc', 'tanzil'])
     expect(entries('fonts')).toEqual(['kfgqpc-hafs', 'print-labels', 'qcf', 'decor', 'ui-fonts'])
     expect(entries('translations')).toContain('tr.en.saheeh')

@@ -21,12 +21,14 @@ import {
   BUNDLE_CHECK_FORMAT,
   confirmPrivateRepository,
   inspect,
+  isReleaseCore,
   listAr,
   listTar,
   listZip,
   main,
   readSqliteFile,
   readSqliteInfo,
+  QF_RELEASE_NOTE_PREFIX,
   readVarint,
 } from './check-artifacts.mjs'
 
@@ -840,37 +842,61 @@ describe('release rules', () => {
       makeDb(path.join(dir, 'qul.db'), { tables, meta: { source: 'qul', schema_version: '1' } }),
     )
     makeDb(path.join(dir, 'qdc.db'), { tables, meta: { source: 'qdc' } })
+    makeDb(path.join(dir, 'qdc-release.db'), {
+      tables,
+      meta: { source: 'qdc', licence_note: `${QF_RELEASE_NOTE_PREFIX} (granted …): Quran text …` },
+    })
     makeDb(path.join(dir, 'pack.db'), { meta: { source: 'qul', pack_id: 'tr.en' } })
   })
 
-  it('allows a qul core.db, installers and executables; refuses everything QF-derived', needsSqlite, () => {
-    put(
-      path.join(dir, 'deb', 'Quran_0.1.0_amd64.deb'),
-      makeDeb({ './usr/lib/Quran/data/core.db': qul, './usr/bin/quran-desktop': fakeElf() }),
+  it('a release core.db is a QUL build, or a QDC one built for release with QF permission (LEAD 30)', () => {
+    assert.equal(isReleaseCore({ source: 'qul' }), true)
+    assert.equal(
+      isReleaseCore({ source: 'qdc', licence_note: `${QF_RELEASE_NOTE_PREFIX} (granted …)` }),
+      true,
     )
-    const ok = inspect(['deb', 'qul.db'], { cwd: dir, release: true })
-    assert.equal(ok.ok, true, JSON.stringify(ok.forbidden))
-    assert.equal(ok.rules, 'release')
-    assert.deepEqual(rulesAt(ok, 'qul.db'), ['db-file', 'sqlite'])
-    assert.deepEqual(rulesAt(ok, 'data.tar.gz!/./usr/bin/quran-desktop'), ['executable'])
-    // The same deb is refused under the public rules.
-    assert.equal(inspect(['deb'], { cwd: dir }).ok, false)
-    if (haveXz) {
-      put(
-        path.join(dir, 'debxz', 'Quran_0.1.0_amd64.deb'),
-        makeDeb({ './usr/lib/Quran/data/core.db': qul, './usr/bin/quran-desktop': fakeElf() }, 'xz'),
-      )
-      const xzOk = inspect(['debxz'], { cwd: dir, release: true })
-      assert.equal(xzOk.ok, true, JSON.stringify(xzOk.forbidden))
-      assert.deepEqual(rulesAt(xzOk, 'data.tar.xz!/./usr/bin/quran-desktop'), ['executable'])
-    }
-
-    put(path.join(dir, 'placeholder', 'core.db'), '')
-    put(path.join(dir, 'fx', 'fixtures', 'p1.json'), '{}')
-    put(path.join(dir, 'font', 'p1.woff2'), Buffer.concat([Buffer.from('wOF2'), Buffer.alloc(60)]))
-    for (const bad of ['qdc.db', 'pack.db', 'placeholder/core.db', 'fx', 'font/p1.woff2'])
-      assert.equal(inspect([bad], { cwd: dir, release: true }).ok, false, bad)
+    assert.equal(
+      isReleaseCore({ source: 'qdc', licence_note: 'DEVELOPMENT BUILD, NEVER DISTRIBUTE: …' }),
+      false,
+    )
+    assert.equal(isReleaseCore({ source: 'qdc' }), false)
+    assert.equal(isReleaseCore({ source: 'other', licence_note: QF_RELEASE_NOTE_PREFIX }), false)
+    assert.equal(isReleaseCore(null), false)
   })
+
+  it(
+    'allows a release core.db, installers and executables; refuses everything QF-derived',
+    needsSqlite,
+    () => {
+      put(
+        path.join(dir, 'deb', 'Quran_0.1.0_amd64.deb'),
+        makeDeb({ './usr/lib/Quran/data/core.db': qul, './usr/bin/quran-desktop': fakeElf() }),
+      )
+      const ok = inspect(['deb', 'qul.db', 'qdc-release.db'], { cwd: dir, release: true })
+      assert.equal(ok.ok, true, JSON.stringify(ok.forbidden))
+      assert.equal(ok.rules, 'release')
+      assert.deepEqual(rulesAt(ok, 'qul.db'), ['db-file', 'sqlite'])
+      assert.deepEqual(rulesAt(ok, 'qdc-release.db'), ['db-file', 'sqlite'])
+      assert.deepEqual(rulesAt(ok, 'data.tar.gz!/./usr/bin/quran-desktop'), ['executable'])
+      // The same deb is refused under the public rules.
+      assert.equal(inspect(['deb'], { cwd: dir }).ok, false)
+      if (haveXz) {
+        put(
+          path.join(dir, 'debxz', 'Quran_0.1.0_amd64.deb'),
+          makeDeb({ './usr/lib/Quran/data/core.db': qul, './usr/bin/quran-desktop': fakeElf() }, 'xz'),
+        )
+        const xzOk = inspect(['debxz'], { cwd: dir, release: true })
+        assert.equal(xzOk.ok, true, JSON.stringify(xzOk.forbidden))
+        assert.deepEqual(rulesAt(xzOk, 'data.tar.xz!/./usr/bin/quran-desktop'), ['executable'])
+      }
+
+      put(path.join(dir, 'placeholder', 'core.db'), '')
+      put(path.join(dir, 'fx', 'fixtures', 'p1.json'), '{}')
+      put(path.join(dir, 'font', 'p1.woff2'), Buffer.concat([Buffer.from('wOF2'), Buffer.alloc(60)]))
+      for (const bad of ['qdc.db', 'pack.db', 'placeholder/core.db', 'fx', 'font/p1.woff2'])
+        assert.equal(inspect([bad], { cwd: dir, release: true }).ok, false, bad)
+    },
+  )
 
   it('refuses an installer it cannot open unless check-bundles verified it by size and SHA-256', () => {
     const installer = put(path.join(dir, 'nsis', 'Quran_0.1.0_x64-setup.exe'), fakePe(true))
@@ -899,16 +925,16 @@ describe('release rules', () => {
         path.join(freshDir(), 'bundle-check.json'),
         JSON.stringify({ format: BUNDLE_CHECK_FORMAT, core, installers: [{ ...entry, ok }] }),
       )
-    const pass = run(['--release', '--verified', manifest('qul'), 'nsis'], {}, dir)
+    const pass = run(['--release', '--verified', manifest('release'), 'nsis'], {}, dir)
     assert.equal(pass.code, 0, pass.text)
     assert.match(pass.text, /release rules/)
     assert.match(pass.text, /check-artifacts passed \(release\)/)
-    assert.equal(run(['--release', '--verified', manifest('qul', false), 'nsis'], {}, dir).code, 1)
+    assert.equal(run(['--release', '--verified', manifest('release', false), 'nsis'], {}, dir).code, 1)
     const placeholder = run(['--release', '--verified', manifest('placeholder'), 'nsis'], {}, dir)
     assert.equal(placeholder.code, 1)
-    assert.match(placeholder.text, /a release needs --core qul/)
+    assert.match(placeholder.text, /a release needs --core release/)
     assert.equal(run(['--release', '--private', 'nsis'], {}, dir).code, 2)
-    assert.equal(run(['--verified', manifest('qul'), 'nsis'], {}, dir).code, 2)
+    assert.equal(run(['--verified', manifest('release'), 'nsis'], {}, dir).code, 2)
     assert.equal(run(['--release', '--verified', path.join(dir, 'missing.json'), 'nsis'], {}, dir).code, 1)
   })
 })
