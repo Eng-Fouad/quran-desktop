@@ -62,6 +62,12 @@ runs:
         mkdir -p src-tauri/resources
         cp data/core/core.db src-tauri/resources/core.db
         ls -l src-tauri/resources/core.db
+        # verify-core cross-checks Tanzil's quran-data.xml (G1, G10, G11; CC BY 3.0, no login), which it finds by
+        # meta.tanzil_sha256; a qdc build in CI fetches the same file.
+        mkdir -p data/sources/tanzil
+        curl --fail --silent --show-error --location --retry 3 --proto '=https' \
+          -o data/sources/tanzil/quran-data.xml https://tanzil.net/res/text/metadata/quran-data.xml
+        ls -l data/sources/tanzil/quran-data.xml
 
     - name: cargo xtask build-core --source qdc
       if: inputs.source == 'qdc'
