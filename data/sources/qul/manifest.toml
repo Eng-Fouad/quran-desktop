@@ -1,0 +1,23 @@
+# Inputs of `cargo xtask build-core --source qul` (`pnpm core:qul`): xtask/src/build/qul.rs.
+#
+# Valid TOML: inline tables, one entry per line (a table header cannot share a line with key/value pairs).
+# - file:     relative to this directory (`/`-separated). The files themselves are gitignored.
+# - resource: the QUL resource id (https://qul.tarteel.ai/resources/<type>/<id>); the build checks it.
+# - sha256:   the file's SHA-256 in hex, recorded by the person who placed the file. "" = not recorded yet: the build
+#             then stops and prints the file's actual hash, to be checked and pasted here.
+#
+# The Imla'i seed is script 54, not 60; the rub el hizb quarters are metadata 63 (QUL's 67 is the Hizb file);
+# meta.juz/hizb/manzil are optional cross-checks (remove an entry to skip it).
+layout.v2        = { file = "layout-10.sqlite",  resource = 10,  sha256 = "" }
+layout.v1        = { file = "layout-15.sqlite",  resource = 15,  sha256 = "" }
+layout.v4        = { file = "layout-19.sqlite",  resource = 19,  sha256 = "" }
+script.code_v2   = { file = "script-61.sqlite",  resource = 61,  sha256 = "" }
+script.code_v1   = { file = "script-57.sqlite",  resource = 57,  sha256 = "" }
+script.text_hafs = { file = "script-312.sqlite", resource = 312, sha256 = "" }
+script.imlaei    = { file = "script-54.sqlite",  resource = 54,  sha256 = "" }
+meta.surah       = { file = "surah-names.json",  resource = 70,  sha256 = "" }
+meta.rub         = { file = "rub-el-hizb.json",  resource = 63,  sha256 = "" }   # rub boundaries, stored
+meta.juz         = { file = "juz.json",          resource = 68,  sha256 = "" }   # optional: cross-check only
+meta.hizb        = { file = "hizb.json",         resource = 67,  sha256 = "" }   # optional: cross-check only
+meta.manzil      = { file = "manzil.json",       resource = 66,  sha256 = "" }   # optional: cross-check only
+tanzil           = { file = "quran-data.xml",                     sha256 = "8867c1d88191472adec9db694b3cd9f135b1a2ef580574d32cf888dcb22c5c7a" }

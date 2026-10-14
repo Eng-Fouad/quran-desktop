@@ -1,0 +1,12 @@
+# dispatch2 ships no licence text of its own; these reviewed files stand in for it.
+versions = ["0.3.1"]
+
+[[file]]
+name = "LICENSE.md"
+kind = "licence"
+source = "https://github.com/madsmtm/objc2/blob/8852b424193ca41602281b3d7540d7c8ed51e49a/LICENSE.md"
+
+[[file]]
+name = "LICENSE-MIT"
+kind = "licence"
+source = "SPDX MIT text (https://github.com/spdx/license-list-data/blob/v3.29.0/text/MIT.txt) with the copyright line \"Copyright (c) Mads Marquart, Mary\": the repository's LICENSE.md names the MIT licence but does not contain its text; the holders are the crate's Cargo authors"

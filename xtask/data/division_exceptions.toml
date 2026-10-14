@@ -1,0 +1,15 @@
+# Division boundaries where the mushaf source and Tanzil quran-data.xml are allowed to differ. Read by
+# `cargo xtask build-core` and `cargo xtask verify-core`.
+#
+# The rub (quarter-hizb) of every ayah comes from the mushaf source (QDC `rub_el_hizb_number`, QUL metadata 67), so the
+# ۞ marker sits where the printed Madani page puts it. Tanzil's quarter starts are a cross-check: every difference must
+# be listed here, and every entry listed here must still differ, otherwise the build fails.
+#
+# Each entry: `id` = the rub number; `source` = its first ayah in the mushaf source; `tanzil` = its first ayah in Tanzil.
+
+# Verified 2026-10-10 against all 114 QDC `verses/by_chapter` responses and the 1,812 cached `verses/by_page` responses:
+# QDC/KFGQPC start rub 106 at 15:49 (the ۞ is printed before 15:49), Tanzil at 15:50.
+[[rub]]
+id = 106
+source = "15:49"
+tanzil = "15:50"

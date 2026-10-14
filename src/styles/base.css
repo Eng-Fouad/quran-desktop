@@ -1,0 +1,294 @@
+/*
+ * Reset, element defaults and utilities.
+ *
+ *   @layer reset      box model, margins, form-control fonts, [hidden]
+ *   @layer base       document surface, UI type, headings, links, focus ring, selection, scrollbars, reduced motion,
+ *                     the Arabic letter-spacing guard
+ *   @layer utilities  .sr-only, .sr-only-focusable, .quran-text, .icon-dir, .tabular-nums, .truncate, .user-text
+ *
+ * Everything here is low-specificity (`:where()`), so component styles always win, except the two guards that must
+ * hold everywhere: `.quran-text` and "no letter-spacing on Arabic", which use `!important`.
+ */
+@layer reset {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  html,
+  body {
+    block-size: 100%;
+  }
+
+  :where(body, h1, h2, h3, h4, h5, h6, p, figure, blockquote, dl, dd, pre) {
+    margin: 0;
+  }
+
+  :where(ul, ol)[role='list'] {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  :where(button, input, select, textarea, optgroup) {
+    font: inherit;
+    color: inherit;
+    letter-spacing: inherit;
+  }
+
+  :where(textarea) {
+    resize: vertical;
+  }
+
+  :where(img, svg, video, canvas, picture) {
+    vertical-align: middle;
+  }
+
+  :where(img, video) {
+    max-inline-size: 100%;
+  }
+
+  :where(table) {
+    border-collapse: collapse;
+  }
+
+  :where(hr) {
+    margin: 0;
+    border: 0;
+    border-block-start: 1px solid var(--border);
+  }
+
+  /* `hidden` always hides, even when a component sets `display` (until-found keeps its own behaviour). */
+  [hidden]:not([hidden='until-found']) {
+    display: none !important;
+  }
+}
+
+@layer base {
+  /* The document surface. With translucent chrome (Mica / the macOS sidebar material) the root stays transparent so the
+     material shows through --surface-chrome; the canvas, page and side pane paint their own opaque surfaces. */
+  :root {
+    background-color: var(--surface-app);
+    color: var(--text);
+    accent-color: var(--accent);
+    scrollbar-color: var(--border-strong) transparent;
+    overscroll-behavior: none;
+  }
+
+  :root[data-chrome='vibrant'] {
+    background-color: transparent;
+  }
+
+  body {
+    font-family: var(--font-ui);
+    font-size: var(--text-md);
+    font-weight: var(--weight-body);
+    line-height: var(--leading-ui);
+    /* Every UI face ships its real weights (Inter and Naskh are variable, Plex has 400/500/600): never fake bold. */
+    font-synthesis-weight: none;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  :where(*) {
+    scrollbar-width: thin;
+  }
+
+  :where(h1, h2, h3, h4, h5, h6) {
+    font-weight: var(--weight-title);
+    line-height: var(--leading-title);
+  }
+
+  :where(h1) {
+    font-size: var(--text-2xl);
+  }
+
+  :where(h2) {
+    font-size: var(--text-xl);
+  }
+
+  :where(h3) {
+    font-size: var(--text-lg);
+  }
+
+  :where(h4, h5, h6) {
+    font-size: var(--text-md);
+  }
+
+  :where(a) {
+    color: var(--accent-text);
+    text-decoration-thickness: from-font;
+    text-underline-offset: 0.2em;
+  }
+
+  :where(code, kbd, samp, pre) {
+    font-family: var(--font-mono);
+    font-size: 0.92em;
+  }
+
+  :where(strong, b) {
+    font-weight: var(--weight-title);
+  }
+
+  ::placeholder {
+    color: var(--text-muted);
+    opacity: 1;
+  }
+
+  ::selection {
+    background-color: var(--selection-bg);
+  }
+
+  :focus-visible {
+    outline: var(--focus-ring-w) solid var(--focus-ring);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  /* Desktop feel: control labels are not text to select, and images are not drag sources. */
+  :where(
+    button,
+    [role='button'],
+    [role='tab'],
+    [role='menuitem'],
+    [role='option'],
+    [role='switch'],
+    label,
+    summary
+  ) {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  :where(img) {
+    -webkit-user-drag: none;
+  }
+
+  /* Directional icons follow the nearest `dir` attribute, which is what :dir() means. :dir() itself is not used:
+     the build's CSS target (chrome111) rewrites it into a :lang(ar, he, fa, …) list, which would mirror icons inside
+     Arabic content in the English UI. */
+  [dir='rtl'] {
+    --_icon-mirror: -1 1;
+  }
+
+  [dir='ltr'] {
+    --_icon-mirror: none;
+  }
+
+  /* Letter-spacing is never applied to Arabic text (it breaks the joins), nor anywhere in the Arabic UI. */
+  :lang(ar) {
+    letter-spacing: 0 !important;
+  }
+
+  /* Reduced motion (the setting, or the OS preference unless the user chose full motion). The --dur-* tokens are
+     already 0; this also stops CSS animations and transitions that do not use them (third-party widgets). 0.01ms, not
+     0, so `transitionend`/`animationend` still fire for code that waits on them. */
+  :root[data-motion='reduce'] *,
+  :root[data-motion='reduce'] *::before,
+  :root[data-motion='reduce'] *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  :root[data-motion='reduce']::view-transition-group(*),
+  :root[data-motion='reduce']::view-transition-old(*),
+  :root[data-motion='reduce']::view-transition-new(*) {
+    animation: none !important;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion='full']) *,
+    :root:not([data-motion='full']) *::before,
+    :root:not([data-motion='full']) *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+
+    :root:not([data-motion='full'])::view-transition-group(*),
+    :root:not([data-motion='full'])::view-transition-old(*),
+    :root:not([data-motion='full'])::view-transition-new(*) {
+      animation: none !important;
+    }
+  }
+}
+
+@layer utilities {
+  /* Visually hidden, still read by screen readers. */
+  .sr-only {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  /* Visually hidden until focused from the keyboard (e.g. "Skip to Quran text"). */
+  .sr-only-focusable:not(:focus-visible) {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  /* qd-hafs and the QCF fonts have one regular weight: inherited or declared weight, style or spacing would synthesise
+     faux bold/italic (smeared joins, colliding harakat). Every element that renders Quran text carries it; `!important`
+     so no component rule on the same element can undo it (scripts/check-logical-css.mjs also rejects such declarations
+     on Quran-text selectors). */
+  .quran-text {
+    font-weight: 400 !important;
+    font-style: normal !important;
+    font-synthesis: none !important;
+    letter-spacing: 0 !important;
+    word-spacing: normal !important;
+    text-transform: none !important;
+    font-variant-ligatures: normal !important;
+    font-feature-settings: normal !important;
+    font-kerning: normal !important;
+    text-shadow: none !important;
+  }
+
+  /* Directional icons (chevrons, arrows) mirror in RTL. Media transport icons never carry this class. */
+  .icon-dir {
+    scale: var(--_icon-mirror, none);
+  }
+
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* One line with an ellipsis. UI text only: Quran text is cut by whole lines with a fade, never inside a word.
+     Only the inline axis clips. Arabic ink (the dots below ب ي ن, the marks) needs ≈ 1.5 em, more than a 1.2–1.4 line
+     box, so `overflow: hidden` would cut it and turn «التالي» into «التالى». Every component ellipsis rule follows this
+     pattern; `min-inline-size: 0` keeps the shrinking a scroll container got for free (`clip` is not one). */
+  .truncate {
+    min-inline-size: 0;
+    overflow-x: clip;
+    overflow-y: visible;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Rendered user text (notes, queries, names) takes its direction from its own first strong character. */
+  .user-text {
+    unicode-bidi: plaintext;
+    text-align: start;
+  }
+}

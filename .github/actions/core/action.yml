@@ -1,0 +1,99 @@
+# core.db inside the job.
+#
+# source: qdc (CI). A qdc-built core.db is QF-derived, so it is built inside each job that needs it and is never
+# uploaded or cached while the repository is public. The raw-response cache (data/cache) is restored only in a private
+# repository and saved only by pushes to the default branch; its key rotates every 7 days and xtask refetches any file
+# older than that (QF terms). Callers end the job with ./.github/actions/scrub.
+#
+# source: release (release.yml). The release core.db is committed at data/core/core.db: a person builds it once
+# (`pnpm core:release`: the QDC build made for release with the Quran Foundation's permission; or a QUL build) and
+# commits it; CI never rebuilds it and needs no QUL files or secrets. It is copied into place, then asserted (a release
+# core.db, assert-core --release) and checked by verify-core against this commit's code, so a core.db that no longer
+# matches the schema or the normaliser stops the release.
+name: core.db
+description: Build core.db in this job (qdc, from the QDC API) or take the committed release build (release), assert it and run verify-core
+
+inputs:
+  source:
+    description: qdc (CI) or release (release.yml)
+    required: false
+    default: qdc
+  report:
+    description: Where verify-core writes its JSON gate report
+    required: false
+    default: target/verify-core.json
+
+runs:
+  using: composite
+  steps:
+    - name: Source
+      shell: bash
+      env:
+        QD_SOURCE: ${{ inputs.source }}
+      run: |
+        case "$QD_SOURCE" in
+          qdc|release) echo "core.db source: $QD_SOURCE" ;;
+          *) echo "::error title=core.db::source must be qdc or release, not '$QD_SOURCE'"; exit 2 ;;
+        esac
+
+    - name: Raw-response cache key (7-day buckets; private repository only)
+      id: bucket
+      if: inputs.source == 'qdc' && github.event.repository.private
+      shell: bash
+      run: echo "key=qdc-raw-v1-w$(( $(date -u +%s) / 604800 ))" >> "$GITHUB_OUTPUT"
+
+    - name: Restore data/cache (private repository only)
+      id: restore
+      if: inputs.source == 'qdc' && github.event.repository.private
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: data/cache
+        key: ${{ steps.bucket.outputs.key }}
+        restore-keys: qdc-raw-v1-
+
+    - name: The committed release core.db (data/core/core.db)
+      if: inputs.source == 'release'
+      shell: bash
+      run: |
+        if [ ! -s data/core/core.db ]; then
+          echo "::error title=core.db (release)::data/core/core.db is not committed. A release ships the core.db committed there: build it with pnpm core:release and commit it."
+          exit 1
+        fi
+        mkdir -p src-tauri/resources
+        cp data/core/core.db src-tauri/resources/core.db
+        ls -l src-tauri/resources/core.db
+        # verify-core cross-checks Tanzil's quran-data.xml (G1, G10, G11; CC BY 3.0, no login), which it finds by
+        # meta.tanzil_sha256; a qdc build in CI fetches the same file.
+        mkdir -p data/sources/tanzil
+        curl --fail --silent --show-error --location --retry 3 --proto '=https' \
+          -o data/sources/tanzil/quran-data.xml https://tanzil.net/res/text/metadata/quran-data.xml
+        ls -l data/sources/tanzil/quran-data.xml
+
+    - name: cargo xtask build-core --source qdc
+      if: inputs.source == 'qdc'
+      shell: bash
+      run: cargo xtask build-core --source qdc
+
+    - name: Assert a real core.db (> 1 MiB, core tables; meta.source = qdc, or a release core.db)
+      shell: bash
+      env:
+        QD_SOURCE: ${{ inputs.source }}
+      run: |
+        if [ "$QD_SOURCE" = release ]; then set -- --release; else set -- --source "$QD_SOURCE"; fi
+        node "$GITHUB_ACTION_PATH/assert-core.mjs" --db src-tauri/resources/core.db "$@"
+
+    - name: cargo xtask verify-core (gates G1–G16)
+      shell: bash
+      env:
+        QD_VERIFY_REPORT: ${{ inputs.report }}
+      run: cargo xtask verify-core --db src-tauri/resources/core.db --report "$QD_VERIFY_REPORT"
+
+    - name: Save data/cache (private repository, push to the default branch)
+      if: >-
+        inputs.source == 'qdc' && github.event.repository.private && github.event_name == 'push' &&
+        github.ref == format('refs/heads/{0}', github.event.repository.default_branch) &&
+        steps.restore.outputs.cache-hit != 'true'
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: data/cache
+        key: ${{ steps.bucket.outputs.key }}

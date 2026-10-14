@@ -1,0 +1,7 @@
+# tauri-specta ships no licence text of its own; these reviewed files stand in for it.
+versions = ["2.0.0-rc.25"]
+
+[[file]]
+name = "LICENSE"
+kind = "licence"
+source = "https://github.com/specta-rs/tauri-specta/blob/e5e578fb339fc2b0d6c676b3031c3dafcec88083/LICENSE"

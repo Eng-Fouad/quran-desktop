@@ -1,0 +1,56 @@
+/*
+ * Memorisation hide/peek.
+ *
+ * `.w-hid` is the class map the memo store drives (GlyphLayer applies it per word span from `memo.isHidden`). `<html>`
+ * carries the session for these rules: `data-memo` (hide | test), `data-memo-style` (blur | blank) and
+ * `data-memo-hover` (the `memoRevealOnHover` setting). Glyph colours never change: hiding uses `filter` and `opacity`,
+ * which also hide COLR (V4) glyphs.
+ *
+ * - **blur**: `blur(0.16·qfs)` at 55 % opacity: the word's shape and length stay readable as a cue, its letters do not.
+ * - **blank**: the word's box draws only a short `--text-faint` rule in its lower part (the SVG filter
+ *   `#qd-memo-blank`, installed by the store while needed): "fill in the blank". Plain `opacity: 0` would hide the rule
+ *   too (opacity applies to the box's shadows), and `color: transparent` leaves COLR layers visible.
+ * - **Reveals** (W, Shift+W, Q) are instant: a fading word repaints its 256 px raster tiles every frame, and with the
+ *   blurred words around it a held W then misses frames (measured: p95 25 ms at 120 Hz with the fade, 8.5 ms without;
+ *   the budget is ≤ 16 ms per frame while revealing). The blur is never transitioned.
+ * - **Hover** (`memoRevealOnHover`) shows a hidden word while the pointer is on it, fading in over 120 ms (one word);
+ *   leaving it hides it at once.
+ */
+@layer mushaf {
+  :root[data-memo-style='blur'] .mp-glyphs .w.w-hid {
+    filter: blur(calc(var(--qfs) * 0.16));
+    opacity: 0.55;
+  }
+
+  :root[data-memo-style='blank'] .mp-glyphs .w.w-hid {
+    filter: url('#qd-memo-blank');
+  }
+
+  /* Reveal on hover: the word shows as long as the pointer rests on it. */
+  :root[data-memo-hover] .mp-glyphs[data-interactive] .w.w-hid:hover {
+    filter: none;
+    opacity: 1;
+    transition: opacity calc(var(--dur-fast) * 1.2) linear;
+  }
+
+  /* The blank style's rule (a decoration: --text-faint keeps ≥ 3:1 on the page). */
+  #qd-memo-blank feFlood {
+    flood-color: var(--text-faint);
+    flood-opacity: 0.7;
+  }
+
+  /* The filter's host element never takes room. */
+  svg.qd-memo-defs {
+    position: absolute;
+    inline-size: 0;
+    block-size: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  @media (forced-colors: active) {
+    #qd-memo-blank feFlood {
+      flood-color: GrayText;
+    }
+  }
+}

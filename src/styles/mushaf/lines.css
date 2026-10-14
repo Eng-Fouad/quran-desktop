@@ -1,0 +1,117 @@
+/*
+ * Line, justification, centred-line and line-fit CSS.
+ *
+ * - Justification: `space-between` with no space characters between word spans (the V2/V4 fonts have no space glyph),
+ *   so every justified line ends exactly at both edges of the 16.5 qfs line box.
+ * - Centred lines (`data-c`, from the layout): words packed in the middle with `--center-gap`.
+ * - Line-fit (bounded): `fitLines()` (geometry.ts) writes `--fx`/`--fy` per line; the transform never changes the line
+ *   box, so nothing shifts (CLS 0). Horizontal-only squeeze stops at 0.96, below that the line scales uniformly.
+ * - Opening pages (1–2): the 8 lines are centred in the 15-line block, inset inside the medallion.
+ * - No native text selection: a press on the glyphs is a click or a drag (pan.ts); copy goes through the ayah
+ *   selection. WKWebView still needs the prefixed property.
+ */
+@layer mushaf {
+  .mp-glyphs {
+    /* Set inline per rendition by GlyphLayer: the page font, its measured scale and the centred-line word gap. */
+    --glyph-family: 'qd-hafs';
+    --glyph-scale: 1;
+    --center-gap: 0.3;
+
+    cursor: default;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  .ln {
+    position: absolute;
+    inset-inline: 0;
+    top: calc(var(--lh) * (var(--l) - 1));
+    height: var(--lh);
+    /* Centres the line's words even when they overflow before the line-fit runs. */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    direction: rtl;
+    font-family: var(--glyph-family);
+    font-size: calc(var(--qfs) * var(--glyph-scale));
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .lw {
+    flex: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: max-content;
+    min-width: 100%;
+    transform: scale(var(--fx, 1), var(--fy, 1));
+    transform-origin: 50% 50%;
+  }
+
+  .ln[data-c] .lw {
+    justify-content: center;
+    column-gap: calc(1em * var(--center-gap));
+    min-width: 0;
+  }
+
+  /*
+   * QCF word glyphs carry their own side bearings, so justified QCF lines need no gap. Unicode text in the Hafs face
+   * (the hafs style and every fallback rendition) has no space inside its word spans: justified lines keep at least the
+   * style's word gap, so a dense line squeezes (line-fit) instead of running its words together.
+   */
+  .mp-glyphs[data-unicode] .lw {
+    column-gap: calc(1em * var(--center-gap));
+  }
+
+  .w {
+    display: inline-block;
+    white-space: nowrap;
+  }
+
+  /* Opening pages: 8 lines, centred vertically ((15 − 8) / 2 = 3.5 lines down) and inset inside the medallion. */
+  .mp[data-opening] .ln {
+    top: calc(var(--lh) * (var(--l) - 1 + 3.5));
+    inset-inline: var(--mp-opening-inset);
+  }
+
+  /* V4 colour glyphs use the shared palette rule; the Hafs fallback rendition never does. */
+  .mp[data-style='qcf_v4'] .mp-glyphs[data-rendition='qcf'] .lw {
+    font-palette: --qd-v4;
+  }
+
+  /* The pointer only over end markers and surah headers; plain words keep the default cursor (zoomed: grab). */
+  .mp-glyphs[data-interactive] .w.e,
+  .mp-glyphs[data-interactive] .ln[data-k='surah_name'] {
+    cursor: pointer;
+  }
+
+  /*
+   * The shaping warm-up's hosts (warmup.ts, in MushafView and in each RenditionStack): lines laid out there are never
+   * painted and never move anything. Their lines take the `.ln` font size from the inherited `--qfs`, so the size the
+   * words are measured and shaped at is the size the page draws them at.
+   */
+  .qd-warm {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    inline-size: 0;
+    block-size: 0;
+    overflow: hidden;
+    visibility: hidden;
+    contain: strict;
+    pointer-events: none;
+  }
+
+  .qd-warm-ln {
+    font-family: var(--glyph-family);
+    font-size: calc(var(--qfs) * var(--glyph-scale));
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .qd-warm-ln > span {
+    display: inline-block;
+    white-space: nowrap;
+  }
+}

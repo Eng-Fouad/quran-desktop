@@ -1,0 +1,215 @@
+/**
+ * `memo` messages, English: hide mode, the self-test, the Memorize panel (progress, Mushaf map, due reviews, loop
+ * presets) and the memorisation announcements. Every key exists in `../ar/memo.ts` too; plurals have `one` and `other`
+ * here and all six categories in Arabic. `{range}`/`{ref}` are bidi-isolated references.
+ */
+export const memo = {
+  /** Memorisation statuses. */
+  status: {
+    new: 'Not started',
+    learning: 'Learning',
+    memorized: 'Memorized',
+    review: 'Due for review',
+  },
+  /** The four self-test answers. */
+  rating: {
+    again: 'Again',
+    hard: 'Hard',
+    good: 'Good',
+    easy: 'Easy',
+  },
+  ratingHint: {
+    again: 'I could not recall it',
+    hard: 'With effort or several hints',
+    good: 'A slip or two',
+    easy: 'Fluent, no hints',
+  },
+  /** Intervals until the next review, as shown under the rating buttons. */
+  interval: {
+    minutes: { one: '{count} min', other: '{count} min' },
+    days: { one: '{count} day', other: '{count} days' },
+  },
+  count: {
+    memorized: { one: '{count} memorized', other: '{count} memorized' },
+    learning: { one: '{count} learning', other: '{count} learning' },
+    new: { one: '{count} not started', other: '{count} not started' },
+    due: { one: '{count} due', other: '{count} due' },
+    words: { one: '{count} word', other: '{count} words' },
+  },
+  /** The hide-mode toolbar in the canvas overlay slot. */
+  toolbar: {
+    region: 'Hide mode',
+    hiding: 'Hiding {range}',
+    /** "14 of 337 words". */
+    progress: { one: '{revealed} of {count} word', other: '{revealed} of {count} words' },
+    allRevealed: 'All words revealed',
+    goTo: 'Go to the next hidden word',
+    revealWord: 'Next word',
+    revealAyah: 'Next ayah',
+    peek: 'Peek',
+    peekHint: 'Hold to show every word',
+    restart: 'Hide again',
+    stop: 'Show the text',
+    style: 'Hidden words',
+    styleBlur: 'Blur',
+    styleBlank: 'Blank',
+    selfTest: 'Self-test this range',
+    more: 'More',
+  },
+  /** The self-test bar in the canvas overlay slot. */
+  test: {
+    region: 'Self-test',
+    reciteFrom: 'Recite from {ref}',
+    reciteRange: 'to {ref}',
+    reveal: 'Reveal',
+    mistake: 'Mistake',
+    undoMistake: 'Take back a mistake',
+    finish: 'Finish',
+    cancel: 'Cancel the test',
+    hints: { one: '{count} hint', other: '{count} hints' },
+    mistakes: { one: '{count} mistake', other: '{count} mistakes' },
+    elapsed: 'Time',
+  },
+  /** The self-test dialog: setup, then the rating. */
+  dialog: {
+    title: 'Self-test',
+    description:
+      'A random ayah of the range is chosen. Recite from there to the end of the range, and reveal words only when you are stuck.',
+    range: 'Range',
+    progress: 'Progress',
+    style: 'Hidden words',
+    keys: 'While reciting',
+    keyReveal: 'Reveal the next word',
+    keyRevealAyah: 'Reveal the rest of the ayah',
+    keyMistake: 'Count a mistake',
+    keyPeek: 'Peek (hold)',
+    start: 'Start the test',
+    rateTitle: 'How did it go?',
+    rateDescription: 'Your answer schedules the next review of {range}.',
+    recited: 'Recited',
+    time: 'Time',
+    hints: 'Hints',
+    mistakes: 'Mistakes',
+    suggested: 'Suggested',
+    keepReciting: 'Keep reciting',
+    discard: 'Discard the test',
+    /** The interval shown under a rating button. */
+    next: 'Next review in {interval}',
+  },
+  /** The Memorize sidebar panel. */
+  panel: {
+    overview: 'Progress',
+    /** "1,234 ayahs memorized". */
+    memorizedAyahs: { one: '{count} ayah memorized', other: '{count} ayahs memorized' },
+    /** "19.8% of the Quran". */
+    ofQuran: '{pct} of the Quran',
+    startTitle: 'Start memorizing',
+    overviewEmpty: 'Hide a page with E, recite it from memory and rate yourself: your progress shows here.',
+    loadError: 'Your progress could not be loaded',
+    practise: 'Practise',
+    scope: {
+      label: 'Range to practise',
+      selection: 'Selection',
+      page: 'Page',
+      surah: 'Surah',
+      juz: 'Juz',
+      custom: 'Custom',
+    },
+    customLabel: 'Type a range',
+    customPlaceholder: 'Or type: 67, 2:255–260, j 30',
+    customInvalid: 'Not a range of ayahs',
+    hide: 'Hide',
+    stopHiding: 'Show',
+    selfTest: 'Self-test',
+    listen: 'Listen ×{n}',
+    listenHint: 'Recite along: each ayah three times',
+    markAs: 'Mark as',
+    mark: {
+      memorized: 'Memorized',
+      learning: 'Learning',
+      review: 'Due for review',
+      new: 'Not started (reset)',
+    },
+    resetTitle: 'Reset this range?',
+    resetBody:
+      'The memorization progress of {range} ({count}) is cleared. Bookmarks, highlights and notes stay.',
+    resetConfirm: 'Reset',
+    due: {
+      title: 'Due for review',
+      empty: 'Nothing is due. Rate a self-test to schedule the next review.',
+      /** "due 2 days ago" / "due now". */
+      when: 'due {when}',
+      now: 'due now',
+      more: { one: 'Show {count} more', other: 'Show {count} more' },
+      less: 'Show less',
+      test: 'Test',
+      hide: 'Hide',
+    },
+    map: {
+      title: 'Mushaf map',
+      label: 'Memorization by page',
+      hint: 'Each square is a page, each row a juz',
+      /** The tooltip and accessible text of one page. */
+      page: 'Page {page}',
+      juz: 'Juz {juz}',
+      open: 'Open page {page}',
+      legendNew: 'Not started',
+      legendLearning: 'Learning',
+      legendMemorized: 'Memorized',
+      legendDue: 'Due',
+    },
+    presets: {
+      title: 'Loop presets',
+      empty: 'Save a range with its repeats and replay it in one click.',
+      new: 'New preset',
+      play: 'Play {name}',
+      edit: 'Edit {name}',
+      delete: 'Delete {name}',
+      actions: 'Actions for {name}',
+      name: 'Name',
+      range: 'Range',
+      ayahRepeat: 'Each ayah',
+      rangeRepeat: 'Whole range',
+      gap: 'Pause after each ayah',
+      gapNone: 'None',
+      /** `{half}` is one half in UI digits (`i18n.fraction`): ½, or ١/٢ with Eastern Arabic numbers. */
+      gapHalf: '×{half}',
+      gapHint: 'A pause as long as the ayah, half of it or twice it',
+      speed: 'Speed',
+      times: '×{n}',
+      forever: '∞',
+      less: 'Fewer',
+      more: 'More',
+      save: 'Save preset',
+      /** The default name of a new preset: "Al-Mulk 67:1–30 ×3". */
+      defaultName: '{range} {repeat}',
+      /** Meta line pieces. */
+      eachAyah: 'each ayah {repeat}',
+      wholeRange: 'range {repeat}',
+      pause: 'pause {gap}',
+    },
+  },
+  announce: {
+    hiding: 'Hiding {range}. W reveals the next word, hold Q to peek.',
+    stopped: 'The text is shown',
+    restarted: 'Every word is hidden again',
+    allRevealed: 'All words are revealed',
+    testStarted: 'Self-test: recite from {ref}',
+    testCancelled: 'Self-test cancelled',
+    mistakes: { one: '{count} mistake', other: '{count} mistakes' },
+    presetPlaying: 'Playing {name}',
+  },
+  toast: {
+    testSaved: 'Self-test saved · {range} · {rating}',
+    rated: 'Rated {range} · {rating}',
+    nextReview: 'Next review {when}',
+    status: {
+      new: 'Progress of {range} reset',
+      learning: 'Marked {range} as learning',
+      memorized: 'Marked {range} as memorized',
+      review: 'Marked {range} as due for review',
+    },
+    presetSaved: 'Saved the preset “{name}”',
+    presetDeleted: 'Deleted the preset “{name}”',
+  },
+} as const

@@ -1,0 +1,7 @@
+# @tauri-apps/plugin-opener ships no licence text of its own; these reviewed files stand in for it.
+versions = ["2.7.0"]
+
+[[file]]
+name = "LICENSE_MIT"
+kind = "licence"
+source = "https://github.com/tauri-apps/plugins-workspace/blob/e51128438011755f9e7277bad29b8c0978cf281c/plugins/opener/LICENSE_MIT"

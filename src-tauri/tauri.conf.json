@@ -1,0 +1,81 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "Quran",
+  "mainBinaryName": "quran-desktop",
+  "version": "0.1.0",
+  "identifier": "com.quran.labs.desktop",
+  "build": {
+    "beforeDevCommand": "pnpm dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "pnpm build",
+    "beforeBundleCommand": "node src-tauri/scripts/check-release-core.mjs",
+    "frontendDist": "../dist",
+    "removeUnusedCommands": true
+  },
+  "app": {
+    "withGlobalTauri": false,
+    "windows": [
+      {
+        "label": "main",
+        "create": false,
+        "title": "Quran",
+        "width": 1440,
+        "height": 940,
+        "minWidth": 760,
+        "minHeight": 600,
+        "center": true,
+        "visible": false,
+        "decorations": true,
+        "dragDropEnabled": false,
+        "zoomHotkeysEnabled": false
+      }
+    ],
+    "security": {
+      "csp": {
+        "default-src": "'self' ipc: http://ipc.localhost",
+        "script-src": "'self'",
+        "style-src": "'self' 'unsafe-inline'",
+        "img-src": "'self' data: blob: quran: http://quran.localhost",
+        "font-src": "'self' data: blob: quran: http://quran.localhost",
+        "media-src": "'self' blob: quran: http://quran.localhost",
+        "connect-src": "'self' ipc: http://ipc.localhost quran: http://quran.localhost",
+        "object-src": "'none'",
+        "base-uri": "'none'",
+        "form-action": "'none'",
+        "frame-ancestors": "'none'"
+      },
+      "devCsp": {
+        "default-src": "'self' ipc: http://ipc.localhost",
+        "script-src": "'self'",
+        "style-src": "'self' 'unsafe-inline'",
+        "img-src": "'self' data: blob: quran: http://quran.localhost",
+        "font-src": "'self' data: blob: quran: http://quran.localhost",
+        "media-src": "'self' blob: quran: http://quran.localhost",
+        "connect-src": "'self' ipc: http://ipc.localhost quran: http://quran.localhost ws://localhost:1420 ws://localhost:1421 http://localhost:1420",
+        "object-src": "'none'"
+      },
+      "dangerousDisableAssetCspModification": ["style-src"],
+      "capabilities": ["default"]
+    }
+  },
+  "bundle": {
+    "active": true,
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "resources": {
+      "resources/core.db": "data/core.db",
+      "resources/catalog.json": "data/catalog.json"
+    },
+    "category": "Education",
+    "shortDescription": "Quran reader with recitation",
+    "homepage": "https://quran.com",
+    "publisher": "Quran for Desktop contributors",
+    "copyright": "© Quran for Desktop contributors",
+    "license": "GPL-3.0-or-later"
+  }
+}

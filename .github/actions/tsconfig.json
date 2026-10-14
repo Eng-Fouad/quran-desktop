@@ -1,0 +1,34 @@
+{
+  // Type-checks the CI and release tooling (all `// @ts-check` JavaScript): pnpm exec tsc -p .github/actions/tsconfig.json
+  "compilerOptions": {
+    "target": "es2023",
+    "lib": ["ES2023"],
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "types": ["node"],
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "skipLibCheck": true,
+    "verbatimModuleSyntax": true
+  },
+  "include": [
+    "./**/*.mjs",
+    "../../scripts/check-artifacts.mjs",
+    "../../scripts/check-artifacts.test.mjs",
+    "../../scripts/check-bundles.mjs",
+    "../../scripts/check-bundles.test.mjs",
+    "../../scripts/check-version.mjs",
+    "../../scripts/check-version.test.mjs",
+    "../../scripts/deb-xz.mjs",
+    "../../scripts/deb-xz.test.mjs",
+    "../../scripts/size-budget.mjs",
+    "../../scripts/size-budget.test.mjs",
+    "../../src-tauri/scripts/check-release-core.mjs",
+    "../../src-tauri/scripts/check-release-core.test.mjs"
+  ]
+}

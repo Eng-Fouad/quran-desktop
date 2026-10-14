@@ -1,0 +1,143 @@
+[workspace]
+resolver = "3"
+members = ["src-tauri", "crates/*", "xtask"]
+default-members = ["src-tauri"] # scaffold choice; commands always pass --workspace or -p
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.95"
+publish = false
+license = "GPL-3.0-or-later"
+repository = "https://github.com/Eng-Fouad/quran-desktop"
+# The bundle's publisher (src-tauri/tauri.conf.json `bundle.publisher`): never a person's name. The deb
+# bundler writes the app crate's `authors` as the package Maintainer.
+authors = ["Quran for Desktop contributors"]
+
+# Every third-party version is pinned here. Member crates use `dep = { workspace = true }` and may add features.
+[workspace.dependencies]
+# --- internal crates ---
+quran-types = { path = "crates/quran-types" }
+quran-core = { path = "crates/quran-core" }
+quran-audio = { path = "crates/quran-audio" }
+quran-packs = { path = "crates/quran-packs" }
+media-session = { path = "crates/media-session" }
+
+# --- tauri (typed IPC: tauri-specta is an RC, so every specta crate is pinned exactly) ---
+# Tauri's default features minus `dynamic-acl`: the app never adds a capability at runtime (`Manager::add_capability`),
+# so release builds carry no runtime ACL table and cannot widen the IPC surface.
+# Debug builds keep the table for denial messages (tauri gates it on `debug_assertions` too). Re-check this list
+# against tauri's `default` features on every tauri bump.
+tauri = { version = "=2.12.2", default-features = false, features = ["wry", "compression", "common-controls-v6", "x11", "dbus", "tray-icon", "image-png"] }
+tauri-build = { version = "=2.7.1", features = [] }
+tauri-plugin-single-instance = "=2.5.2"
+tauri-plugin-window-state = "=2.5.0"
+tauri-plugin-log = "=2.10.0"
+tauri-plugin-opener = "=2.7.0"
+tauri-plugin-dialog = "=2.8.1"
+tauri-plugin-os = "=2.4.0" # Rust-side only
+specta = { version = "=2.0.0-rc.25", features = ["derive"] }
+specta-typescript = "=0.0.12"
+tauri-specta = { version = "=2.0.0-rc.25", features = ["derive", "typescript"] }
+
+# --- data ---
+rusqlite = { version = "=0.40.2", features = ["bundled", "functions", "backup", "serde_json", "collation", "hooks"] }
+r2d2 = "=0.8.10"
+r2d2_sqlite = "=0.35.0"
+rusqlite_migration = "=2.6.0"
+unicode-normalization = "=0.1.25"
+
+# --- audio ---
+cpal = "=0.18.2"
+symphonia = { version = "=0.6.1", default-features = false, features = ["mp3", "opt-simd"] }
+rtrb = "=0.4.0"
+rubato = "=5.0.1"
+crossbeam-channel = "=0.5.17"
+stream-download = { version = "=0.24.4", default-features = false, features = ["reqwest-rustls"] }
+
+# --- network and general ---
+# reqwest: `default-features = false` would otherwise drop system/PAC proxy support, hence `system-proxy`. Not
+# `charset` (a default): every body is read as JSON or bytes, and only stream-download reads one as text (an HTTP error's,
+# for its message), which without it is decoded as lossy UTF-8. encoding_rs, its tables and decoders, was 333 KB of the
+# universal macOS app (installed footprint).
+reqwest = { version = "=0.13.5", default-features = false, features = ["rustls", "http2", "json", "stream", "gzip", "system-proxy"] }
+tokio = { version = "1.53.2", features = ["rt", "rt-multi-thread", "sync", "time", "fs", "io-util", "macros"] }
+futures-util = "0.3.34"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+thiserror = "2.0.21"
+log = "0.4.34"
+uuid = { version = "1.27.0", features = ["v7"] }
+sha2 = "0.11.0"
+hex = "0.4.3"
+zip = { version = "9.0.0", default-features = false, features = ["deflate"] }
+ammonia = "4.2.1"
+regex = "1.13.1"             # QuranEnc footnote patterns
+url = "2.5.8"
+percent-encoding = "2.3.2"   # protocol path decode (verified probe)
+dunce = "1.0.5"
+parking_lot = "0.12.5"
+time = { version = "0.3.55", features = ["formatting", "parsing", "macros"] }
+fastrand = "2.5.0"
+tempfile = "3.27.0"
+toml = "1.1.8"               # xtask manifest + division_exceptions.toml
+
+# --- media controls (crates/media-session) ---
+windows = { version = "=0.62.2", features = ["Foundation", "Media", "Media_Playback", "Storage_Streams", "Win32_Foundation", "Win32_System_WinRT", "Win32_System_Com", "Win32_UI_Shell"] }
+objc2 = "0.6.5"
+objc2-foundation = "0.3.2"
+objc2-media-player = { version = "=0.3.2", features = ["MPNowPlayingInfoCenter", "MPRemoteCommandCenter", "MPRemoteCommand", "MPRemoteCommandEvent", "MPMediaItem", "block2"] }
+block2 = "0.6.2"
+mpris-server = "=0.10.0"
+# WebView2 crash recovery in src-tauri (`window::webview2`): the version wry and tauri-runtime-wry 2.12.1 already pin, so
+# no new crate.
+webview2-com = "=0.39.1"
+async-channel = "2.5.0"
+futures-lite = "2.6.1"
+
+# --- xtask ---
+clap = { version = "4.6.7", features = ["derive"] }
+anyhow = "1.0.104"
+quick-xml = "0.42.0"
+
+# Release: optimised for size, except the audio hot path. `opt-level = "z"` makes the exe 1.1 MB smaller than "s" (NSIS
+# −0.26 MiB) with no measurable cost on the IPC paths (page assembly, search, asset decompression); decode, resampling
+# (rubato's FFT) and WSOLA run at opt-level 3, 2.6–3.3× faster than they did at "s"
+# (`cargo test -p quran-audio --release --test dsp_cpu`). The list mirrors the dev overrides below plus the FFT crates
+# rubato drives.
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "z"
+panic = "abort"
+strip = true
+[profile.release.package.symphonia-core]
+opt-level = 3
+[profile.release.package.symphonia-bundle-mp3]
+opt-level = 3
+[profile.release.package.rubato]
+opt-level = 3
+[profile.release.package.realfft]
+opt-level = 3
+[profile.release.package.rustfft]
+opt-level = 3
+[profile.release.package.quran-audio]
+opt-level = 3
+
+# Debug builds: dependencies run optimised so symphonia, WSOLA and SQLite keep real-time speed.
+[profile.dev.package."*"]
+opt-level = 2
+# The audio hot path gets the full optimiser (scaffold overrides kept).
+[profile.dev.package.symphonia-core]
+opt-level = 3
+[profile.dev.package.symphonia-bundle-mp3]
+opt-level = 3
+[profile.dev.package.rubato]
+opt-level = 3
+[profile.dev.package.quran-audio]
+opt-level = 3
+
+# Every crate opts in with `[lints] workspace = true`; test modules and tests/ files use #[allow].
+[workspace.lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"

@@ -1,0 +1,175 @@
+/**
+ * `player` messages, English: the recitation dock, its popovers, the reciter picker and the audio shortcuts'
+ * announcements. Every key exists in `../ar/player.ts` too; plurals have `one` and `other` here and all six categories
+ * in Arabic.
+ */
+export const player = {
+  /** The idle dock. `{ref}` is a bidi-isolated reference. */
+  idle: {
+    play: 'Play {surah} from {ref}',
+    resume: 'Resume {surah} · {ref}',
+    /** Second line of the idle pill. */
+    reciter: '{reciter}',
+    dismissResume: 'Forget where you stopped',
+    /** The pill's accessible name adds the key. */
+    hint: '{action} ({key})',
+  },
+  transport: {
+    play: 'Play',
+    pause: 'Pause',
+    previous: 'Previous ayah',
+    next: 'Next ayah',
+    loading: 'Loading the recitation…',
+    buffering: 'Buffering…',
+    group: 'Playback',
+  },
+  /** The ayah being recited, in the dock. */
+  basmala: 'Basmala',
+  /** "Al-Baqarah · 2:255" */
+  where: '{surah} · {ref}',
+  readout: {
+    label: 'Time',
+    /** Screen-reader text of the time readout. */
+    spoken: '{time} of {total}',
+  },
+  scrubber: {
+    label: 'Recitation position',
+    /** `aria-valuetext`: "2:255, 1:23 of 7:12". */
+    valueText: '{ref}, {time} of {total}',
+    /** Hover tooltip: "2:255 · 01:23". */
+    hover: '{ref} · {time}',
+    hint: 'Shift snaps to the start of an ayah',
+    range: 'Playing range',
+    abA: 'A',
+    abB: 'B',
+  },
+  reciter: {
+    change: 'Change reciter',
+    /** Tooltip of the reciter cell: "Reciter: Mishary Rashid Alafasy". */
+    current: 'Reciter: {name}',
+  },
+  picker: {
+    title: 'Reciter',
+    search: 'Search reciters',
+    noMatch: 'No reciter matches “{query}”',
+    selected: 'Selected',
+    wordLevel: 'Word timing',
+    wordLevelHint: 'Highlights each word as it is recited',
+    ayahLevel: 'Ayah timing',
+    ayahLevelHint: 'Highlights each ayah as it is recited',
+    downloaded: { one: '{count} surah downloaded', other: '{count} surahs downloaded' },
+    cached: { one: '{count} surah cached', other: '{count} surahs cached' },
+    streams: 'Streams as you listen',
+    manage: 'Manage downloads',
+  },
+  repeat: {
+    button: 'Repeat',
+    title: 'Repeat',
+    ayah: 'Each ayah',
+    range: 'Whole range',
+    off: 'Off',
+    forever: 'Forever',
+    times: '×{n}',
+    decrease: 'Fewer',
+    increase: 'More',
+    gap: 'Pause after each ayah',
+    gapNone: 'None',
+    gapFixed: 'Seconds',
+    gapMultiplier: '× ayah length',
+    gapFixedHint: 'Length of the pause',
+    gapMultiplierHint: 'Times the ayah’s length',
+    gapSeconds: '{n} s',
+    gapTimes: '×{n}',
+    rangeLabel: 'Range',
+    rangePlaceholder: '2:255–257',
+    rangeHint: 'An ayah or a range in one surah, like 2:255 or 18:1–10',
+    rangeInvalid: 'Type an ayah or a range in one surah, like 2:255–257',
+    playRange: 'Play range',
+    presets: 'Presets',
+    presetNone: 'No saved loops yet',
+    savePreset: 'Save as preset',
+    presetSaved: 'Saved “{name}”',
+    presetName: '{ref} · {repeat}',
+    /** Live badge on the Repeat button. */
+    badge: {
+      ab: 'A-B',
+      forever: '∞',
+    },
+    /** Spoken and tooltip forms of the badge. */
+    status: {
+      off: 'Repeat is off',
+      ayah: 'Ayah {n} of {total}',
+      ayahForever: 'Repeating each ayah',
+      range: 'Pass {n} of {total}',
+      rangeForever: 'Repeating the range',
+      ab: 'A-B loop {from}–{to}',
+    },
+  },
+  speed: {
+    button: 'Speed',
+    title: 'Speed',
+    value: '{speed}',
+    pitch: 'The pitch stays natural at every speed.',
+    normal: 'Normal speed',
+  },
+  more: {
+    button: 'More',
+    title: 'Recitation options',
+    stopAt: 'Stop at',
+    stopAtOptions: {
+      end_of_surah: 'End of surah',
+      end_of_page: 'End of page',
+      end_of_juz: 'End of juz',
+      end_of_quran: 'End of the Quran',
+    },
+    volume: 'Volume',
+    mute: 'Mute',
+    unmute: 'Unmute',
+    followAlong: 'Follow along',
+    followAlongHint: 'Turn the pages with the recitation',
+    wordHighlight: 'Highlight words',
+    ab: 'A-B loop',
+    abSetA: 'Set A',
+    abSetB: 'Set B',
+    abClear: 'Clear',
+    abHint: 'Loop a passage: set A, then B',
+    abPendingA: 'A at {time}',
+    download: 'Download {surah}',
+    downloadSize: 'Download {surah} · {size}',
+    downloading: 'Downloading {surah}…',
+    downloaded: '{surah} is downloaded',
+    stop: 'Stop',
+  },
+  collapse: 'Minimize the player',
+  expand: 'Expand the player',
+  errors: {
+    offline: 'Offline — {surah} isn’t downloaded for {reciter}',
+    offlineShort: 'Offline — not downloaded',
+    downloadWhenOnline: 'Download when online',
+    queued: '{surah} will download when you’re online',
+    noOutput: 'No audio output — reconnecting…',
+    failed: 'Couldn’t play: {reason}',
+    dismiss: 'Dismiss',
+  },
+  notes: {
+    basmalaSkipped: 'Played without the basmala (not downloaded)',
+  },
+  /** Polite live-region announcements of the audio shortcuts. */
+  announce: {
+    playing: 'Playing {where}',
+    paused: 'Paused',
+    stopped: 'Stopped',
+    speed: 'Speed {speed}',
+    muted: 'Muted',
+    unmuted: 'Sound on',
+    volume: 'Volume {pct}%',
+    repeatOff: 'Repeat off',
+    repeatAyah: 'Repeat each ayah {n} times',
+    repeatForever: 'Repeat each ayah forever',
+    abA: 'Loop start set at {time}',
+    abSet: 'A-B loop {from} to {to}',
+    abCleared: 'A-B loop cleared',
+    abShort: 'Too short for a loop: set B further from A',
+    nothingPlaying: 'Nothing is playing',
+  },
+} as const

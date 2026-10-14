@@ -1,0 +1,7 @@
+# dlopen2_derive ships no licence text of its own; these reviewed files stand in for it.
+versions = ["0.4.3"]
+
+[[file]]
+name = "LICENSE"
+kind = "licence"
+source = "https://github.com/OpenByteDev/dlopen2/blob/cc80e4a0a90d499b677fdf7743699b4b3a43a989/LICENSE"

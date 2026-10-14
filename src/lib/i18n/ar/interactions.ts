@@ -1,0 +1,51 @@
+import type { Dict } from '$lib/contracts/i18n'
+
+/** `interactions` messages, Arabic. Same keys as `../en/interactions.ts`. */
+export const interactions = {
+  actionBar: {
+    label: 'إجراءات الآية · {ref}',
+    play: 'تشغيل من هنا',
+    playHint: '{mod}+نقرة',
+    repeat: 'تكرار',
+    repeatAyah: 'هذه الآية {n} مرات',
+    repeatAyahForever: 'هذه الآية بلا توقف',
+    repeatSelection: 'التحديد {n} مرات',
+    repeatSelectionForever: 'التحديد بلا توقف',
+    bookmark: 'إضافة علامة',
+    removeBookmark: 'إزالة العلامة',
+    highlight: 'تظليل',
+    highlightColor: 'تظليل {color}',
+    removeHighlight: 'إزالة التظليل',
+    highlightColors: 'ألوان التظليل',
+    addNote: 'إضافة ملاحظة',
+    editNote: 'تعديل الملاحظة',
+    copy: 'نسخ',
+    copied: 'تم نسخ {ref}',
+    copyFailed: 'تعذّر نسخ {ref}',
+    study: 'الترجمة والتفسير',
+    more: 'إجراءات أخرى',
+  },
+  colors: {
+    yellow: 'أصفر',
+    green: 'أخضر',
+    blue: 'أزرق',
+    red: 'أحمر',
+    purple: 'بنفسجي',
+  },
+  wbw: {
+    unavailable: 'لا توجد ترجمة كلمة بكلمة لهذه الكلمة',
+  },
+  a11y: {
+    list: 'نص الصفحة {page}',
+    ref: 'سورة {surah}، الآية {ayah}',
+    continued: 'تابع من الصفحة السابقة',
+    continues: 'يتبع في الصفحة التالية',
+    juz: 'بداية الجزء {n}',
+    hizb: 'بداية الحزب {n}',
+    quarter: 'ربع الحزب {n}',
+    half: 'نصف الحزب {n}',
+    threeQuarters: 'ثلاثة أرباع الحزب {n}',
+    sajda: 'موضع سجدة',
+    sajdaObligatory: 'سجدة واجبة',
+  },
+} satisfies Dict['interactions']

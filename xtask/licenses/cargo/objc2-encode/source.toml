@@ -1,0 +1,12 @@
+# objc2-encode ships no licence text of its own; these reviewed files stand in for it.
+versions = ["4.1.0"]
+
+[[file]]
+name = "LICENSE.md"
+kind = "licence"
+source = "https://github.com/madsmtm/objc2/blob/8d214f5477365ffcbcbb7de058c86ed9a518efb7/LICENSE.md"
+
+[[file]]
+name = "LICENSE-MIT"
+kind = "licence"
+source = "SPDX MIT text (https://github.com/spdx/license-list-data/blob/v3.29.0/text/MIT.txt) with the copyright line \"Copyright (c) Mads Marquart\": the repository's LICENSE.md names the MIT licence but does not contain its text; the holders are the crate's Cargo authors"

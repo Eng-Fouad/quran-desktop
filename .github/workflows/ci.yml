@@ -1,0 +1,303 @@
+# Continuous integration.
+#
+# Licensing: a qdc-built core.db, its fixtures, raw QF API responses (data/cache) and
+# any bundle containing them are QF-derived and are never distributed. So, while the repository is public:
+#   - core.db is built inside each job that needs it (./.github/actions/core) and is never uploaded or cached;
+#   - data/cache is restored only when the repository is private, and saved only by pushes to the default branch;
+#   - the jobs that build a qdc core.db (test-core, build) do not run for pull requests from forks;
+#   - every upload goes through ./.github/actions/upload, which runs scripts/check-artifacts.mjs on the same paths;
+#   - those jobs end with ./.github/actions/scrub, before the caching actions' post-job steps.
+# While the repository is private, test-core also uploads core.db and fixtures/ as 1-day artifacts for developers
+# (`gh run download`), and the screenshots. ./.github/actions/policy enforces these rules on .github/** (lint job).
+#
+# The build job also makes this OS's release installers (NSIS; app + dmg; deb + AppImage) around build.rs's 0-byte
+# placeholder core.db, checks what they contain (scripts/check-bundles.mjs) and enforces the size budgets
+# (scripts/size-budget.mjs, the real core.db added as each format compresses it). On pushes to the default branch the
+# macOS one is universal, as in release.yml; otherwise it is built for the runner's architecture only.
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: '0'
+  RUST_BACKTRACE: '1'
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: CI policy (pinned actions, guarded uploads, safe caches, fork guard, permissions, app icon)
+        uses: ./.github/actions/policy
+
+      - name: Workflow lint (actionlint with shellcheck)
+        run: >-
+          docker run --rm -v "$PWD:/repo" -w /repo -e SHELLCHECK_OPTS=--severity=warning
+          rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667
+          -color
+
+      - name: Tooling tests (check-artifacts, release tooling, bundling guard, CI actions, QA harness, metrics)
+        run: >-
+          node --test scripts/*.test.mjs .github/actions/*/*.test.mjs src-tauri/scripts/*.test.mjs
+          tests/e2e/lib/*.test.mjs tests/e2e/metrics/*.test.mjs scripts/qa/lib/*.test.mjs
+
+      - name: Committed databases (only the release core.db, data/core/core.db)
+        run: |
+          tracked="$(git ls-files -- '*.db' '*.db3' '*.sqlite' '*.sqlite3' '*.db-wal' '*.db-shm' '*.db-journal')"
+          if [ -n "$tracked" ] && [ "$tracked" != data/core/core.db ]; then
+            echo "::error title=committed database::only data/core/core.db, a release build, may be committed:"
+            echo "$tracked"
+            exit 1
+          fi
+          if [ -n "$tracked" ]; then node .github/actions/core/assert-core.mjs --db data/core/core.db --release; fi
+
+      - name: Type-check the CI tooling and the QA harness
+        run: |
+          pnpm exec tsc -p .github/actions/tsconfig.json
+          pnpm exec tsc -p tests/e2e/lib/tsconfig.json
+
+      - run: cargo fmt --all --check
+      - run: cargo lint
+      - run: pnpm lint
+      - run: pnpm format:check
+      - run: pnpm lint:css
+      - run: pnpm check
+      - run: pnpm check:dist
+
+  test-rust:
+    name: test-rust (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup
+        uses: ./.github/actions/setup
+        with:
+          fonts: none
+
+      # Unit tests only: build.rs writes the 0-byte core.db placeholder, so no core.db is needed.
+      - name: cargo test --workspace
+        run: cargo test --workspace
+
+  test-web:
+    name: test-web
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup
+        uses: ./.github/actions/setup
+        with:
+          fonts: none
+
+      - run: pnpm test
+
+      # Fails when a DTO changed without regenerating src/lib/ipc/bindings.ts (git-free).
+      - name: bindings.ts matches the Rust contract (pnpm bindings:check)
+        run: pnpm bindings:check
+
+      - name: thirdparty.json matches cargo metadata + pnpm licenses (cargo xtask licenses)
+        uses: ./.github/actions/drift-check
+        with:
+          name: src/lib/about/thirdparty.json
+          command: cargo xtask licenses
+          paths: src/lib/about/thirdparty.json
+
+  test-core:
+    name: test-core
+    # Builds a qdc core.db: never for pull requests from forks.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-22.04
+    timeout-minutes: 75
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: core.db (qdc, built in this job; verify-core)
+        uses: ./.github/actions/core
+
+      - name: The committed release core.db passes verify-core on this commit (data/core/core.db)
+        if: hashFiles('data/core/core.db') != ''
+        run: cargo xtask verify-core --db data/core/core.db --report target/verify-core-release.json
+
+      - name: quran-core integration tests on the real core.db
+        run: cargo test -p quran-core -- --ignored
+        env:
+          QD_CORE_DB: ${{ github.workspace }}/src-tauri/resources/core.db
+
+      - name: Browser-mock fixtures (cargo xtask export-fixtures)
+        run: cargo xtask export-fixtures
+
+      - name: Upload core.db and fixtures for developers (private repository only, 1 day)
+        if: github.event.repository.private
+        uses: ./.github/actions/upload
+        with:
+          name: core-db-and-fixtures
+          path: |
+            src-tauri/resources/core.db
+            src/lib/ipc/mock/fixtures/
+          retention-days: '1'
+          qf-derived: private-only
+
+      - name: Playwright browser cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Playwright browsers (chromium, webkit) with their system dependencies
+        run: pnpm exec playwright install --with-deps chromium webkit
+
+      - name: Component tests in chromium and webkit (pnpm test:browser)
+        run: pnpm test:browser
+
+      - name: Browser-mock screenshots (pnpm shots:web)
+        run: pnpm shots:web
+
+      - name: Upload the screenshots (private repository only)
+        if: always() && github.event.repository.private
+        uses: ./.github/actions/upload
+        with:
+          name: shots-web
+          path: |
+            artifacts/shots/web/
+            artifacts/vitest-browser/
+          if-no-files-found: ignore
+
+      - name: Scrub QF-derived outputs
+        if: always()
+        uses: ./.github/actions/scrub
+
+  build:
+    name: build (${{ matrix.os }})
+    # Builds a qdc core.db: never for pull requests from forks.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-22.04]
+        include:
+          - os: windows-latest
+            kinds: nsis
+            budgets: nsis,installed
+          - os: macos-latest
+            kinds: dmg
+            budgets: dmg,installed
+          - os: ubuntu-22.04
+            kinds: deb,appimage
+            budgets: deb,appimage,installed
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 150
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup
+        uses: ./.github/actions/setup
+        with:
+          fonts: required
+
+      - name: KFGQPC Hafs V30 (cargo xtask fetch-assets; verified against xtask/assets.lock)
+        run: cargo xtask fetch-assets
+
+      - name: core.db (qdc, built in this job; > 1 MiB; verify-core)
+        uses: ./.github/actions/core
+
+      - name: Debug app build on the real core.db (QD_REQUIRE_CORE=1)
+        run: pnpm tauri build --debug --no-bundle
+        env:
+          QD_REQUIRE_CORE: '1'
+
+      - name: macOS target (universal on pushes to the default branch, as release.yml; else this runner's)
+        id: mac
+        if: runner.os == 'macOS'
+        env:
+          QD_UNIVERSAL: >-
+            ${{ github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+        run: |
+          if [ "$QD_UNIVERSAL" = "true" ]; then
+            rustup target add aarch64-apple-darwin x86_64-apple-darwin
+            echo "args=--target universal-apple-darwin" >> "$GITHUB_OUTPUT"
+            echo "universal=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "universal=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Installers around the placeholder core.db (contents and size budgets, enforced)
+        uses: ./.github/actions/size-check
+        with:
+          build-args: ${{ steps.mac.outputs.args }}
+          universal: ${{ steps.mac.outputs.universal || 'false' }}
+          require: ${{ matrix.kinds }}
+          budgets: ${{ matrix.budgets }}
+          enforce: 'true'
+
+      - name: Scrub QF-derived outputs
+        if: always()
+        uses: ./.github/actions/scrub
+
+  ci-result:
+    name: CI result
+    # One required check for branch protection; test-core and build are skipped (not failed) for fork pull requests.
+    if: always()
+    needs: [lint, test-rust, test-web, test-core, build]
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    steps:
+      - name: Every job passed or was skipped
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          node -e '
+            const needs = JSON.parse(process.env.NEEDS)
+            let ok = true
+            for (const [job, { result }] of Object.entries(needs)) {
+              console.log(`${job.padEnd(10)} ${result}`)
+              if (result !== "success" && result !== "skipped") ok = false
+            }
+            process.exit(ok ? 0 : 1)
+          '

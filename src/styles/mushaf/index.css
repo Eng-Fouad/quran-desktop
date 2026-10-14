@@ -1,0 +1,11 @@
+/*
+ * Mushaf styles: imports the per-package files below, nothing else. Each file wraps its rules in
+ * `@layer mushaf { ... }` (the layer order is declared in tokens.css). Physical left/right is intentional in Mushaf
+ * geometry; mark such lines with a `physical-ok` comment for the logical-CSS lint.
+ */
+@import './page.css';
+@import './lines.css';
+@import './frame.css';
+@import './highlights.css';
+@import './spread.css';
+@import './memo.css';

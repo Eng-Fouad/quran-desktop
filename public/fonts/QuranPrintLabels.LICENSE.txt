@@ -1,0 +1,44 @@
+Quran Print Labels (family "Quran Print Labels", version 1.000, CFF OpenType, 1000 units per em)
+File: QuranPrintLabels.woff2 (111,228 B, sha256 67062851e94137deb06a6adfa893e72842565e018993f21eeaa9c900d0991ab7): the
+generator's QuranPrintLabels.otf (1,235,388 B, sha256 6b86a924466abf981a55130e10b1683b50c6da41c77f6f460af57ff533790cbc)
+in a WOFF2 container, the same tables losslessly compressed.
+
+WHAT IT IS
+
+The page furniture of the 1441H Madinah Mushaf print of the King Fahd Glorious Qur'an Printing Complex, as glyph
+outlines: the running heads «سُورَةُ name» (U+F600 + surah, 2 to 114) and «الجُزۡءُ …» (U+F700 + juz, 1 to 30), the
+stacked margin labels of the 240 rubs (U+F800 + rub), the label words رُبُع، نِصۡف، ثَلَاثَةُ أَرۡبَاعِ، الحِزۡبُ،
+الجُزۡءُ، سُورَةُ (U+F500 to U+F505) and the print's Eastern Arabic digits (U+0660 to U+0669). It holds no Quranic text.
+
+PROVENANCE
+
+The outlines are cut, not redrawn, from 123 pages of the Mushaf Database "Ligature-Based SVG Mushaf", version 1.01
+(https://github.com/mushafdatabase/MushafDatabase-Ligature-Based-SVG, folder "SVG V1.01"; https://mushafdatabase.com/),
+by assets/print-labels/build_print_labels.py in the Quran for Desktop repository; assets/print-labels/pages.txt lists
+the pages. 64 margin labels are the print's own; the other 176, whose pages were not among the inputs, are set from the
+words and digits cut from the print, with the layout measured on the printed labels. The generator is deterministic and
+reproduces both files byte for byte.
+
+The dataset's artwork derives from the printing-use Madinah Mushaf of the King Fahd Glorious Qur'an Printing Complex
+(KFGQPC), whose files KFGQPC allows to be used free of charge in computer programs
+(https://dm.qurancomplex.gov.sa/rights/). The calligraphy remains the work of KFGQPC.
+
+LICENCE OF THE SOURCE DATASET
+
+Reproduced verbatim from the dataset's LICENSE file (also embedded in the font's name table, ID 13):
+
+Legal Use and Open Permission (Sadaqa-e-Jaria)
+
+This dataset is released as Sadaqa-e-Jaria for the benefit of Muslims worldwide.
+
+Permission is hereby granted to any person, without prior written approval, to use, copy, modify, publish, distribute, and create derivative works from this dataset, in whole or in part, for any lawful purpose, including personal, educational, research, nonprofit, and commercial use.
+
+Users must not knowingly alter the Quranic content in any way that misrepresents or compromises the integrity of the Holy Quran.
+
+This dataset is provided “as is”, without warranty of any kind, and the publisher shall not be liable for any claim, damage, or loss arising from its use.
+
+THIS FONT AND THE APP'S LICENCE
+
+This font is not covered by the GNU General Public License of Quran for Desktop. It is a separate work, a derivative
+of the dataset above, used and distributed under that permission and the KFGQPC terms, and it ships unmodified as a
+separate work (exactly as the generator writes it) with the app.

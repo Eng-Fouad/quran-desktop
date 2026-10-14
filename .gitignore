@@ -1,0 +1,59 @@
+# Dependencies and build output
+/node_modules/
+/dist/
+/dist-ssr/
+*.local
+*.log
+*.tsbuildinfo
+.eslintcache
+vite.config.*.timestamp-*
+vitest.config.*.timestamp-*
+
+# Rust
+/target/
+src-tauri/target/
+src-tauri/gen/schemas/
+
+# Snap packing (.github/workflows/store.yml copies the release's deb in; snapcraft leaves its work and the snap)
+/snap/local/
+/parts/
+/stage/
+/prime/
+/*.snap
+
+# Generated data and third-party binaries: never committed, except the pinned KFGQPC TTF in xtask/assets/ that
+# `cargo xtask fetch-assets` falls back to; its output here stays ignored, and the release build data/core/core.db
+# (`pnpm core:release`); only its build leftovers are ignored. The development core.db in src-tauri/resources/ is
+# never committed.
+# src-tauri/resources/catalog.json IS committed.
+src-tauri/resources/core.db*
+data/core/core.db?*
+src/lib/ipc/mock/fixtures/
+data/cache/
+data/dev-packs/
+data/sources/qul/*
+!data/sources/qul/.gitkeep
+!data/sources/qul/manifest.toml
+data/sources/tanzil/*
+!data/sources/tanzil/.gitkeep
+public/fonts/*.ttf
+fixtures-out/
+
+# Test and QA output (Mushaf images are never committed; the one exception is docs/screenshot.png)
+artifacts/
+tests/e2e/baselines/
+# vitest's default attachment directory (failure screenshots of older runs; vitest.config.ts now writes to artifacts/)
+.vitest/
+__screenshots__/
+coverage/
+test-results/
+screenshots/
+
+# Editors / OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+*.suo
+*.sw?

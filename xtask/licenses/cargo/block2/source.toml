@@ -1,0 +1,12 @@
+# block2 ships no licence text of its own; these reviewed files stand in for it.
+versions = ["0.6.2"]
+
+[[file]]
+name = "LICENSE.md"
+kind = "licence"
+source = "https://github.com/madsmtm/objc2/blob/b4167b582b2f75f9a1be75495c41b765344fd03c/LICENSE.md"
+
+[[file]]
+name = "LICENSE-MIT"
+kind = "licence"
+source = "SPDX MIT text (https://github.com/spdx/license-list-data/blob/v3.29.0/text/MIT.txt) with the copyright line \"Copyright (c) Mads Marquart\": the repository's LICENSE.md names the MIT licence but does not contain its text; the holders are the crate's Cargo authors"

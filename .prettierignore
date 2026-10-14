@@ -1,0 +1,15 @@
+# Prettier also skips everything in .gitignore (node_modules, dist, target, artifacts, fixtures, data caches, ...).
+pnpm-lock.yaml
+
+# Rust-side trees: configs and golden/data files there are owned by the Rust packages or rewritten by the tauri CLI.
+src-tauri/
+crates/
+xtask/
+
+# Generated files (never edited by hand).
+src/lib/ipc/bindings.ts
+src/lib/ipc/mock/fixtures/
+src/lib/about/thirdparty.json
+
+# Local data.
+data/

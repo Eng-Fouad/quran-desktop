@@ -1,0 +1,14 @@
+# Scrub QF-derived outputs at the end of a job.
+#
+# Run it as the last step of every job that builds core.db, with `if: always()`. It runs before the post-job steps of
+# the caching actions, so rust-cache never stores target/<profile>/data/core.db (copied there by tauri-build) or a
+# bundle, and nothing QF-derived outlives the job on the runner.
+name: Scrub QF-derived outputs
+description: Remove core.db, fixtures, data/cache, data/dev-packs and target/**/{data/core.db,bundle} before post-job caching
+
+runs:
+  using: composite
+  steps:
+    - name: Remove QF-derived and distributable outputs
+      shell: bash
+      run: node "$GITHUB_ACTION_PATH/scrub.mjs" --root "$GITHUB_WORKSPACE"

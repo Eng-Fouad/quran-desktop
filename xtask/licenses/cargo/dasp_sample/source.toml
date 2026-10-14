@@ -1,0 +1,7 @@
+# dasp_sample ships no licence text of its own; these reviewed files stand in for it.
+versions = ["0.11.0"]
+
+[[file]]
+name = "LICENSE-MIT"
+kind = "licence"
+source = "https://github.com/rustaudio/dasp/blob/97c3bb9b2363c0b46ac1633858bf1054fd02a980/LICENSE-MIT"

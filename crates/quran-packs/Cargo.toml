@@ -1,0 +1,35 @@
+[package]
+name = "quran-packs"
+description = "Quran for Desktop content packs: catalog, download manager, adapters, installers and revalidation"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+quran-types = { workspace = true }
+quran-core = { workspace = true }
+reqwest = { workspace = true }
+tokio = { workspace = true }
+futures-util = { workspace = true }           # in-flight dedupe (shared futures), byte streams
+sha2 = { workspace = true }                   # integrity: sha256 computed while streaming
+hex = { workspace = true }
+zip = { workspace = true }                    # QuranEnc packs: exactly one *.sqlite entry
+ammonia = { workspace = true }                # translation/tafsir HTML policy
+regex = { workspace = true }                  # QuranEnc footnote markers and lines
+rusqlite = { workspace = true }               # reads the QuranEnc `translations` table
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+log = { workspace = true }
+uuid = { workspace = true }                   # staging directory names
+tempfile = { workspace = true }               # staging files and directories
+url = { workspace = true }                    # mirror/host parsing for per-host limits
+parking_lot = { workspace = true }            # job/registry maps without lock poisoning (download tasks never panic)
+time = { workspace = true }                   # Retry-After / Last-Modified HTTP dates
+dunce = { workspace = true }                  # paths reported to the UI carry no `\\?\` prefix
+
+[lints]
+workspace = true
